@@ -47,6 +47,13 @@
       <h2 id="articleTitle" class="article-title">Extracting headline from current tab...</h2>
       <p id="articleExcerpt" class="article-excerpt"></p>
 
+      <div class="hermes-toggle-container">
+        <label class="hermes-toggle-label">
+          <input type="checkbox" id="useHermesToggle" />
+          <span class="hermes-toggle-text">Nous Hermes Autonomous Investigation (Gemma 4 Grounding)</span>
+        </label>
+      </div>
+
       <button id="analyzeBtn" class="btn-primary">
         <span class="btn-icon">⚡</span>
         <span id="btnText">Run Full SAVI Audit</span>
@@ -149,6 +156,16 @@
         <div id="claimsList" class="claims-list">
           <!-- Dynamically populated -->
         </div>
+      </section>
+
+      <!-- Hermes Autonomous Investigation Card -->
+      <section id="hermesCard" class="card hermes-card hidden">
+        <h3 class="section-title">NOUS HERMES AGENT TRAJECTORY</h3>
+        <div class="hermes-summary-box">
+          <span id="hermesVerdict" class="hermes-verdict">VERIFIED_TRUE</span>
+          <p id="hermesSummaryText" class="hermes-summary"></p>
+        </div>
+        <div id="hermesStepsList" class="hermes-steps-list"></div>
       </section>
 
       <!-- Recommendation Card -->

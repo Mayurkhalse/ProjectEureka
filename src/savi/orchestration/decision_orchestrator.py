@@ -18,14 +18,16 @@ class OrchestratorDecisionInput(BaseModel):
     platforms_requested: List[str] = Field(default_factory=lambda: ["web", "reddit", "twitter", "youtube"])
     mdp_state_summary: Dict[str, Any] = Field(default_factory=dict)
     last_execution_results: Dict[str, Any] = Field(default_factory=dict)
+    candidate_urls_from_gemma: List[str] = Field(default_factory=list)
     candidate_urls_from_gemini: List[str] = Field(default_factory=list)
     temporal_window_minutes: float = 15.0
+    active_gemma_key_index: int = 0
     active_gemini_key_index: int = 0
     notes: Optional[str] = None
 
 
 class OrchestratorDecisionOutput(BaseModel):
-    next_agent: str  # web_search_gemini | web_scrape_firecrawl | reddit | twitter | youtube | none
+    next_agent: str  # web_search_gemma | web_search_gemini | web_scrape_firecrawl | reddit | twitter | youtube | none
     action: str      # search | scrape | api | backoff | rotate_key | rotate_proxy | switch_parser
     target: str      # query string, URL, subreddit, video_id, or status URL
     parser_mode: str # api | firecrawl | headless | apify
@@ -55,7 +57,8 @@ class DecisionOrchestrator:
         using Open-Jev System 1 primitives and §2 decision rubric.
         """
         last_results = plan_input.last_execution_results
-        key_idx = plan_input.active_gemini_key_index
+        key_idx = plan_input.active_gemma_key_index if plan_input.active_gemma_key_index != 0 else plan_input.active_gemini_key_index
+        candidate_urls = plan_input.candidate_urls_from_gemma or plan_input.candidate_urls_from_gemini
 
         hit_429 = any(res.get("hit_429_rate_limit", False) for res in last_results.values())
         hit_captcha = any(res.get("hit_captcha_challenge", False) for res in last_results.values())
@@ -64,8 +67,8 @@ class DecisionOrchestrator:
         state_str = (
             f"Intent: {plan_input.user_intent}. "
             f"Platforms: {','.join(plan_input.platforms_requested)}. "
-            f"Active Gemini Key: {key_idx}. "
-            f"Candidate URLs: {len(plan_input.candidate_urls_from_gemini)}. "
+            f"Active Gemma Key: {key_idx}. "
+            f"Candidate URLs: {len(candidate_urls)}. "
             f"Rate Limit 429: {hit_429}. "
             f"Captcha Wall: {hit_captcha}."
         )
@@ -107,14 +110,14 @@ class DecisionOrchestrator:
         if hit_429:
             if key_idx == 0:
                 return OrchestratorDecisionOutput(
-                    next_agent="web_search_gemini",
+                    next_agent="web_search_gemma",
                     action="rotate_key",
                     target=plan_input.user_intent,
                     parser_mode="api",
                     priority=1,
                     ppo_action_hint="ROTATE_KEY",
                     fallback_tier=2,
-                    reasoning="HTTP 429 / quota detected on primary Gemini key. Rotating to secondary GEMINI_API_KEY_2 (Tier 2).",
+                    reasoning="HTTP 429 / quota detected on primary Gemma key. Rotating to secondary GEMMA_API_KEY_2 (Tier 2).",
                     open_jev_probabilities=probs_summary,
                     risk_score=risk_level,
                 )
@@ -137,7 +140,7 @@ class DecisionOrchestrator:
             return OrchestratorDecisionOutput(
                 next_agent="web_scrape_firecrawl",
                 action="switch_parser",
-                target=plan_input.candidate_urls_from_gemini[0] if plan_input.candidate_urls_from_gemini else plan_input.user_intent,
+                target=candidate_urls[0] if candidate_urls else plan_input.user_intent,
                 parser_mode="firecrawl",
                 priority=1,
                 ppo_action_hint="SWITCH_PARSER",
@@ -148,8 +151,8 @@ class DecisionOrchestrator:
             )
 
         # Rule 3: Web Discovery -> Scrape Handover
-        if plan_input.candidate_urls_from_gemini:
-            target_url = plan_input.candidate_urls_from_gemini[0]
+        if candidate_urls:
+            target_url = candidate_urls[0]
             parallel = [p for p in plan_input.platforms_requested if p in ["reddit", "twitter", "youtube"]]
             return OrchestratorDecisionOutput(
                 next_agent="web_scrape_firecrawl",
@@ -161,16 +164,16 @@ class DecisionOrchestrator:
                 macro_cascade_hint=len(parallel) > 1,
                 ppo_action_hint=None,
                 fallback_tier=1,
-                reasoning=f"Discovered candidate URLs from Gemini. Dispatching Firecrawl to extract sanitized article from {target_url}.",
+                reasoning=f"Discovered candidate URLs from Gemma. Dispatching Firecrawl to extract sanitized article from {target_url}.",
                 open_jev_probabilities=probs_summary,
                 risk_score=risk_level,
             )
 
-        # Rule 4: Initial Step -> Initiate Gemini Search Discovery
+        # Rule 4: Initial Step -> Initiate Gemma Search Discovery
         if "web" in plan_input.platforms_requested:
             parallel = [p for p in plan_input.platforms_requested if p != "web"]
             return OrchestratorDecisionOutput(
-                next_agent="web_search_gemini",
+                next_agent="web_search_gemma",
                 action="search",
                 target=plan_input.user_intent,
                 parser_mode="api",
@@ -179,7 +182,7 @@ class DecisionOrchestrator:
                 macro_cascade_hint=True,
                 ppo_action_hint=None,
                 fallback_tier=1,
-                reasoning="Initial query step: executing Gemini discovery with Google Search grounding to identify authoritative URLs.",
+                reasoning="Initial query step: executing Gemma discovery with Google Search grounding to identify authoritative URLs.",
                 open_jev_probabilities=probs_summary,
                 risk_score=risk_level,
             )

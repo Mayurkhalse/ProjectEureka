@@ -308,28 +308,31 @@ class SystemHealthChecker:
             )
 
     def check_api_credentials(self) -> ComponentHealth:
-        """Audits API keys and dual-key rotation registry."""
+        """Audits API keys and dual-key rotation registry for Gemma 4 and external providers."""
         creds = settings.credentials
-        gemini_1 = bool(creds.gemini_api_key)
-        gemini_2 = bool(creds.gemini_api_key_2)
+        gemma_1 = bool(creds.gemma_api_key or creds.gemini_api_key)
+        gemma_2 = bool(creds.gemma_api_key_2 or creds.gemini_api_key_2)
         firecrawl = bool(creds.firecrawl_api_key)
         openai = bool(creds.openai_api_key)
         apify = bool(creds.apify_api_key)
 
-        configured_count = sum([gemini_1, gemini_2, firecrawl, openai, apify])
-
+        configured_count = sum([gemma_1, gemma_2, firecrawl, openai, apify])
         status_val = "HEALTHY" if configured_count >= 3 else "DEGRADED"
 
         return ComponentHealth(
             name="External API Credentials Mesh",
             status=status_val,
             latency_ms=0.0,
-            message=f"{configured_count}/5 key slots configured. Dual Gemini key rotation: {'Active' if (gemini_1 and gemini_2) else 'Single Key'}.",
+            message=f"{configured_count}/5 key slots configured. Dual Gemma key rotation: {'Active' if (gemma_1 and gemma_2) else 'Single Key'}.",
             details={
-                "gemini_primary_configured": gemini_1,
-                "gemini_secondary_configured": gemini_2,
-                "gemini_key_rotation_ready": gemini_1 and gemini_2,
-                "gemini_model": creds.gemini_model,
+                "gemma_primary_configured": gemma_1,
+                "gemma_secondary_configured": gemma_2,
+                "gemma_key_rotation_ready": gemma_1 and gemma_2,
+                "gemma_model": creds.gemma_model,
+                "gemini_primary_configured": gemma_1,
+                "gemini_secondary_configured": gemma_2,
+                "gemini_key_rotation_ready": gemma_1 and gemma_2,
+                "gemini_model": creds.gemma_model,
                 "firecrawl_configured": firecrawl,
                 "openai_configured": openai,
                 "openai_model": creds.openai_chat_model,

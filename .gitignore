@@ -27,3 +27,7 @@ Thumbs.db
 .env.*
 !.env.example
 context.md
+
+# Local runtime & cloned references
+data/
+chrome-extensions-samples/

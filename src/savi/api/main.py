@@ -26,7 +26,13 @@ from savi.ingestion.agents import (
     RedditIngestionAgent,
     TwitterIngestionAgent,
     YouTubeIngestionAgent,
+    GemmaWebDiscoveryAgent,
     GeminiWebDiscoveryAgent,
+)
+from savi.hermes import (
+    HermesInvestigationAgent,
+    HermesInvestigationReport,
+    HermesSkill,
 )
 from savi.orchestration.decision_orchestrator import (
     DecisionOrchestrator,
@@ -76,11 +82,12 @@ class SAVIPipelineOrchestrator:
         # Quad-Scraper agents mesh + Discovery & Decision heads
         self.decision_orchestrator = DecisionOrchestrator()
         self.local_jev_engine = LocalOpenJevEngine()
-        self.web_discovery_agent = GeminiWebDiscoveryAgent()
+        self.web_discovery_agent = GemmaWebDiscoveryAgent()
         self.web_agent = WebIngestionAgent()
         self.reddit_agent = RedditIngestionAgent()
         self.twitter_agent = TwitterIngestionAgent()
         self.youtube_agent = YouTubeIngestionAgent()
+        self.hermes_agent = HermesInvestigationAgent()
 
     async def start(self):
         await self.cdc_worker.start()
@@ -168,11 +175,12 @@ class SAVIPipelineOrchestrator:
         decision_input = OrchestratorDecisionInput(
             user_intent=query,
             platforms_requested=platforms,
+            active_gemma_key_index=self.web_discovery_agent.active_key_index,
             active_gemini_key_index=self.web_discovery_agent.active_key_index,
         )
         decision = self.decision_orchestrator.plan_next_step(decision_input)
 
-        # Step 2: Gemini Discovery with Search Grounding
+        # Step 2: Google Gemma 4 Discovery with Search Grounding
         discovery_artifact, discovery_exec = await self.web_discovery_agent.discover_urls(
             query, max_results=max_results
         )
@@ -235,6 +243,7 @@ class SAVIPipelineOrchestrator:
         selected_text: Optional[str] = None,
         author: Optional[str] = None,
         domain: Optional[str] = None,
+        use_hermes: bool = False,
     ) -> Dict[str, Any]:
         """
         Real-time intelligence analysis specifically tailored for news articles inspected via browser extension.
@@ -395,6 +404,18 @@ class SAVIPipelineOrchestrator:
 
         duration_ms = (time.perf_counter() - start_time) * 1000.0
 
+        hermes_investigation_result = None
+        if use_hermes:
+            try:
+                h_rep = await self.hermes_agent.investigate(
+                    query=resolved_title,
+                    max_steps=5,
+                    deep_verification=False,
+                )
+                hermes_investigation_result = h_rep.model_dump()
+            except Exception:
+                pass
+
         return {
             "status": "success",
             "analysis_id": content_id,
@@ -424,6 +445,7 @@ class SAVIPipelineOrchestrator:
             },
             "key_claims": audited_claims,
             "recommendation": recommendation,
+            "hermes_investigation": hermes_investigation_result,
             "processing_latency_ms": round(duration_ms, 2),
             "timestamp": datetime.now(timezone.utc).isoformat(),
         }
@@ -468,6 +490,13 @@ class ExtensionAnalyzeRequest(BaseModel):
     author: Optional[str] = None
     domain: Optional[str] = None
     published_time: Optional[str] = None
+    use_hermes: bool = False
+
+
+class HermesInvestigateRequest(BaseModel):
+    query: str
+    max_steps: Optional[int] = Field(default=6, ge=1, le=15)
+    deep_verification: bool = Field(default=True)
 
 
 class InvestigateRequest(BaseModel):
@@ -557,8 +586,40 @@ async def analyze_extension_article(req: ExtensionAnalyzeRequest):
         selected_text=req.selected_text,
         author=req.author,
         domain=req.domain,
+        use_hermes=req.use_hermes,
     )
     return result
+
+
+@app.post("/api/v1/hermes/investigate", response_model=HermesInvestigationReport, tags=["Hermes Agent"])
+async def hermes_investigate_endpoint(req: HermesInvestigateRequest):
+    """
+    Autonomous multi-step investigation powered by NousResearch Hermes Agent:
+    1. Formulates investigation plan & trajectory using Gemma 4 web discovery
+    2. Executes tool calls across Firecrawl, Open-Jev System 1, and Isolation Rainforest
+    3. Spawns autonomous subagents for source corroboration
+    4. Persists verified claims into long-term memory and procedural skill bank
+    5. Returns transparent reasoning trajectory, confidence score, and SAVI metrics
+    """
+    report = await orchestrator.hermes_agent.investigate(
+        query=req.query,
+        max_steps=req.max_steps,
+        deep_verification=req.deep_verification,
+    )
+    return report
+
+
+@app.get("/api/v1/hermes/skills", tags=["Hermes Agent"])
+async def get_hermes_skills():
+    """Returns the persistent self-improving skill bank maintained by Hermes Agent."""
+    skills = orchestrator.hermes_agent.memory.list_skills()
+    return {"count": len(skills), "skills": [s.model_dump() for s in skills]}
+
+
+@app.get("/api/v1/hermes/memory", tags=["Hermes Agent"])
+async def get_hermes_memory():
+    """Returns Hermes Agent persistent factual knowledge store and verified claims cache."""
+    return orchestrator.hermes_agent.memory.export_state()
 
 
 

@@ -177,6 +177,7 @@ async function triggerAnalysis(serverUrl) {
         selected_text: currentArticleData.selected_text,
         author: currentArticleData.author,
         domain: currentArticleData.domain,
+        use_hermes: document.getElementById("useHermesToggle") ? document.getElementById("useHermesToggle").checked : false,
       })
     });
 
@@ -278,6 +279,32 @@ function renderAnalysisResults(data) {
       item.appendChild(verdict);
       claimsList.appendChild(item);
     });
+  }
+
+  // 5.5. Nous Hermes Autonomous Investigation Trajectory
+  const hermesCard = document.getElementById("hermesCard");
+  if (data.hermes_investigation && hermesCard) {
+    hermesCard.classList.remove("hidden");
+    const h = data.hermes_investigation;
+    const vElem = document.getElementById("hermesVerdict");
+    if (vElem) vElem.textContent = `${h.verdict} (${Math.round((h.confidence_score || 0.85) * 100)}% Confidence)`;
+    const sElem = document.getElementById("hermesSummaryText");
+    if (sElem) sElem.textContent = h.executive_summary || "";
+
+    const stepsList = document.getElementById("hermesStepsList");
+    if (stepsList) {
+      stepsList.innerHTML = "";
+      if (h.trajectory && h.trajectory.steps) {
+        h.trajectory.steps.forEach(st => {
+          const item = document.createElement("div");
+          item.className = "hermes-step-item";
+          item.innerHTML = `<strong>Step ${st.step_index}:</strong> <span>${escapeHtml(st.observation || st.thought)}</span>`;
+          stepsList.appendChild(item);
+        });
+      }
+    }
+  } else if (hermesCard) {
+    hermesCard.classList.add("hidden");
   }
 
   // 6. Recommendation

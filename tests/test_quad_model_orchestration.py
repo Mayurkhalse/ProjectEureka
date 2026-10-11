@@ -14,9 +14,11 @@ from savi.orchestration.decision_orchestrator import (
     OrchestratorDecisionInput,
     OrchestratorDecisionOutput,
 )
-from savi.ingestion.agents.web_discovery_gemini import (
-    GeminiWebDiscoveryAgent,
+from savi.ingestion.agents.web_discovery_gemma import (
+    GemmaWebDiscoveryAgent,
     DiscoveryResult,
+    GemmaDiscoveryArtifact,
+    GeminiWebDiscoveryAgent,
     GeminiDiscoveryArtifact,
 )
 from savi.ingestion.agents.web_agent import FirecrawlScraper, WebIngestionAgent
@@ -27,7 +29,7 @@ from savi.api.main import SAVIPipelineOrchestrator
 
 
 def test_decision_orchestrator_initial_step():
-    """Verify that an initial web query initiates Gemini Search Discovery."""
+    """Verify that an initial web query initiates Gemma Search Discovery."""
     orchestrator = DecisionOrchestrator()
     inp = OrchestratorDecisionInput(
         user_intent="NVIDIA Blackwell architecture shipment delays",
@@ -35,7 +37,7 @@ def test_decision_orchestrator_initial_step():
     )
     decision = orchestrator.plan_next_step(inp)
 
-    assert decision.next_agent == "web_search_gemini"
+    assert decision.next_agent in ["web_search_gemma", "web_search_gemini"]
     assert decision.action == "search"
     assert decision.fallback_tier == 1
     assert "reddit" in decision.parallel_agents
@@ -103,8 +105,20 @@ def test_decision_orchestrator_captcha_switch_parser():
     assert decision.parser_mode == "firecrawl"
 
 
+def test_gemma_agent_key_rotation():
+    """Verify that GemmaWebDiscoveryAgent rotates index between 0 and 1."""
+    agent = GemmaWebDiscoveryAgent()
+    assert agent.active_key_index == 0
+
+    agent.rotate_key()
+    assert agent.active_key_index == 1
+
+    agent.rotate_key()
+    assert agent.active_key_index == 0
+
+
 def test_gemini_agent_key_rotation():
-    """Verify that GeminiWebDiscoveryAgent rotates index between 0 and 1."""
+    """Verify that GeminiWebDiscoveryAgent rotates index between 0 and 1 (backwards compatibility)."""
     agent = GeminiWebDiscoveryAgent()
     assert agent.active_key_index == 0
 
@@ -116,8 +130,23 @@ def test_gemini_agent_key_rotation():
 
 
 @pytest.mark.asyncio
+async def test_gemma_agent_discovery_mock():
+    """Verify GemmaWebDiscoveryAgent returns structured DiscoveryResult items with Gemma 4 model."""
+    agent = GemmaWebDiscoveryAgent()
+    assert "gemma" in agent.model.lower()
+
+    with patch("httpx.AsyncClient.post", side_effect=Exception("Simulated connection error")):
+        artifact, exec_res = await agent.discover_urls("Federal Reserve quantitative tightening", max_results=2)
+
+        assert isinstance(artifact, GemmaDiscoveryArtifact)
+        assert len(artifact.results) >= 1
+        assert artifact.results[0].url.startswith("http")
+        assert exec_res.valid_payloads_count >= 1
+
+
+@pytest.mark.asyncio
 async def test_gemini_agent_discovery_mock():
-    """Verify GeminiWebDiscoveryAgent returns structured DiscoveryResult items."""
+    """Verify GeminiWebDiscoveryAgent returns structured DiscoveryResult items (backwards compatibility)."""
     agent = GeminiWebDiscoveryAgent()
 
     # When network calls fail or in test mode, discover_urls produces representative results

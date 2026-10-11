@@ -56,6 +56,8 @@ class LocalOpenJevEngine:
             "scrape": [12, 13],
             "firecrawl": [12, 13],
             "gemini": [10, 11],
+            "gemma": [10, 11],
+            "hermes": [32, 33],
             "reddit": [14, 15],
             "twitter": [16, 17],
             "youtube": [18, 19],

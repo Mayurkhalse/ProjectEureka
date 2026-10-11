@@ -4,7 +4,7 @@ Contains hyperparameter defaults, network topologies, API credentials, and servi
 """
 
 import os
-from typing import List, Tuple
+from typing import List, Tuple, Optional
 from dotenv import load_dotenv
 from pydantic import BaseModel, Field
 
@@ -15,9 +15,12 @@ load_dotenv()
 class APICredentialsConfig(BaseModel):
     """Live API credentials and paired key rotation registry for external model endpoints."""
     firecrawl_api_key: str = Field(default_factory=lambda: os.getenv("FIRECRAWL_API_KEY", ""))
-    gemini_api_key: str = Field(default_factory=lambda: os.getenv("GEMINI_API_KEY", ""))
-    gemini_api_key_2: str = Field(default_factory=lambda: os.getenv("GEMINI_API_KEY_2", ""))
-    gemini_model: str = Field(default_factory=lambda: os.getenv("GEMINI_MODEL", "gemini-2.0-flash"))
+    gemma_api_key: str = Field(default_factory=lambda: os.getenv("GEMMA_API_KEY", os.getenv("GEMINI_API_KEY", "")))
+    gemma_api_key_2: str = Field(default_factory=lambda: os.getenv("GEMMA_API_KEY_2", os.getenv("GEMINI_API_KEY_2", "")))
+    gemma_model: str = Field(default_factory=lambda: os.getenv("GEMMA_MODEL", os.getenv("GEMINI_MODEL", "gemma-4")))
+    gemini_api_key: str = Field(default_factory=lambda: os.getenv("GEMINI_API_KEY", os.getenv("GEMMA_API_KEY", "")))
+    gemini_api_key_2: str = Field(default_factory=lambda: os.getenv("GEMINI_API_KEY_2", os.getenv("GEMMA_API_KEY_2", "")))
+    gemini_model: str = Field(default_factory=lambda: os.getenv("GEMMA_MODEL", os.getenv("GEMINI_MODEL", "gemma-4")))
     openai_api_key: str = Field(default_factory=lambda: os.getenv("OPENAI_API_KEY", ""))
     openai_chat_model: str = Field(default_factory=lambda: os.getenv("OPENAI_CHAT_MODEL", "gpt-4o-mini"))
     apify_api_key: str = Field(default_factory=lambda: os.getenv("APIFY_API_KEY", os.getenv("APIFY_TOKEN", "")))
@@ -27,16 +30,33 @@ class APICredentialsConfig(BaseModel):
     open_jev_model_id: str = Field(default_factory=lambda: os.getenv("OPEN_JEV_MODEL_ID", "ZefanCai/Open-Jev-27B-v1.1"))
     open_jev_temperature: float = Field(default_factory=lambda: float(os.getenv("OPEN_JEV_TEMPERATURE", "0.7")))
 
+    def get_gemma_key(self, index: int = 0) -> str:
+        """Returns Gemma key for the given rotation index (0: primary, 1: secondary)."""
+        if index == 1 and (self.gemma_api_key_2 or self.gemini_api_key_2):
+            return self.gemma_api_key_2 or self.gemini_api_key_2
+        return self.gemma_api_key or self.gemini_api_key or self.gemma_api_key_2 or self.gemini_api_key_2
+
+    def rotate_gemma_key(self, current_index: int) -> Tuple[int, str]:
+        """Toggles between primary (0) and secondary (1) Gemma API keys."""
+        new_index = 1 if current_index == 0 else 0
+        return new_index, self.get_gemma_key(new_index)
+
     def get_gemini_key(self, index: int = 0) -> str:
-        """Returns Gemini key for the given rotation index (0: primary, 1: secondary)."""
-        if index == 1 and self.gemini_api_key_2:
-            return self.gemini_api_key_2
-        return self.gemini_api_key or self.gemini_api_key_2
+        """Backwards compatibility alias for get_gemma_key."""
+        return self.get_gemma_key(index)
 
     def rotate_gemini_key(self, current_index: int) -> Tuple[int, str]:
-        """Toggles between primary (0) and secondary (1) Gemini API keys."""
-        new_index = 1 if current_index == 0 else 0
-        return new_index, self.get_gemini_key(new_index)
+        """Backwards compatibility alias for rotate_gemma_key."""
+        return self.rotate_gemma_key(current_index)
+
+
+class HermesAgentConfig(BaseModel):
+    """Configuration for NousResearch Hermes Agent integration."""
+    model_id: str = Field(default_factory=lambda: os.getenv("HERMES_MODEL_ID", "NousResearch/Hermes-3-Llama-3.1-8B"))
+    server_url: Optional[str] = Field(default_factory=lambda: os.getenv("HERMES_SERVER_URL", None))
+    max_steps: int = Field(default_factory=lambda: int(os.getenv("HERMES_MAX_STEPS", "8")))
+    temperature: float = Field(default_factory=lambda: float(os.getenv("HERMES_TEMPERATURE", "0.7")))
+    memory_store_path: str = Field(default_factory=lambda: os.getenv("HERMES_MEMORY_PATH", "data/hermes_memory.json"))
 
 
 class PPOConfig(BaseModel):
@@ -121,6 +141,7 @@ class SAVIConfig(BaseModel):
     stgnn: STGNNConfig = Field(default_factory=STGNNConfig)
     metrics: SAVIMetricsConfig = Field(default_factory=SAVIMetricsConfig)
     db: DatabaseConfig = Field(default_factory=DatabaseConfig)
+    hermes: HermesAgentConfig = Field(default_factory=HermesAgentConfig)
 
 
 # Default global settings instance

@@ -610,6 +610,71 @@ body {
   letter-spacing: 0.05em;
 }
 
+/* Hermes Autonomous Agent Styles */
+.hermes-toggle-container {
+  margin: 8px 0 10px 0;
+  padding: 6px 8px;
+  background: rgba(14, 165, 233, 0.08);
+  border: 1px dashed rgba(14, 165, 233, 0.3);
+  border-radius: 6px;
+}
+
+.hermes-toggle-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-size: 11px;
+  color: #bae6fd;
+}
+
+.hermes-toggle-label input {
+  cursor: pointer;
+  accent-color: var(--cyan);
+}
+
+.hermes-card {
+  border-left: 3px solid #8b5cf6;
+}
+
+.hermes-summary-box {
+  margin-bottom: 8px;
+}
+
+.hermes-verdict {
+  display: inline-block;
+  padding: 2px 6px;
+  background: rgba(139, 92, 246, 0.2);
+  color: #c4b5fd;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.hermes-summary {
+  font-size: 11px;
+  color: #e2e8f0;
+  line-height: 1.35;
+}
+
+.hermes-steps-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 140px;
+  overflow-y: auto;
+}
+
+.hermes-step-item {
+  font-size: 10px;
+  background: #0f172a;
+  padding: 4px 6px;
+  border-radius: 4px;
+  border-left: 2px solid var(--cyan);
+  color: #cbd5e1;
+}
+
 .hidden {
   display: none !important;
 }
