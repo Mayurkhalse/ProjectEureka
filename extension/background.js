@@ -1,16 +1,38 @@
 /**
  * SAVI Intelligence Platform - Background Service Worker (Manifest V3)
- * Implements Google Chrome Extension Side Panel Framework (chrome.sidePanel)
- * Manages side panel behavior, context menus, and session storage dispatch.
+ * Manages context menus, side panel coordination, and session storage dispatch.
  */
 
 const DEFAULT_SERVER_URL = "http://localhost:8000";
 
-// Configure side panel to open directly when clicking the extension action icon in the toolbar
-if (chrome.sidePanel && chrome.sidePanel.setPanelBehavior) {
-  chrome.sidePanel
-    .setPanelBehavior({ openPanelOnActionClick: true })
-    .catch((error) => console.warn("SAVI: sidePanel.setPanelBehavior error:", error));
+/**
+ * Safely opens the Chrome Side Panel across all Chromium versions (116+).
+ */
+async function openSidePanelSafely(tab) {
+  if (!chrome.sidePanel || !chrome.sidePanel.open) return false;
+  if (!tab) return false;
+
+  // Strategy 1: Open using windowId (supported across Chrome 116+)
+  if (tab.windowId) {
+    try {
+      await chrome.sidePanel.open({ windowId: tab.windowId });
+      return true;
+    } catch (e) {
+      // Window strategy may fail if windowId is invalid
+    }
+  }
+
+  // Strategy 2: Open using tabId (supported on Chrome 122+)
+  if (tab.id) {
+    try {
+      await chrome.sidePanel.open({ tabId: tab.id });
+      return true;
+    } catch (e) {
+      console.warn("SAVI: sidePanel.open with tabId error:", e);
+    }
+  }
+
+  return false;
 }
 
 // On extension install or reload
@@ -60,15 +82,9 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
       });
     }
 
-    // Open native Chrome Side Panel on the active tab
-    if (chrome.sidePanel && chrome.sidePanel.open) {
-      await chrome.sidePanel.open({ tabId: tab.id });
-    }
+    await openSidePanelSafely(tab);
   } else if (info.menuItemId === "savi-open-panel" || info.menuItemId === "savi-audit-page") {
-    // Open native Chrome Side Panel
-    if (chrome.sidePanel && chrome.sidePanel.open) {
-      await chrome.sidePanel.open({ tabId: tab.id });
-    }
+    await openSidePanelSafely(tab);
   }
 });
 
@@ -77,7 +93,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.action === "OPEN_SIDEPANEL") {
     (async () => {
       try {
-        const tabId = sender.tab ? sender.tab.id : message.tabId;
+        const tab = sender.tab || (await chrome.tabs.query({ active: true, currentWindow: true }))[0];
+
         if (message.selectionText && chrome.storage && chrome.storage.session) {
           await chrome.storage.session.set({
             pendingClaim: {
@@ -88,10 +105,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           });
         }
 
-        if (tabId && chrome.sidePanel && chrome.sidePanel.open) {
-          await chrome.sidePanel.open({ tabId: tabId });
-        }
-        sendResponse({ success: true });
+        const opened = await openSidePanelSafely(tab);
+        sendResponse({ success: opened });
       } catch (err) {
         console.error("SAVI: failed to open side panel via message:", err);
         sendResponse({ success: false, error: err.message });
@@ -102,8 +117,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 });
 
 // Notify session storage when tab changes so sidepanel updates context
-chrome.tabs.onActivated.addListener((activeInfo) => {
-  if (chrome.storage && chrome.storage.session) {
-    chrome.storage.session.set({ activeTabUpdated: Date.now() }).catch(() => {});
-  }
-});
+if (chrome.tabs && chrome.tabs.onActivated) {
+  chrome.tabs.onActivated.addListener(() => {
+    if (chrome.storage && chrome.storage.session) {
+      chrome.storage.session.set({ activeTabUpdated: Date.now() }).catch(() => {});
+    }
+  });
+}

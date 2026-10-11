@@ -23,8 +23,8 @@
 
   // Create and inject the floating trigger button on the page
   function createFloatingTrigger() {
-    if (!isArticlePage()) return;
     if (document.getElementById("savi-floating-btn")) return;
+    if (!document.body) return;
 
     const btn = document.createElement("button");
     btn.id = "savi-floating-btn";
@@ -397,15 +397,19 @@
   document.addEventListener("mouseup", handleSelection);
 
   // Initialize
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", () => {
-      createFloatingTrigger();
-      createSlideDrawer();
-    });
-  } else {
+  function initContentScript() {
     createFloatingTrigger();
     createSlideDrawer();
   }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", initContentScript);
+  } else {
+    initContentScript();
+  }
+
+  // Also retry after 1.2s to support client-rendered React/Next.js pages
+  setTimeout(initContentScript, 1200);
 
   // Listen for messages from background context menu
   if (chrome.runtime && chrome.runtime.onMessage) {

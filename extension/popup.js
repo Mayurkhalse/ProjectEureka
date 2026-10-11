@@ -25,10 +25,22 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   if (openSidePanelBtn) {
     openSidePanelBtn.addEventListener("click", async () => {
-      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-      if (tab && chrome.sidePanel && chrome.sidePanel.open) {
-        chrome.sidePanel.open({ tabId: tab.id });
-        window.close();
+      try {
+        const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+        if (tab && chrome.sidePanel && chrome.sidePanel.open) {
+          try {
+            if (tab.windowId) {
+              await chrome.sidePanel.open({ windowId: tab.windowId });
+            } else {
+              await chrome.sidePanel.open({ tabId: tab.id });
+            }
+          } catch {
+            await chrome.sidePanel.open({ tabId: tab.id });
+          }
+          window.close();
+        }
+      } catch (err) {
+        console.warn("Could not open side panel from popup:", err);
       }
     });
   }
