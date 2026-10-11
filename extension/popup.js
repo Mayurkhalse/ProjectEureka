@@ -18,9 +18,20 @@ document.addEventListener("DOMContentLoaded", async () => {
   const serverUrlInput = document.getElementById("serverUrlInput");
   const saveServerBtn = document.getElementById("saveServerBtn");
   const toggleSettingsBtn = document.getElementById("toggleSettingsBtn");
+  const openSidePanelBtn = document.getElementById("openSidePanelBtn");
   const settingsDrawer = document.getElementById("settingsDrawer");
   const analyzeBtn = document.getElementById("analyzeBtn");
   const retryBtn = document.getElementById("retryBtn");
+
+  if (openSidePanelBtn) {
+    openSidePanelBtn.addEventListener("click", async () => {
+      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      if (tab && chrome.sidePanel && chrome.sidePanel.open) {
+        chrome.sidePanel.open({ tabId: tab.id });
+        window.close();
+      }
+    });
+  }
 
   // Load configured VPS server URL
   const stored = await chrome.storage.local.get(["saviServerUrl"]);

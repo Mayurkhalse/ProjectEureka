@@ -35,10 +35,31 @@
     `;
     btn.title = "Audit this news article with SAVI Intelligence Platform";
     btn.addEventListener("click", () => {
-      openSaviDrawerAndAnalyze();
+      triggerSaviVerification();
     });
 
     document.body.appendChild(btn);
+  }
+
+  // Opens native Chrome Side Panel or falls back to inline drawer
+  function triggerSaviVerification(selectionText = "") {
+    const sel = selectionText || (window.getSelection() ? window.getSelection().toString().trim() : "");
+    if (chrome.runtime && chrome.runtime.sendMessage) {
+      chrome.runtime.sendMessage(
+        {
+          action: "OPEN_SIDEPANEL",
+          autoAnalyze: true,
+          selectionText: sel
+        },
+        (res) => {
+          if (chrome.runtime.lastError || !res || !res.success) {
+            openSaviDrawerAndAnalyze();
+          }
+        }
+      );
+    } else {
+      openSaviDrawerAndAnalyze();
+    }
   }
 
   // Create the on-page Slide-Out Intelligence Drawer
@@ -314,7 +335,7 @@
         selectionTooltip.className = "savi-selection-tooltip";
         selectionTooltip.innerHTML = `<span>⚡ Verify Claim with SAVI</span>`;
         selectionTooltip.addEventListener("click", () => {
-          openSaviDrawerAndAnalyze();
+          triggerSaviVerification(text);
           if (selectionTooltip) selectionTooltip.remove();
           selectionTooltip = null;
         });
