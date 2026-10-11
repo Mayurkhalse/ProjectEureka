@@ -98,7 +98,7 @@
             <div>
               <span class="savi-card-label">OVERALL TRUST RATING</span>
               <div class="savi-score-row">
-                <span id="savi-drawer-score" class="savi-score-num">--</span>
+                <span id="savi-drawer-score" class="savi-score-num">0</span>
                 <span class="savi-score-pct">%</span>
               </div>
             </div>
@@ -114,19 +114,19 @@
             <div class="savi-metrics-grid">
               <div class="savi-metric-row">
                 <span>Sentiment (S<sub>dyn</sub>):</span>
-                <strong id="savi-m-s">--</strong>
+                <strong id="savi-m-s">0.00</strong>
               </div>
               <div class="savi-metric-row">
                 <span>Factual Accuracy (A<sub>score</sub>):</span>
-                <strong id="savi-m-a">--</strong>
+                <strong id="savi-m-a">0%</strong>
               </div>
               <div class="savi-metric-row">
                 <span>Logical Validation (V<sub>index</sub>):</span>
-                <strong id="savi-m-v">--</strong>
+                <strong id="savi-m-v">0%</strong>
               </div>
               <div class="savi-metric-row">
                 <span>News Impact (I<sub>impact</sub>):</span>
-                <strong id="savi-m-i">--</strong>
+                <strong id="savi-m-i">0.0</strong>
               </div>
             </div>
           </div>

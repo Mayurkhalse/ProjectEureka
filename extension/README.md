@@ -53,7 +53,7 @@ When reading any news article, financial dispatch, or research piece, you can tr
    ```
 5. The extension **"SAVI Intelligence: News Verification & Credibility"** is now installed!
 6. Pin the extension to your browser toolbar.
-7. Click the extension icon on any news tab — the **SAVI Side Panel** will slide open on the right edge of your browser window.
+7. Click the extension icon on any news tab: the **SAVI Side Panel** will slide open on the right edge of your browser window.
 
 ---
 

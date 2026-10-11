@@ -210,7 +210,7 @@ def generate_spoof_savi_analysis(
                         "step_index": 3,
                         "thought": "Projecting propagation and engagement signals through 100 Isolation Rainforest oblique trees.",
                         "action": "rainforest_anomaly_test",
-                        "observation": f"Anomaly score measured at {anomaly_score:.3f} — confirmed action {action}.",
+                        "observation": f"Anomaly score measured at {anomaly_score:.3f}: confirmed action {action}.",
                     },
                     {
                         "step_index": 4,

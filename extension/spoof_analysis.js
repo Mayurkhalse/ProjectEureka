@@ -179,7 +179,7 @@
               step_index: 3,
               thought: "Projecting propagation and engagement signals through 100 Isolation Rainforest oblique trees.",
               action: "rainforest_anomaly_test",
-              observation: `Anomaly score measured at ${anomalyScore.toFixed(3)} — confirmed action ${action}.`
+              observation: `Anomaly score measured at ${anomalyScore.toFixed(3)}: confirmed action ${action}.`
             },
             {
               step_index: 4,

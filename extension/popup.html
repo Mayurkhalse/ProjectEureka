@@ -4,6 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>SAVI Intelligence Auditor</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="popup.css">
 </head>
 <body>
@@ -83,7 +86,7 @@
           <div class="trust-metric">
             <span class="label">OVERALL TRUST RATING</span>
             <div class="score-display">
-              <span id="trustScoreVal" class="score-number">--</span>
+              <span id="trustScoreVal" class="score-number">0</span>
               <span class="score-unit">%</span>
             </div>
           </div>
@@ -101,7 +104,7 @@
           <div class="metric-item">
             <div class="metric-meta">
               <span class="metric-name">Sentiment (S<sub>dyn</sub>)</span>
-              <span id="metricS" class="metric-val">--</span>
+              <span id="metricS" class="metric-val">0.00</span>
             </div>
             <div class="bar-track"><div id="barS" class="bar-fill bar-cyan" style="width: 50%;"></div></div>
           </div>
@@ -109,7 +112,7 @@
           <div class="metric-item">
             <div class="metric-meta">
               <span class="metric-name">Factual Accuracy (A<sub>score</sub>)</span>
-              <span id="metricA" class="metric-val">--</span>
+              <span id="metricA" class="metric-val">0%</span>
             </div>
             <div class="bar-track"><div id="barA" class="bar-fill bar-emerald" style="width: 50%;"></div></div>
           </div>
@@ -117,7 +120,7 @@
           <div class="metric-item">
             <div class="metric-meta">
               <span class="metric-name">Logical Validation (V<sub>index</sub>)</span>
-              <span id="metricV" class="metric-val">--</span>
+              <span id="metricV" class="metric-val">0%</span>
             </div>
             <div class="bar-track"><div id="barV" class="bar-fill bar-emerald" style="width: 50%;"></div></div>
           </div>
@@ -125,7 +128,7 @@
           <div class="metric-item">
             <div class="metric-meta">
               <span class="metric-name">News Impact Index (I<sub>impact</sub>)</span>
-              <span id="metricI" class="metric-val">--</span>
+              <span id="metricI" class="metric-val">0.0</span>
             </div>
             <div class="bar-track"><div id="barI" class="bar-fill bar-purple" style="width: 50%;"></div></div>
           </div>
@@ -139,13 +142,13 @@
           <div class="intel-box">
             <span class="intel-label">Open-Jev Decision</span>
             <span id="openJevChoice" class="intel-val val-green">CREDIBLE</span>
-            <span id="openJevConfidence" class="intel-sub">Conf: --</span>
+            <span id="openJevConfidence" class="intel-sub">Conf: 0%</span>
           </div>
 
           <div class="intel-box">
             <span class="intel-label">Rainforest Boundary</span>
             <span id="anomalyAction" class="intel-val val-green">PASS_ORGANIC</span>
-            <span id="anomalyScore" class="intel-sub">s(x,n): --</span>
+            <span id="anomalyScore" class="intel-sub">s(x,n): 0.00</span>
           </div>
         </div>
         <p id="openJevReasoning" class="intel-reasoning"></p>
