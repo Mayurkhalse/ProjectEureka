@@ -70,7 +70,7 @@ class SAVIMetricsConfig(BaseModel):
 class DatabaseConfig(BaseModel):
     """Persistence and Graph Database configuration."""
     postgres_host: str = "localhost"
-    postgres_port: int = 5432
+    postgres_port: int = 5433
     postgres_db: str = "savi_master"
     postgres_user: str = "savi_admin"
     postgres_password: str = "savi_secret"

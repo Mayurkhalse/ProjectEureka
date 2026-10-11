@@ -6,9 +6,117 @@ Acts as the platform's high-speed topological staging and structural computation
 from __future__ import annotations
 from typing import List, Dict, Any, Optional, Tuple
 import networkx as nx
+from neo4j import GraphDatabase, Driver
+from savi.config import DatabaseConfig, settings
 from savi.graph.triplet_extractor import Triplet
 from savi.graph.louvain import LouvainCommunityDetector
 from savi.ingestion.schema import ScrapedPayload
+
+
+class Neo4jLiveClusterClient:
+    """
+    Direct client connecting to live Neo4j 5.x graph database cluster.
+    Translates canonical data envelopes and SPO triplets into Cypher graphs.
+    """
+    def __init__(self, db_config: DatabaseConfig = settings.db):
+        self.db_config = db_config
+        self.driver: Optional[Driver] = None
+        self.is_connected = False
+        try:
+            self.driver = GraphDatabase.driver(
+                db_config.neo4j_uri,
+                auth=(db_config.neo4j_user, db_config.neo4j_password),
+                connection_timeout=3,
+            )
+            self.driver.verify_connectivity()
+            self.is_connected = True
+        except Exception:
+            self.is_connected = False
+
+    def close(self) -> None:
+        if self.driver:
+            self.driver.close()
+
+    def health_check(self) -> bool:
+        if not self.driver or not self.is_connected:
+            return False
+        try:
+            with self.driver.session() as session:
+                res = session.run("RETURN 1 AS ping")
+                rec = res.single()
+                return rec is not None and rec["ping"] == 1
+        except Exception:
+            return False
+
+    def sync_payload(self, payload: ScrapedPayload, triplets: List[Triplet]) -> None:
+        """Writes content node, author, platform, citations, and SPO triplets to live Neo4j."""
+        if not self.driver or not self.is_connected:
+            return
+
+        with self.driver.session() as session:
+            # Merge Content, Author, Platform
+            session.run("""
+                MERGE (c:Content {id: $content_id})
+                SET c.title = $title,
+                    c.platform = $platform,
+                    c.canonical_hash = $canonical_hash,
+                    c.published_timestamp = $published_at
+                
+                MERGE (a:Author {id: $author_id})
+                SET a.username = $username,
+                    a.is_verified = $is_verified
+                
+                MERGE (p:Platform {name: $platform})
+                
+                MERGE (a)-[:AUTHORED]->(c)
+                MERGE (c)-[:PUBLISHED_ON]->(p)
+            """, {
+                "content_id": payload.content_id,
+                "title": payload.headline_or_title,
+                "platform": payload.origin_platform,
+                "canonical_hash": payload.canonical_hash,
+                "published_at": payload.published_timestamp.isoformat(),
+                "author_id": payload.author.author_id,
+                "username": payload.author.username,
+                "is_verified": payload.author.is_verified,
+            })
+
+            # Merge Citations
+            for cit in payload.citations:
+                session.run("""
+                    MATCH (c:Content {id: $content_id})
+                    MERGE (cit:Citation {url: $url})
+                    MERGE (c)-[:CITES]->(cit)
+                """, {"content_id": payload.content_id, "url": cit})
+
+            # Merge SPO Triplets
+            for trip in triplets:
+                session.run("""
+                    MATCH (c:Content {id: $content_id})
+                    MERGE (s:Entity {name: $subject})
+                    MERGE (o:Entity {name: $object})
+                    MERGE (c)-[:MENTIONS]->(s)
+                    MERGE (s)-[r:RELATION {predicate: $predicate}]->(o)
+                    SET r.confidence = $confidence
+                """, {
+                    "content_id": payload.content_id,
+                    "subject": trip.subject.lower(),
+                    "predicate": trip.predicate.upper(),
+                    "object": trip.object.lower(),
+                    "confidence": trip.confidence,
+                })
+
+    def count_nodes(self) -> Dict[str, int]:
+        """Returns node count breakdown from live Neo4j."""
+        if not self.driver or not self.is_connected:
+            return {}
+        with self.driver.session() as session:
+            res = session.run("MATCH (n) RETURN labels(n)[0] AS label, count(n) AS cnt")
+            counts = {}
+            for rec in res:
+                lbl = rec["label"] or "Unlabeled"
+                counts[lbl] = rec["cnt"]
+            return counts
 
 
 class Neo4jStagingGraph:
@@ -16,12 +124,14 @@ class Neo4jStagingGraph:
     Topological Staging and In-Memory Graph Processing Engine.
     Handles entity nodes, triplet relationships, citation networks,
     and topological betweenness centrality metrics.
+    Optionally syncs to live Neo4j cluster when available.
     """
-    def __init__(self):
+    def __init__(self, live_client: Optional[Neo4jLiveClusterClient] = None):
         self.graph = nx.Graph()
         self.payload_nodes: Dict[str, ScrapedPayload] = {}
         self.triplets: List[Triplet] = []
         self.community_detector = LouvainCommunityDetector()
+        self.live_client = live_client
 
     def add_payload(self, payload: ScrapedPayload, triplets: List[Triplet]) -> None:
         """Stages content payload and its SPO triplets in the topological graph."""
@@ -65,6 +175,13 @@ class Neo4jStagingGraph:
             self.graph.add_edge(s_node, o_node, relation=trip.predicate, weight=trip.confidence)
             # Connect content node to subject entity
             self.graph.add_edge(content_id, s_node, relation="MENTIONS", weight=1.0)
+
+        # Forward sync to live Neo4j cluster if connected
+        if self.live_client and self.live_client.is_connected:
+            try:
+                self.live_client.sync_payload(payload, triplets)
+            except Exception:
+                pass
 
     def compute_betweenness_centrality(self) -> Dict[str, float]:
         """

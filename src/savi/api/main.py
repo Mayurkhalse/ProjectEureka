@@ -18,7 +18,7 @@ from savi.ingestion.agents import WebIngestionAgent, RedditIngestionAgent, Twitt
 from savi.pipeline.dag_router import DynamicDAGRouter
 from savi.anomaly.isolation_rainforest import IsolationRainforest
 from savi.graph.triplet_extractor import OpenIEExtractor
-from savi.graph.neo4j_driver import Neo4jStagingGraph
+from savi.graph.neo4j_driver import Neo4jStagingGraph, Neo4jLiveClusterClient
 from savi.graph.open_jev import OpenJEVLogicEngine
 from savi.metrics.savi_suite import SAVIEngine
 from savi.persistence.postgres_store import IntelligenceQueryStore
@@ -47,10 +47,11 @@ class SAVIPipelineOrchestrator:
 
         self.dag_router = DynamicDAGRouter(rainforest=self.rainforest)
         self.triplet_extractor = OpenIEExtractor()
-        self.neo4j_staging = Neo4jStagingGraph()
+        self.neo4j_live = Neo4jLiveClusterClient()
+        self.neo4j_staging = Neo4jStagingGraph(live_client=self.neo4j_live)
         self.open_jev = OpenJEVLogicEngine()
         self.savi_engine = SAVIEngine()
-        self.query_store = IntelligenceQueryStore(in_memory=True)
+        self.query_store = IntelligenceQueryStore(in_memory=False)
         self.cdc_worker = CDCTransactionWorker(self.query_store)
 
         # Scraper agents mesh
@@ -151,6 +152,8 @@ async def health_check():
         "status": "healthy",
         "service": "SAVI Intelligence Platform",
         "architecture": "CQRS (Neo4j Command / PostgreSQL Query)",
+        "postgres_connected": orchestrator.query_store.is_postgres,
+        "neo4j_connected": orchestrator.neo4j_live.is_connected,
         "version": "1.0.0",
     }
 
