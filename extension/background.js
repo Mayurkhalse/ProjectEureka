@@ -48,19 +48,19 @@ chrome.runtime.onInstalled.addListener(() => {
   chrome.contextMenus.removeAll(() => {
     chrome.contextMenus.create({
       id: "savi-open-panel",
-      title: "⚡ Open SAVI Intelligence Side Panel",
+      title: "Open SAVI Intelligence Side Panel",
       contexts: ["page", "action"]
     });
 
     chrome.contextMenus.create({
       id: "savi-verify-claim",
-      title: "⚡ Verify Highlighted Claim with SAVI",
+      title: "Verify Highlighted Claim with SAVI",
       contexts: ["selection"]
     });
 
     chrome.contextMenus.create({
       id: "savi-audit-page",
-      title: "⚡ Audit Article with SAVI Knowledge Graph",
+      title: "Audit Article with SAVI Knowledge Graph",
       contexts: ["page", "link"]
     });
   });

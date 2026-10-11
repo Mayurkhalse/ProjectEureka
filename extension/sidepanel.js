@@ -120,7 +120,7 @@ async function checkVpsHealth(serverUrl) {
   } catch (err) {
     pill.className = "status-pill status-offline";
     text.textContent = "VPS Offline";
-    pill.title = `Cannot reach ${serverUrl}. Click ⚙️ to configure VPS host URL.`;
+    pill.title = `Cannot reach ${serverUrl}. Click Settings to configure VPS host URL.`;
   }
 }
 
@@ -290,7 +290,7 @@ async function triggerAnalysis(serverUrl) {
       renderAnalysisResults(spoofData);
       const latencyElem = document.getElementById("latencyDisplay");
       if (latencyElem) {
-        latencyElem.textContent = `⚡ Analyzed in ${spoofData.processing_latency_ms} ms (Edge Heuristic Engine)`;
+        latencyElem.textContent = `Analyzed in ${spoofData.processing_latency_ms} ms (Edge Heuristic Engine)`;
       }
     } else {
       document.getElementById("errorMsg").textContent = `Audit error: ${err.message}`;
@@ -432,7 +432,7 @@ function renderAnalysisResults(data) {
   document.getElementById("recommendationText").textContent = data.recommendation || "Verified organic editorial publication.";
 
   // 8. Processing Latency
-  document.getElementById("latencyDisplay").textContent = `⚡ Analyzed in ${(data.processing_latency_ms || 0).toFixed(1)} ms`;
+  document.getElementById("latencyDisplay").textContent = `Analyzed in ${(data.processing_latency_ms || 0).toFixed(1)} ms`;
 
   // Reveal results panel
   resultsPanel.classList.remove("hidden");

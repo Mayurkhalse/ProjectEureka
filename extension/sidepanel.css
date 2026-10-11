@@ -157,6 +157,9 @@ body {
   font-size: 13px;
   cursor: pointer;
   color: var(--text-main);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   transition: background-color 0.15s, border-color 0.15s;
 }
 
@@ -442,6 +445,10 @@ body {
 
 .error-icon {
   font-size: 20px;
+  color: var(--red);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .error-box p {
@@ -757,6 +764,10 @@ body {
 .rec-icon {
   font-size: 20px;
   color: var(--orange);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
 }
 
 .rec-content {

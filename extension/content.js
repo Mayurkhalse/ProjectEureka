@@ -1,6 +1,6 @@
 /**
  * SAVI Intelligence Extension - Content Script
- * Injects on-page "⚡ SAVI Analyze" floating button and inline slide-out intelligence drawer
+ * Injects on-page "SAVI Analyze" floating button and inline slide-out intelligence drawer
  * directly on news articles for frictionless zero-click-away analysis.
  */
 
@@ -30,7 +30,6 @@
     btn.id = "savi-floating-btn";
     btn.className = "savi-floating-trigger";
     btn.innerHTML = `
-      <span class="savi-btn-icon">⚡</span>
       <span class="savi-btn-label">SAVI Analyze</span>
     `;
     btn.title = "Audit this news article with SAVI Intelligence Platform";
@@ -72,13 +71,13 @@
     drawer.innerHTML = `
       <div class="savi-drawer-header">
         <div class="savi-drawer-brand">
-          <span class="savi-drawer-logo">⚡</span>
+          <span class="savi-drawer-logo">S</span>
           <div>
             <h3>SAVI INTELLIGENCE</h3>
             <span class="savi-drawer-sub">Autonomous News Verification</span>
           </div>
         </div>
-        <button id="savi-drawer-close" class="savi-drawer-close-btn" title="Close">✕</button>
+        <button id="savi-drawer-close" class="savi-drawer-close-btn" title="Close">&times;</button>
       </div>
 
       <div class="savi-drawer-body">
@@ -155,7 +154,7 @@
 
           <!-- Editorial Recommendation -->
           <div class="savi-card savi-rec-card">
-            <span class="savi-card-label">🛡️ EDITORIAL RECOMMENDATION</span>
+            <span class="savi-card-label">EDITORIAL RECOMMENDATION</span>
             <p id="savi-drawer-rec" class="savi-rec-text"></p>
           </div>
         </div>
@@ -167,7 +166,7 @@
       </div>
 
       <div class="savi-drawer-footer">
-        <span id="savi-drawer-latency">⚡ Ready</span>
+        <span id="savi-drawer-latency">Ready</span>
         <span>PostgreSQL CQRS Sub-10ms Serving</span>
       </div>
     `;
@@ -270,7 +269,7 @@
       loading.classList.add("savi-hidden");
       content.classList.remove("savi-hidden");
       const latEl = document.getElementById("savi-drawer-latency");
-      if (latEl) latEl.textContent = `⚡ Analyzed in ${spoofData.processing_latency_ms} ms (Edge Fallback)`;
+      if (latEl) latEl.textContent = `Analyzed in ${spoofData.processing_latency_ms} ms (Edge Fallback)`;
     }
   }
 
@@ -353,7 +352,7 @@
     });
 
     document.getElementById("savi-drawer-rec").textContent = data.recommendation || "";
-    document.getElementById("savi-drawer-latency").textContent = `⚡ Analyzed in ${(data.processing_latency_ms || 0).toFixed(1)} ms`;
+    document.getElementById("savi-drawer-latency").textContent = `Analyzed in ${(data.processing_latency_ms || 0).toFixed(1)} ms`;
   }
 
   function escapeHtml(s) {
@@ -373,7 +372,7 @@
         selectionTooltip = document.createElement("div");
         selectionTooltip.id = "savi-selection-tooltip";
         selectionTooltip.className = "savi-selection-tooltip";
-        selectionTooltip.innerHTML = `<span>⚡ Verify Claim with SAVI</span>`;
+        selectionTooltip.innerHTML = `<span>Verify Claim with SAVI</span>`;
         selectionTooltip.addEventListener("click", () => {
           triggerSaviVerification(text);
           if (selectionTooltip) selectionTooltip.remove();
