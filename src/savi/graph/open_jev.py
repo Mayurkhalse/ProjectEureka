@@ -8,9 +8,10 @@ Classes: Entailment (C_{ent}), Contradiction (C_{con}), Neutral (C_{neu}).
 from __future__ import annotations
 import enum
 from dataclasses import dataclass
-from typing import List, Dict, Any, Tuple
+from typing import List, Dict, Any, Tuple, Optional
 import numpy as np
 from savi.graph.triplet_extractor import Triplet
+from savi.open_jev.client import OpenJevClient
 
 
 class JEVClass(enum.IntEnum):
@@ -29,15 +30,19 @@ class JEVVerificationVerdict:
     p_contradiction: float
     p_neutral: float
     reasoning_chain: List[str]
+    open_jev_response: Optional[Dict[str, Any]] = None
 
     def to_audit_json(self) -> Dict[str, Any]:
-        return {
+        data = {
             "verdict": self.predicted_class,
             "probabilities": self.class_probabilities,
             "claim": str(self.claim_triplet),
             "evidence_count": len(self.evidence_triplets),
             "reasoning_chain": self.reasoning_chain,
         }
+        if self.open_jev_response:
+            data["open_jev_decisions"] = self.open_jev_response
+        return data
 
 
 class OpenJEVLogicEngine:
@@ -47,6 +52,7 @@ class OpenJEVLogicEngine:
     """
     def __init__(self, embedding_dim: int = 32, seed: int = 42):
         self.embedding_dim = embedding_dim
+        self.open_jev_client = OpenJevClient()
         rng = np.random.default_rng(seed)
 
         # Concatenation vector has dimension 4 * embedding_dim:
@@ -126,13 +132,39 @@ class OpenJEVLogicEngine:
         class_names = ["Entailment", "Contradiction", "Neutral"]
         predicted_class = class_names[pred_idx]
 
+        # Open-Jev System 1 Verification Query
+        evidence_str = ", ".join(str(e) for e in evidence_triplets[:5]) if evidence_triplets else "No direct evidence"
+        state_str = f"Claim: {claim_triplet}. Evidence: {evidence_str}."
+        jev_res = self.open_jev_client.ask(
+            state=state_str,
+            questions={
+                "formal_verdict": {
+                    "type": "choice",
+                    "options": ["Entailment", "Contradiction", "Neutral"],
+                    "instructions": "Determine whether graph evidence logically entails, contradicts, or is neutral to claim",
+                },
+                "entailment_verified": {
+                    "type": "noul",
+                    "instructions": "Is the factual assertion verified by supporting graph evidence?",
+                },
+            },
+        )
+        jev_verdict = jev_res.decisions.get("formal_verdict")
+        jev_decision_label = getattr(jev_verdict, "selected", predicted_class)
+
         reasoning_chain = [
             f"Evaluated claim triplet: {claim_triplet}",
             f"Discovered {len(evidence_triplets)} topological evidence triplet(s) in Neo4j compute staging.",
             f"Computed interaction distance |H_{{T_c}} - H_{{K}}|: {float(np.mean(abs_diff)):.4f}",
+            f"Open-Jev System 1 Verdict: {jev_decision_label}",
             f"Final classification probabilities: Entailment={p_ent:.3f}, Contradiction={p_con:.3f}, Neutral={p_neu:.3f}",
             f"Formal Logic Verdict: {predicted_class}",
         ]
+
+        jev_dict = {
+            k: v.model_dump() if hasattr(v, "model_dump") else v
+            for k, v in jev_res.decisions.items()
+        }
 
         return JEVVerificationVerdict(
             claim_triplet=claim_triplet,
@@ -147,4 +179,6 @@ class OpenJEVLogicEngine:
             p_contradiction=p_con,
             p_neutral=p_neu,
             reasoning_chain=reasoning_chain,
+            open_jev_response=jev_dict,
         )
+

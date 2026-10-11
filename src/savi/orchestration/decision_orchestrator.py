@@ -1,14 +1,16 @@
 """
-Phase 2 Decision Orchestrator (Open-Jev / LLM decision head).
+Phase 2 Decision Orchestrator (Open-Jev System 1 decision head).
 Coordinates multi-agent scheduling, tool selection (search vs scrape vs API),
-fallback tiers, and PPO feedback hints according to SAVI Agent Context Spec Section 2.
+fallback tiers, and PPO feedback hints according to Zefan-Cai/Open-Jev specification
+and SAVI Agent Context Spec Section 2.
 """
 
 from __future__ import annotations
-from dataclasses import dataclass, field
 from typing import List, Dict, Any, Optional
 from pydantic import BaseModel, Field
 from savi.config import settings
+from savi.open_jev.client import OpenJevClient
+from savi.open_jev.schema import ChoiceQuestion, NoulQuestion, ScoreQuestion
 
 
 class OrchestratorDecisionInput(BaseModel):
@@ -33,29 +35,73 @@ class OrchestratorDecisionOutput(BaseModel):
     ppo_action_hint: Optional[str] = None  # INCREASE_DELAY | SWITCH_PARSER | SOFT_BACKOFF | ROTATE_KEY | null
     fallback_tier: int = 1
     reasoning: str
+    open_jev_probabilities: Optional[Dict[str, Any]] = None
+    risk_score: Optional[float] = None
 
 
 class DecisionOrchestrator:
     """
     Open-Jev Decision Engine:
     Evaluates current state, rate limit triggers, candidate URLs, and platform needs
-    to issue the optimal operational decision for the quad-agent mesh.
+    using Open-Jev typed primitives (Choice, Noul, Score) to issue optimal operational decisions.
     """
-    def __init__(self):
-        self.model_id = "ZefanCai/Open-Jev-2B"
+    def __init__(self, model_id: Optional[str] = None):
+        self.model_id = model_id or settings.credentials.open_jev_model_id
+        self.open_jev_client = OpenJevClient(model_id=self.model_id)
 
     def plan_next_step(self, plan_input: OrchestratorDecisionInput) -> OrchestratorDecisionOutput:
         """
-        Determines the next agent, execution tier, and PPO action hint
-        based on the decision rubric in §2.4 & §0.1.3 of context.md.
+        Determines next agent, execution tier, and PPO action hint
+        using Open-Jev System 1 primitives and §2 decision rubric.
         """
         last_results = plan_input.last_execution_results
-        web_res = last_results.get("web", {})
         key_idx = plan_input.active_gemini_key_index
 
-        # Check for 429 rate limits or quota exhaustion
         hit_429 = any(res.get("hit_429_rate_limit", False) for res in last_results.values())
         hit_captcha = any(res.get("hit_captcha_challenge", False) for res in last_results.values())
+
+        # Construct serialized context state for Open-Jev evaluation
+        state_str = (
+            f"Intent: {plan_input.user_intent}. "
+            f"Platforms: {','.join(plan_input.platforms_requested)}. "
+            f"Active Gemini Key: {key_idx}. "
+            f"Candidate URLs: {len(plan_input.candidate_urls_from_gemini)}. "
+            f"Rate Limit 429: {hit_429}. "
+            f"Captcha Wall: {hit_captcha}."
+        )
+
+        # Open-Jev System 1 query with Choice, Noul, and Score primitives
+        jev_response = self.open_jev_client.ask(
+            state=state_str,
+            questions={
+                "rate_limit_noul": {
+                    "type": "noul",
+                    "instructions": "Did the ingestion mesh experience HTTP 429 or quota exhaustion?",
+                },
+                "captcha_noul": {
+                    "type": "noul",
+                    "instructions": "Was a bot wall, cloudflare challenge, or captcha encountered?",
+                },
+                "action_choice": {
+                    "type": "choice",
+                    "options": ["search", "scrape", "api", "backoff", "rotate_key", "switch_parser"],
+                    "instructions": "Select operational action for next scraping cycle",
+                },
+                "risk_score": {
+                    "type": "score",
+                    "instructions": "Evaluate ingestion throttling risk and latency penalty",
+                    "levels": [1, 2, 3, 4, 5],
+                },
+            },
+        )
+
+        risk_level = 1.0
+        if "risk_score" in jev_response.decisions:
+            risk_level = float(jev_response.decisions["risk_score"].score)
+
+        probs_summary = {
+            k: v.probabilities for k, v in jev_response.decisions.items() if hasattr(v, "probabilities")
+        }
 
         # Rule 1: Handle rate limits with PPO Key Rotation or Soft Backoff
         if hit_429:
@@ -69,6 +115,8 @@ class DecisionOrchestrator:
                     ppo_action_hint="ROTATE_KEY",
                     fallback_tier=2,
                     reasoning="HTTP 429 / quota detected on primary Gemini key. Rotating to secondary GEMINI_API_KEY_2 (Tier 2).",
+                    open_jev_probabilities=probs_summary,
+                    risk_score=risk_level,
                 )
             else:
                 return OrchestratorDecisionOutput(
@@ -80,6 +128,8 @@ class DecisionOrchestrator:
                     ppo_action_hint="SOFT_BACKOFF",
                     fallback_tier=3,
                     reasoning="Multiple rate limits encountered across primary and secondary keys. Triggering soft backoff.",
+                    open_jev_probabilities=probs_summary,
+                    risk_score=risk_level,
                 )
 
         # Rule 2: Handle Captchas by switching parser strategy
@@ -93,11 +143,12 @@ class DecisionOrchestrator:
                 ppo_action_hint="SWITCH_PARSER",
                 fallback_tier=2,
                 reasoning="Captcha / bot wall encountered on native DOM parser. Switching parser mode to Firecrawl.",
+                open_jev_probabilities=probs_summary,
+                risk_score=risk_level,
             )
 
         # Rule 3: Web Discovery -> Scrape Handover
         if plan_input.candidate_urls_from_gemini:
-            # URLs discovered, ready for Firecrawl extraction
             target_url = plan_input.candidate_urls_from_gemini[0]
             parallel = [p for p in plan_input.platforms_requested if p in ["reddit", "twitter", "youtube"]]
             return OrchestratorDecisionOutput(
@@ -111,6 +162,8 @@ class DecisionOrchestrator:
                 ppo_action_hint=None,
                 fallback_tier=1,
                 reasoning=f"Discovered candidate URLs from Gemini. Dispatching Firecrawl to extract sanitized article from {target_url}.",
+                open_jev_probabilities=probs_summary,
+                risk_score=risk_level,
             )
 
         # Rule 4: Initial Step -> Initiate Gemini Search Discovery
@@ -127,6 +180,8 @@ class DecisionOrchestrator:
                 ppo_action_hint=None,
                 fallback_tier=1,
                 reasoning="Initial query step: executing Gemini discovery with Google Search grounding to identify authoritative URLs.",
+                open_jev_probabilities=probs_summary,
+                risk_score=risk_level,
             )
 
         # Default fallback
@@ -142,4 +197,6 @@ class DecisionOrchestrator:
             ppo_action_hint=None,
             fallback_tier=1,
             reasoning=f"Routing directly to primary platform {first_plat}.",
+            open_jev_probabilities=probs_summary,
+            risk_score=risk_level,
         )

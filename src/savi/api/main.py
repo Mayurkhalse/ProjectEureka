@@ -238,6 +238,12 @@ app = FastAPI(
 )
 
 
+from savi.open_jev import open_jev_router
+
+app.include_router(open_jev_router)
+app.include_router(open_jev_router, prefix="/api/v1/openjev")
+
+
 class InvestigateRequest(BaseModel):
     query: str
     platforms: List[str] = Field(default_factory=lambda: ["web", "reddit", "twitter", "youtube"])
@@ -252,6 +258,12 @@ async def health_check():
         "architecture": "CQRS (Neo4j Command / PostgreSQL Query)",
         "postgres_connected": orchestrator.query_store.is_postgres,
         "neo4j_connected": orchestrator.neo4j_live.is_connected,
+        "open_jev": {
+            "ready": True,
+            "model_id": settings.credentials.open_jev_model_id,
+            "primitives": ["choice", "noul", "score"],
+            "server_url": settings.credentials.open_jev_server_url,
+        },
         "credentials": {
             "gemini_primary_configured": bool(settings.credentials.gemini_api_key),
             "gemini_secondary_configured": bool(settings.credentials.gemini_api_key_2),

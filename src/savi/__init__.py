@@ -20,6 +20,14 @@ from savi.persistence.postgres_store import IntelligenceQueryStore
 from savi.persistence.cdc_worker import CDCTransactionWorker
 from savi.orchestration.decision_orchestrator import DecisionOrchestrator, OrchestratorDecisionInput, OrchestratorDecisionOutput
 from savi.ingestion.agents.web_discovery_gemini import GeminiWebDiscoveryAgent
+from savi.open_jev import (
+    OpenJevClient,
+    ChoiceQuestion,
+    NoulQuestion,
+    ScoreQuestion,
+    OpenJevResponse,
+    LocalOpenJevEngine,
+)
 
 __all__ = [
     "settings",
@@ -44,4 +52,10 @@ __all__ = [
     "OrchestratorDecisionInput",
     "OrchestratorDecisionOutput",
     "GeminiWebDiscoveryAgent",
+    "OpenJevClient",
+    "ChoiceQuestion",
+    "NoulQuestion",
+    "ScoreQuestion",
+    "OpenJevResponse",
+    "LocalOpenJevEngine",
 ]

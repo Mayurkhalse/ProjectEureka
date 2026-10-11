@@ -23,6 +23,9 @@ class APICredentialsConfig(BaseModel):
     apify_api_key: str = Field(default_factory=lambda: os.getenv("APIFY_API_KEY", os.getenv("APIFY_TOKEN", "")))
     apify_token: str = Field(default_factory=lambda: os.getenv("APIFY_TOKEN", os.getenv("APIFY_API_KEY", "")))
     youtube_api_key: str = Field(default_factory=lambda: os.getenv("YOUTUBE_API_KEY", ""))
+    open_jev_server_url: str = Field(default_factory=lambda: os.getenv("OPEN_JEV_SERVER_URL", "http://127.0.0.1:8791"))
+    open_jev_model_id: str = Field(default_factory=lambda: os.getenv("OPEN_JEV_MODEL_ID", "ZefanCai/Open-Jev-27B-v1.1"))
+    open_jev_temperature: float = Field(default_factory=lambda: float(os.getenv("OPEN_JEV_TEMPERATURE", "0.7")))
 
     def get_gemini_key(self, index: int = 0) -> str:
         """Returns Gemini key for the given rotation index (0: primary, 1: secondary)."""
