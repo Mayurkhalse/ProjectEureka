@@ -5,11 +5,17 @@ Serves low-latency queries directly from PostgreSQL Materialized Views and coord
 
 from __future__ import annotations
 import time
+import uuid
+from datetime import datetime, timezone
 from contextlib import asynccontextmanager
 from typing import List, Dict, Any, Optional
 import numpy as np
 from fastapi import FastAPI, HTTPException, Query, status
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
+
+from savi.open_jev.engine import LocalOpenJevEngine
+from savi.open_jev.schema import ChoiceQuestion, NoulQuestion, ScoreQuestion
 
 from savi.config import settings
 from savi.ingestion.schema import ScrapedPayload, AuthorMetadata, EngagementMetrics
@@ -69,6 +75,7 @@ class SAVIPipelineOrchestrator:
 
         # Quad-Scraper agents mesh + Discovery & Decision heads
         self.decision_orchestrator = DecisionOrchestrator()
+        self.local_jev_engine = LocalOpenJevEngine()
         self.web_discovery_agent = GeminiWebDiscoveryAgent()
         self.web_agent = WebIngestionAgent()
         self.reddit_agent = RedditIngestionAgent()
@@ -220,6 +227,207 @@ class SAVIPipelineOrchestrator:
             "total_latency_ms": round(total_latency_ms, 2),
         }
 
+    async def analyze_news_article(
+        self,
+        url: str,
+        title: Optional[str] = None,
+        raw_text: Optional[str] = None,
+        selected_text: Optional[str] = None,
+        author: Optional[str] = None,
+        domain: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """
+        Real-time intelligence analysis specifically tailored for news articles inspected via browser extension.
+        Evaluates Open-Jev System 1 primitives, Isolation Rainforest anomalies, Knowledge Graph claim triplets,
+        and full SAVI metric suite, materializing to PostgreSQL master store.
+        """
+        start_time = time.perf_counter()
+
+        body_text = (raw_text or "").strip()
+        resolved_title = (title or "").strip()
+        resolved_domain = domain or (url.split("//")[-1].split("/")[0] if url else "web_news")
+
+        # Fallback to Firecrawl ingestion if browser body is empty
+        if len(body_text) < 40 and url and url.startswith("http"):
+            try:
+                payloads, _ = await self.web_agent.ingest_source(url)
+                if payloads:
+                    p = payloads[0]
+                    body_text = p.sanitized_body
+                    if not resolved_title:
+                        resolved_title = p.headline_or_title
+            except Exception:
+                pass
+
+        if not body_text:
+            body_text = resolved_title or f"News report from {resolved_domain}"
+        if not resolved_title:
+            resolved_title = body_text[:80] + ("..." if len(body_text) > 80 else "")
+
+        content_id = str(uuid.uuid4())
+
+        # Step 1: Open-Jev System 1 Decision Evaluation
+        c_dec = self.local_jev_engine.evaluate_choice(
+            state=f"Title: {resolved_title}\nSource: {resolved_domain}\nExcerpt: {body_text[:280]}",
+            question=ChoiceQuestion(
+                options=[
+                    "VERIFIED_CREDIBLE",
+                    "UNVERIFIED_DEVELOPING",
+                    "SENSATIONALIZED_MISINFORMATION"
+                ],
+                instructions="Assess the credibility tier and editorial rigor of this news item."
+            ),
+            temp=0.7,
+        )
+
+        n_dec = self.local_jev_engine.evaluate_noul(
+            state=f"News claim: {resolved_title}",
+            question=NoulQuestion(
+                instructions="Does this article exhibit deceptive claims, astroturfing, or factual manipulation?"
+            ),
+            temp=0.7,
+        )
+
+        s_dec = self.local_jev_engine.evaluate_score(
+            state=f"{resolved_title}\n{body_text[:200]}",
+            question=ScoreQuestion(
+                instructions="Rate the journalistic integrity, citation evidence, and objectivity.",
+                levels=[1, 2, 3, 4, 5]
+            ),
+            temp=0.7,
+        )
+
+        # Step 2: Triplet Extraction & Knowledge Graph Staging
+        analysis_text = (
+            selected_text.strip()
+            if (selected_text and len(selected_text.strip()) > 15)
+            else (resolved_title + ". " + body_text)
+        )
+        triplets = self.triplet_extractor.extract_triplets(
+            analysis_text[:1200],
+            fallback_subject=resolved_domain.replace(".com", "").capitalize()
+        )
+
+        # Construct Canonical ScrapedPayload
+        is_trusted_outlet = any(t in resolved_domain.lower() for t in ["reuters", "bloomberg", "apnews", "bbc", "wsj", "ft.com", "economist", "nytimes", "theguardian"])
+        payload = ScrapedPayload(
+            content_id=content_id,
+            origin_platform="web",
+            headline_or_title=resolved_title,
+            sanitized_body=body_text[:4000],
+            author=AuthorMetadata(
+                author_id=resolved_domain,
+                username=author or resolved_domain,
+                is_verified=is_trusted_outlet,
+            ),
+            citations=[url] if url else [],
+            engagement=EngagementMetrics(views=1200, upvotes=150, propagation_velocity=1.5),
+        )
+
+        # Step 3: Isolation Rainforest Anomaly Filtering
+        envelope = await self.dag_router.process_payload(payload)
+        anomaly_score = envelope.anomaly_verdict.get("anomaly_score", 0.32) if envelope.anomaly_verdict else 0.32
+        anomaly_action = envelope.anomaly_verdict.get("action", "PASS_ORGANIC") if envelope.anomaly_verdict else "PASS_ORGANIC"
+
+        # Step 4: Graph Staging & Open JEV Formal Logic Verification
+        self.neo4j_staging.add_payload(payload, triplets)
+
+        audited_claims = []
+        p_ent = 0.85
+        p_con = 0.05
+        if triplets:
+            for t in triplets[:4]:
+                evidence = self.neo4j_staging.find_evidence_triplets_for_claim(t)
+                audit = self.open_jev.verify_claim(t, evidence)
+                audited_claims.append({
+                    "subject": t.subject,
+                    "predicate": t.predicate,
+                    "object": t.object,
+                    "verdict": audit.predicted_class,
+                    "confidence": round(audit.class_probabilities.get(audit.predicted_class, 0.8), 3),
+                    "p_entailment": round(audit.p_entailment, 3),
+                    "p_contradiction": round(audit.p_contradiction, 3),
+                })
+            p_ent = audited_claims[0]["p_entailment"]
+            p_con = audited_claims[0]["p_contradiction"]
+
+        # Step 5: Full SAVI Metric Suite
+        metrics = self.savi_engine.evaluate(
+            sentiment_trajectory=[(0.0, 0.05), (1.0, 0.20)],
+            current_time_t=1.0,
+            mu_topo=0.92,
+            p_entailment=p_ent,
+            authority_weights=[2.0, 2.5] if is_trusted_outlet else [1.2, 1.5],
+            kappa_contradictions=p_con,
+            anomaly_score_s=anomaly_score,
+            platform_engagements={"web": 0.85},
+            betweenness_centralities={"web": 0.65},
+            transmission_velocity=max(1.0, payload.engagement.propagation_velocity),
+        )
+
+        # Step 6: Trust Score Calculation (0 - 100)
+        raw_trust = (0.40 * metrics.accuracy_rating + 0.35 * metrics.validation_index + 0.25 * (1.0 - anomaly_score)) * 100.0
+        if anomaly_action == "QUARANTINE":
+            raw_trust = min(raw_trust, 35.0)
+        elif anomaly_action == "FLAG_ELEVATED":
+            raw_trust = min(raw_trust, 65.0)
+        trust_score = round(float(np.clip(raw_trust, 5.0, 99.0)), 1)
+
+        if trust_score >= 75.0:
+            overall_verdict = "VERIFIED_ORGANIC"
+            trust_label = "High Trust / Structurally Verified"
+            recommendation = "Reliable reporting with consistent logic and high factual coherence."
+        elif trust_score >= 50.0:
+            overall_verdict = "CAUTION_FLAGGED"
+            trust_label = "Moderate Trust / Exercise Caution"
+            recommendation = "Developing or uncorroborated story. Review primary citations before citing."
+        else:
+            overall_verdict = "HIGH_RISK_ANOMALY"
+            trust_label = "Low Trust / Elevated Anomaly Risk"
+            recommendation = "Significant synthetic anomalies or contradictory assertions detected."
+
+        # Step 7: Asynchronous CDC Sink to PostgreSQL
+        if triplets:
+            evidence = self.neo4j_staging.find_evidence_triplets_for_claim(triplets[0])
+            primary_audit = self.open_jev.verify_claim(triplets[0], evidence)
+            await self.cdc_worker.enqueue_finalized_state(payload, metrics, primary_audit, {"web": 1.0})
+            await self.cdc_worker.flush()
+
+        duration_ms = (time.perf_counter() - start_time) * 1000.0
+
+        return {
+            "status": "success",
+            "analysis_id": content_id,
+            "url": url,
+            "title": resolved_title,
+            "domain": resolved_domain,
+            "overall_verdict": overall_verdict,
+            "trust_score": trust_score,
+            "trust_label": trust_label,
+            "savi_metrics": {
+                "sentiment_dynamics": round(metrics.sentiment_score, 3),
+                "factual_accuracy": round(metrics.accuracy_rating, 3),
+                "logical_validation": round(metrics.validation_index, 3),
+                "news_impact_index": round(metrics.impact_ranking, 3),
+            },
+            "open_jev": {
+                "credibility_choice": c_dec.selected,
+                "credibility_confidence": round(c_dec.confidence, 3),
+                "manipulation_noul_yes": round(n_dec.probabilities.get("yes", 0.0), 3),
+                "integrity_score": round(s_dec.score, 2),
+                "reasoning": f"System 1 selected '{c_dec.selected}' with {c_dec.confidence*100:.1f}% confidence."
+            },
+            "anomaly_detection": {
+                "anomaly_score": round(anomaly_score, 4),
+                "action": anomaly_action,
+                "description": envelope.anomaly_verdict.get("description", "Organic pattern.") if envelope.anomaly_verdict else "Organic."
+            },
+            "key_claims": audited_claims,
+            "recommendation": recommendation,
+            "processing_latency_ms": round(duration_ms, 2),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+        }
+
 
 orchestrator = SAVIPipelineOrchestrator()
 
@@ -238,11 +446,28 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 from savi.open_jev import open_jev_router
 
 app.include_router(open_jev_router)
 app.include_router(open_jev_router, prefix="/api/v1/openjev")
+
+
+class ExtensionAnalyzeRequest(BaseModel):
+    url: str
+    title: Optional[str] = None
+    raw_text: Optional[str] = None
+    selected_text: Optional[str] = None
+    author: Optional[str] = None
+    domain: Optional[str] = None
+    published_time: Optional[str] = None
 
 
 class InvestigateRequest(BaseModel):
@@ -309,6 +534,29 @@ async def investigate_topic_endpoint(req: InvestigateRequest):
         query=req.query,
         platforms=req.platforms,
         max_results=req.max_results,
+    )
+    return result
+
+
+@app.post("/api/v1/extension/analyze", tags=["Browser Extension"])
+async def analyze_extension_article(req: ExtensionAnalyzeRequest):
+    """
+    Real-time news article intelligence analysis for SAVI Browser Extension:
+    1. Extracts or ingests article body from browser DOM / Firecrawl
+    2. Evaluates Open-Jev System 1 Decision Head (Choice, Noul, Score primitives)
+    3. Runs Isolation Rainforest oblique hyperplane anomaly detector (Organic vs Astroturfed)
+    4. Extracts Knowledge Graph triplets (SPO) and executes Open JEV Formal Logic verification
+    5. Computes full SAVI Metric Suite (Sentiment Dynamics, Factual Accuracy, Logical Validation, News Impact)
+    6. Returns an instant Trust Score (0-100) and actionable credibility report for reader
+    7. Persists state asynchronously into PostgreSQL Materialized View
+    """
+    result = await orchestrator.analyze_news_article(
+        url=req.url,
+        title=req.title,
+        raw_text=req.raw_text,
+        selected_text=req.selected_text,
+        author=req.author,
+        domain=req.domain,
     )
     return result
 

@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SAVI Intelligence Auditor</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="savi-container">
+    <!-- Header -->
+    <header class="savi-header">
+      <div class="brand">
+        <div class="logo-orb">
+          <span class="logo-symbol">⚡</span>
+        </div>
+        <div class="brand-text">
+          <h1>SAVI INTELLIGENCE</h1>
+          <span class="subtitle">Autonomous News Verification</span>
+        </div>
+      </div>
+      <div class="header-actions">
+        <div id="vpsStatus" class="status-pill status-checking" title="VPS Connection Status">
+          <span class="status-dot"></span>
+          <span id="vpsStatusText">Checking</span>
+        </div>
+        <button id="toggleSettingsBtn" class="icon-btn" title="Configure VPS Server">⚙️</button>
+      </div>
+    </header>
+
+    <!-- VPS Server Settings Drawer (Collapsible) -->
+    <div id="settingsDrawer" class="settings-drawer hidden">
+      <label for="serverUrlInput">SAVI VPS Server URL:</label>
+      <div class="input-row">
+        <input type="text" id="serverUrlInput" placeholder="http://localhost:8000" spellcheck="false" />
+        <button id="saveServerBtn" class="btn-save">Save</button>
+      </div>
+      <span class="hint">Supports localhost:8000 or production VPS https://your-savi-vps.com</span>
+    </div>
+
+    <!-- Active Article Context Card -->
+    <section class="card article-context">
+      <div class="context-meta">
+        <span id="articleDomain" class="domain-tag">Connecting...</span>
+        <span id="selectionNotice" class="selection-pill hidden">Highlight Selected</span>
+      </div>
+      <h2 id="articleTitle" class="article-title">Extracting headline from current tab...</h2>
+      <p id="articleExcerpt" class="article-excerpt"></p>
+
+      <button id="analyzeBtn" class="btn-primary">
+        <span class="btn-icon">⚡</span>
+        <span id="btnText">Run Full SAVI Audit</span>
+      </button>
+    </section>
+
+    <!-- Loading State -->
+    <div id="loadingState" class="loading-state hidden">
+      <div class="scanner-line"></div>
+      <div class="loading-spinner"></div>
+      <p id="loadingMsg">Auditing structural knowledge graph & Open-Jev System 1...</p>
+    </div>
+
+    <!-- Error State -->
+    <div id="errorState" class="error-box hidden">
+      <span class="error-icon">⚠️</span>
+      <p id="errorMsg">Failed to connect to SAVI VPS backend.</p>
+      <button id="retryBtn" class="btn-secondary">Retry Audit</button>
+    </div>
+
+    <!-- Results Panel -->
+    <main id="resultsPanel" class="results-panel hidden">
+      <!-- Trust Score Gauge Card -->
+      <section class="card trust-card">
+        <div class="trust-header">
+          <div class="trust-metric">
+            <span class="label">OVERALL TRUST RATING</span>
+            <div class="score-display">
+              <span id="trustScoreVal" class="score-number">--</span>
+              <span class="score-unit">%</span>
+            </div>
+          </div>
+          <div class="verdict-container">
+            <span id="verdictBadge" class="verdict-badge">VERIFIED</span>
+            <span id="trustLabel" class="trust-label">Structurally Verified</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- SAVI Analytical Matrix (S, A, V, I) -->
+      <section class="card metrics-card">
+        <h3 class="section-title">SAVI ANALYTICAL MATRIX</h3>
+        <div class="metric-grid">
+          <div class="metric-item">
+            <div class="metric-meta">
+              <span class="metric-name">Sentiment (S<sub>dyn</sub>)</span>
+              <span id="metricS" class="metric-val">--</span>
+            </div>
+            <div class="bar-track"><div id="barS" class="bar-fill bar-cyan" style="width: 50%;"></div></div>
+          </div>
+
+          <div class="metric-item">
+            <div class="metric-meta">
+              <span class="metric-name">Factual Accuracy (A<sub>score</sub>)</span>
+              <span id="metricA" class="metric-val">--</span>
+            </div>
+            <div class="bar-track"><div id="barA" class="bar-fill bar-emerald" style="width: 50%;"></div></div>
+          </div>
+
+          <div class="metric-item">
+            <div class="metric-meta">
+              <span class="metric-name">Logical Validation (V<sub>index</sub>)</span>
+              <span id="metricV" class="metric-val">--</span>
+            </div>
+            <div class="bar-track"><div id="barV" class="bar-fill bar-emerald" style="width: 50%;"></div></div>
+          </div>
+
+          <div class="metric-item">
+            <div class="metric-meta">
+              <span class="metric-name">News Impact Index (I<sub>impact</sub>)</span>
+              <span id="metricI" class="metric-val">--</span>
+            </div>
+            <div class="bar-track"><div id="barI" class="bar-fill bar-purple" style="width: 50%;"></div></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Open-Jev System 1 Decision Head & Isolation Rainforest -->
+      <section class="card intelligence-card">
+        <h3 class="section-title">SYSTEM 1 HEAD & ANOMALY FILTER</h3>
+        <div class="intel-grid">
+          <div class="intel-box">
+            <span class="intel-label">Open-Jev Decision</span>
+            <span id="openJevChoice" class="intel-val val-green">CREDIBLE</span>
+            <span id="openJevConfidence" class="intel-sub">Conf: --</span>
+          </div>
+
+          <div class="intel-box">
+            <span class="intel-label">Rainforest Boundary</span>
+            <span id="anomalyAction" class="intel-val val-green">PASS_ORGANIC</span>
+            <span id="anomalyScore" class="intel-sub">s(x,n): --</span>
+          </div>
+        </div>
+        <p id="openJevReasoning" class="intel-reasoning"></p>
+      </section>
+
+      <!-- Key Claims Verification (Triplets) -->
+      <section class="card claims-card">
+        <h3 class="section-title">VERIFIED CLAIMS & KNOWLEDGE TRIPLETS</h3>
+        <div id="claimsList" class="claims-list">
+          <!-- Dynamically populated -->
+        </div>
+      </section>
+
+      <!-- Recommendation Card -->
+      <section class="card recommendation-card">
+        <div class="rec-icon">🛡️</div>
+        <div class="rec-content">
+          <span class="rec-title">Editorial Recommendation</span>
+          <p id="recommendationText" class="rec-text"></p>
+        </div>
+      </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="savi-footer">
+      <span id="latencyDisplay" class="latency">⚡ Ready to analyze</span>
+      <span class="cqrs-tag">CQRS Sub-10ms Serving</span>
+    </footer>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
