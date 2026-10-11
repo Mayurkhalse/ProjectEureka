@@ -125,7 +125,8 @@ class IntelligenceQueryStore:
                         accuracy_rating, validation_index, impact_ranking, anomaly_metric,
                         open_jev_audit, platform_distribution, multimodal_features
                     ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                    ON CONFLICT (content_id) DO UPDATE SET
+                    ON CONFLICT (canonical_hash) DO UPDATE SET
+                        content_id = EXCLUDED.content_id,
                         primary_headline = EXCLUDED.primary_headline,
                         sentiment_score = EXCLUDED.sentiment_score,
                         accuracy_rating = EXCLUDED.accuracy_rating,

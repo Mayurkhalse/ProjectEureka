@@ -21,3 +21,9 @@ htmlcov/
 Thumbs.db
 .vscode/
 .idea/
+
+# Local Environment & Credentials
+.env
+.env.*
+!.env.example
+context.md

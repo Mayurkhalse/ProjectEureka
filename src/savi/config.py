@@ -1,10 +1,39 @@
 """
 Configuration module for SAVI (Sentiment, Accuracy, Validation, Impact) Platform.
-Contains hyperparameter defaults, network topologies, and service settings.
+Contains hyperparameter defaults, network topologies, API credentials, and service settings.
 """
 
-from typing import List
+import os
+from typing import List, Tuple
+from dotenv import load_dotenv
 from pydantic import BaseModel, Field
+
+# Load local environment variables from .env
+load_dotenv()
+
+
+class APICredentialsConfig(BaseModel):
+    """Live API credentials and paired key rotation registry for external model endpoints."""
+    firecrawl_api_key: str = Field(default_factory=lambda: os.getenv("FIRECRAWL_API_KEY", ""))
+    gemini_api_key: str = Field(default_factory=lambda: os.getenv("GEMINI_API_KEY", ""))
+    gemini_api_key_2: str = Field(default_factory=lambda: os.getenv("GEMINI_API_KEY_2", ""))
+    gemini_model: str = Field(default_factory=lambda: os.getenv("GEMINI_MODEL", "gemini-2.0-flash"))
+    openai_api_key: str = Field(default_factory=lambda: os.getenv("OPENAI_API_KEY", ""))
+    openai_chat_model: str = Field(default_factory=lambda: os.getenv("OPENAI_CHAT_MODEL", "gpt-4o-mini"))
+    apify_api_key: str = Field(default_factory=lambda: os.getenv("APIFY_API_KEY", os.getenv("APIFY_TOKEN", "")))
+    apify_token: str = Field(default_factory=lambda: os.getenv("APIFY_TOKEN", os.getenv("APIFY_API_KEY", "")))
+    youtube_api_key: str = Field(default_factory=lambda: os.getenv("YOUTUBE_API_KEY", ""))
+
+    def get_gemini_key(self, index: int = 0) -> str:
+        """Returns Gemini key for the given rotation index (0: primary, 1: secondary)."""
+        if index == 1 and self.gemini_api_key_2:
+            return self.gemini_api_key_2
+        return self.gemini_api_key or self.gemini_api_key_2
+
+    def rotate_gemini_key(self, current_index: int) -> Tuple[int, str]:
+        """Toggles between primary (0) and secondary (1) Gemini API keys."""
+        new_index = 1 if current_index == 0 else 0
+        return new_index, self.get_gemini_key(new_index)
 
 
 class PPOConfig(BaseModel):
@@ -69,19 +98,20 @@ class SAVIMetricsConfig(BaseModel):
 
 class DatabaseConfig(BaseModel):
     """Persistence and Graph Database configuration."""
-    postgres_host: str = "localhost"
-    postgres_port: int = 5433
-    postgres_db: str = "savi_master"
-    postgres_user: str = "savi_admin"
-    postgres_password: str = "savi_secret"
+    postgres_host: str = Field(default_factory=lambda: os.getenv("SAVI_POSTGRES_HOST", "localhost"))
+    postgres_port: int = Field(default_factory=lambda: int(os.getenv("SAVI_POSTGRES_PORT", "5433")))
+    postgres_db: str = Field(default_factory=lambda: os.getenv("SAVI_POSTGRES_DB", "savi_master"))
+    postgres_user: str = Field(default_factory=lambda: os.getenv("SAVI_POSTGRES_USER", "savi_admin"))
+    postgres_password: str = Field(default_factory=lambda: os.getenv("SAVI_POSTGRES_PASSWORD", "savi_secret"))
 
-    neo4j_uri: str = "bolt://localhost:7687"
-    neo4j_user: str = "neo4j"
-    neo4j_password: str = "savi_graph_secret"
+    neo4j_uri: str = Field(default_factory=lambda: os.getenv("SAVI_NEO4J_URI", "bolt://localhost:7687"))
+    neo4j_user: str = Field(default_factory=lambda: os.getenv("SAVI_NEO4J_USER", "neo4j"))
+    neo4j_password: str = Field(default_factory=lambda: os.getenv("SAVI_NEO4J_PASSWORD", "savi_graph_secret"))
 
 
 class SAVIConfig(BaseModel):
     """Unified Platform Configuration."""
+    credentials: APICredentialsConfig = Field(default_factory=APICredentialsConfig)
     ppo: PPOConfig = Field(default_factory=PPOConfig)
     rainforest: IsolationRainforestConfig = Field(default_factory=IsolationRainforestConfig)
     pipeline: PipelineConfig = Field(default_factory=PipelineConfig)

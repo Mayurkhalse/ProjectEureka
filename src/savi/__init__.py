@@ -18,6 +18,8 @@ from savi.graph.open_jev import OpenJEVLogicEngine
 from savi.metrics.savi_suite import SAVIEngine, SAVIMetricsResult
 from savi.persistence.postgres_store import IntelligenceQueryStore
 from savi.persistence.cdc_worker import CDCTransactionWorker
+from savi.orchestration.decision_orchestrator import DecisionOrchestrator, OrchestratorDecisionInput, OrchestratorDecisionOutput
+from savi.ingestion.agents.web_discovery_gemini import GeminiWebDiscoveryAgent
 
 __all__ = [
     "settings",
@@ -38,4 +40,8 @@ __all__ = [
     "SAVIMetricsResult",
     "IntelligenceQueryStore",
     "CDCTransactionWorker",
+    "DecisionOrchestrator",
+    "OrchestratorDecisionInput",
+    "OrchestratorDecisionOutput",
+    "GeminiWebDiscoveryAgent",
 ]
