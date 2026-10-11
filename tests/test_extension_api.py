@@ -130,6 +130,7 @@ def test_extension_manifest_and_sidepanel_integrity():
     assert (ext_dir / "sidepanel.html").exists(), "sidepanel.html must exist"
     assert (ext_dir / "sidepanel.js").exists(), "sidepanel.js must exist"
     assert (ext_dir / "sidepanel.css").exists(), "sidepanel.css must exist"
+    assert (ext_dir / "spoof_analysis.js").exists(), "spoof_analysis.js must exist"
     assert (ext_dir / "background.js").exists(), "background.js must exist"
     assert (ext_dir / "content.js").exists(), "content.js must exist"
 
