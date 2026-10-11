@@ -35,6 +35,7 @@ from savi.graph.open_jev import OpenJEVLogicEngine
 from savi.metrics.savi_suite import SAVIEngine
 from savi.persistence.postgres_store import IntelligenceQueryStore
 from savi.persistence.cdc_worker import CDCTransactionWorker
+from savi.diagnostics import SystemHealthChecker, SystemHealthReport
 
 
 # Orchestrator coordinating end-to-end flow
@@ -252,27 +253,45 @@ class InvestigateRequest(BaseModel):
 
 @app.get("/health", tags=["System"])
 async def health_check():
+    """Fast health ping summarizing subsystem statuses and runtime metrics."""
+    checker = SystemHealthChecker(query_store=orchestrator.query_store)
+    report = checker.generate_report()
     return {
-        "status": "healthy",
+        "status": report.overall_status.lower(),
+        "overall_status": report.overall_status,
         "service": "SAVI Intelligence Platform",
-        "architecture": "CQRS (Neo4j Command / PostgreSQL Query)",
+        "uptime_seconds": report.uptime_seconds,
+        "summary": report.summary,
+        "components": {
+            k: {
+                "name": v.name,
+                "status": v.status,
+                "latency_ms": v.latency_ms,
+                "message": v.message,
+            }
+            for k, v in report.components.items()
+        },
         "postgres_connected": orchestrator.query_store.is_postgres,
         "neo4j_connected": orchestrator.neo4j_live.is_connected,
-        "open_jev": {
-            "ready": True,
-            "model_id": settings.credentials.open_jev_model_id,
-            "primitives": ["choice", "noul", "score"],
-            "server_url": settings.credentials.open_jev_server_url,
-        },
-        "credentials": {
-            "gemini_primary_configured": bool(settings.credentials.gemini_api_key),
-            "gemini_secondary_configured": bool(settings.credentials.gemini_api_key_2),
-            "firecrawl_configured": bool(settings.credentials.firecrawl_api_key),
-            "openai_configured": bool(settings.credentials.openai_api_key),
-            "apify_configured": bool(settings.credentials.apify_api_key),
-        },
+        "open_jev_model": settings.credentials.open_jev_model_id,
         "version": "1.0.0",
     }
+
+
+@app.get("/api/v1/system/health", response_model=SystemHealthReport, tags=["Diagnostics", "System"])
+async def get_system_health():
+    """
+    Comprehensive real-time diagnostic audit across all 5 SAVI architectural layers:
+    1. PostgreSQL 16 Master (Tables, Indexes, Materialized View query latency)
+    2. Neo4j Graph Database (Bolt ping, Node & Edge counts, Topology engine)
+    3. Open-Jev System 1 Decision Head (Choice, Noul, Score primitives)
+    4. Isolation Rainforest (Oblique hyperplane trees, anomaly boundaries)
+    5. PPO Reinforcement Learning Controller (Action policy, state normalization)
+    6. External API Credentials & Key Rotation Mesh (Gemini dual-key, Firecrawl, OpenAI, Apify)
+    7. Host Telemetry (Process RSS, System RAM, CPU cores, Uptime, Platform)
+    """
+    checker = SystemHealthChecker(query_store=orchestrator.query_store)
+    return checker.generate_report()
 
 
 @app.post("/api/v1/orchestration/investigate", tags=["Orchestration"])

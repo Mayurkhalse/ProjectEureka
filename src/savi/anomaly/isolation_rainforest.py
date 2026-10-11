@@ -155,9 +155,15 @@ class IsolationRainforest:
         if self.c_subsample <= 0.0:
             return 0.50
 
-        # s(x, n) = 2^(- E[h(x)] / c(n))
         score = float(2.0 ** (- (mean_path / self.c_subsample)))
-        return np.clip(score, 0.0, 1.0)
+        return float(np.clip(score, 0.0, 1.0))
+
+    def predict_anomaly_score(self, X: np.ndarray) -> np.ndarray:
+        """Computes anomaly scores for 1D vector or 2D matrix of observations."""
+        X_arr = np.asarray(X, dtype=np.float32)
+        if X_arr.ndim == 1:
+            return np.array([self.compute_anomaly_score(X_arr)], dtype=np.float32)
+        return np.array([self.compute_anomaly_score(row) for row in X_arr], dtype=np.float32)
 
     def route_decision(self, anomaly_score: float) -> Tuple[str, Dict[str, Any]]:
         """
