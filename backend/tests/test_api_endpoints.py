@@ -1,5 +1,6 @@
 """Integration tests for FastAPI endpoints, RBAC, and review state machine in Project EUREKA."""
 
+import os
 import pytest
 from fastapi.testclient import TestClient
 
@@ -138,5 +139,28 @@ def test_spatio_temporal_graph_endpoint_rbac(client, monkeypatch):
     # 3. Unauthenticated access rejected
     unauth = client.get("/api/v1/graph/spatio-temporal")
     assert unauth.status_code in (401, 403)
+
+
+def test_district_performance_report_endpoint(client):
+    from eureka.processor.generate_english_synthetic import generate_english_dataset
+    from eureka.api.reports_router import _resolve_dataset_path
+
+    path = _resolve_dataset_path()
+    if not os.path.exists(path):
+        generate_english_dataset(output_path=path, total_rows=1000, chunk_size=1000)
+
+    response = client.get("/api/v1/reports/district-performance")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["status"] == "success"
+    assert "evaluated_rows" in data
+    assert "leaderboard" in data
+    assert len(data["leaderboard"]) > 0
+
+    first_entry = data["leaderboard"][0]
+    assert "district" in first_entry
+    assert "raw_metrics" in first_entry
+    assert "pillar_scores" in first_entry
+    assert "total_index" in first_entry
 
 

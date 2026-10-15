@@ -7,6 +7,7 @@ from pydantic import BaseModel
 from typing import Optional
 
 from eureka.api.auth import create_access_token
+from eureka.api.reports_router import router as reports_router
 from eureka.api.routers import conclusions, graph, health, quad, scoring
 from eureka.core.config import get_settings
 from eureka.core.neo4j_driver import Neo4jGraphService
@@ -74,3 +75,4 @@ app.include_router(quad.router)
 app.include_router(conclusions.router)
 app.include_router(scoring.router)
 app.include_router(graph.router)
+app.include_router(reports_router)
