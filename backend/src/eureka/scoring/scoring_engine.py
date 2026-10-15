@@ -111,6 +111,7 @@ class CompositeScoringEngine:
             if p.exists():
                 return p
         candidates = [
+            Path("backend/seed_data"),
             Path("project-eureka/seed_data"),
             Path("seed_data"),
             Path(__file__).resolve().parent.parent.parent.parent / "seed_data",
@@ -122,6 +123,8 @@ class CompositeScoringEngine:
         for c in candidates:
             if c.exists() and (c / "expected_scores.csv").exists():
                 return c
+        if Path("backend/seed_data").exists():
+            return Path("backend/seed_data")
         return Path("project-eureka/seed_data")
 
     @classmethod

@@ -41,7 +41,9 @@ jobs:
           uv pip install torch -f https://download.pytorch.org/whl/cpu/torch_stable.html
 
           # Now install the remaining requirements and test tools
-          if [ -f "project-eureka/requirements.txt" ]; then
+          if [ -f "backend/requirements.txt" ]; then
+            uv pip install --no-build-isolation -r backend/requirements.txt pytest pytest-asyncio httpx
+          elif [ -f "project-eureka/requirements.txt" ]; then
             uv pip install --no-build-isolation -r project-eureka/requirements.txt pytest pytest-asyncio httpx
           elif [ -f "requirements.txt" ]; then
             uv pip install --no-build-isolation -r requirements.txt pytest pytest-asyncio httpx
@@ -49,7 +51,9 @@ jobs:
 
       - name: Run EUREKA 38-Test Suite
         run: |
-          if [ -d "project-eureka/tests" ]; then
+          if [ -d "backend/tests" ]; then
+            uv run pytest backend/tests/ -v
+          elif [ -d "project-eureka/tests" ]; then
             uv run pytest project-eureka/tests/ -v
           else
             uv run pytest tests/ -v

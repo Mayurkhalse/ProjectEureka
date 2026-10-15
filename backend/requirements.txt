@@ -45,6 +45,7 @@ passlib[bcrypt]>=1.7.4
 # Utilities & Resilience
 tenacity>=8.2.3
 numpy>=1.26.4
+pandas>=2.0.0
 networkx>=3.2.1
 
 # Testing

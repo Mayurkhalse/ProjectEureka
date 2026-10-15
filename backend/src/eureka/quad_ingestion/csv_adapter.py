@@ -30,12 +30,13 @@ class CSVAdapter(BaseIngestionAdapter):
         else:
             # Locate seed_data relative to project root or current working dir
             candidate_paths = [
+                Path("backend/seed_data"),
                 Path("project-eureka/seed_data"),
                 Path("seed_data"),
                 Path(__file__).resolve().parent.parent.parent.parent / "seed_data",
                 Path(__file__).resolve().parent.parent.parent.parent / "Maha_Command_Center_Student_Pack" / "Maha_Command_Center_Student_Pack" / "2_Seed_Data",
             ]
-            self.seed_dir = next((p for p in candidate_paths if p.exists()), Path("seed_data"))
+            self.seed_dir = next((p for p in candidate_paths if p.exists()), Path("backend/seed_data") if Path("backend/seed_data").exists() else Path("seed_data"))
 
     def resolve_file_path(self, filename_or_path: str) -> Path:
         """Resolve full path to CSV file."""

@@ -38,6 +38,9 @@ fang-algo/
 !project-eureka/seed_data/*.csv
 !seed_data/
 !seed_data/*.csv
+seed_data/*extreme_scale.csv
+*extreme_scale.csv
+*synthetic*.csv
 
 # Scratch & temporary ONNX export artifacts
 *.onnx.data
