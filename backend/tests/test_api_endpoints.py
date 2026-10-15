@@ -142,17 +142,18 @@ def test_spatio_temporal_graph_endpoint_rbac(client, monkeypatch):
 
 
 def test_district_performance_report_endpoint(client):
-    from eureka.processor.generate_english_synthetic import generate_english_dataset
-    from eureka.api.reports_router import _resolve_dataset_path
+    from eureka.api.reports_router import resolve_db_path
+    from eureka.db.seeder import seed_database
 
-    path = _resolve_dataset_path()
-    if not os.path.exists(path):
-        generate_english_dataset(output_path=path, total_rows=1000, chunk_size=1000)
+    db_path = resolve_db_path()
+    if not os.path.exists(db_path):
+        seed_database(limit_rows=1000, chunk_size=1000)
 
     response = client.get("/api/v1/reports/district-performance")
     assert response.status_code == 200
     data = response.json()
     assert data["status"] == "success"
+    assert data["datastore"] == "SQLite embedded (eureka_db.db)"
     assert "evaluated_rows" in data
     assert "leaderboard" in data
     assert len(data["leaderboard"]) > 0
