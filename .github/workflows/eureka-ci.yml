@@ -29,14 +29,19 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Install Dependencies
+      - name: Install PyTorch (CPU)
         run: |
           uv venv
+          uv pip install torch --index-url https://download.pytorch.org/whl/cpu
+
+      - name: Install Dependencies
+        run: |
           if [ -f "project-eureka/requirements.txt" ]; then
-            uv pip install -r project-eureka/requirements.txt pytest pytest-asyncio
-          else
-            uv pip install -r requirements.txt pytest pytest-asyncio
+            uv pip install --no-build-isolation -r project-eureka/requirements.txt
+          elif [ -f "requirements.txt" ]; then
+            uv pip install --no-build-isolation -r requirements.txt
           fi
+          uv pip install pytest pytest-asyncio httpx
 
       - name: Run EUREKA 38-Test Suite
         run: |

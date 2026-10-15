@@ -31,6 +31,7 @@ celerybeat-schedule*
 *.csv
 seed_data/
 Maha_Command_Center_Student_Pack/
+fang-algo/
 
 # Whitelist essential benchmark seed data (< 1.5MB total) needed by the 38-test suite
 !project-eureka/seed_data/
