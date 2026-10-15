@@ -1,0 +1,42 @@
+name: "stgnn_forecaster"
+platform: "onnxruntime_onnx"
+max_batch_size: 16
+
+# Dynamic batching configuration for high-throughput vectorized aggregation
+dynamic_batching {
+  preferred_batch_size: [2, 4, 8, 16]
+  max_queue_delay_microseconds: 2000
+}
+
+input [
+  {
+    name: "node_features"
+    data_type: TYPE_FP32
+    dims: [ 36, 3, 12 ]
+  },
+  {
+    name: "adj_norm"
+    data_type: TYPE_FP32
+    dims: [ 36, 36 ]
+  }
+]
+
+output [
+  {
+    name: "predictions"
+    data_type: TYPE_FP32
+    dims: [ 36, 2 ]
+  },
+  {
+    name: "attention_weights"
+    data_type: TYPE_FP32
+    dims: [ 12 ]
+  }
+]
+
+instance_group [
+  {
+    count: 1
+    kind: KIND_CPU
+  }
+]

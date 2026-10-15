@@ -1,0 +1,37 @@
+district_id,name_en,name_mr,division,approx_hq_lat,approx_hq_lon
+1,Mumbai City,मुंबई शहर,Konkan,18.96,72.82
+2,Mumbai Suburban,मुंबई उपनगर,Konkan,19.08,72.88
+3,Thane,ठाणे,Konkan,19.2,72.97
+4,Palghar,पालघर,Konkan,19.7,72.77
+5,Raigad,रायगड,Konkan,18.64,72.88
+6,Ratnagiri,रत्नागिरी,Konkan,16.99,73.3
+7,Sindhudurg,सिंधुदुर्ग,Konkan,16.01,73.69
+8,Pune,पुणे,Pune,18.52,73.86
+9,Satara,सातारा,Pune,17.68,74.02
+10,Sangli,सांगली,Pune,16.85,74.57
+11,Kolhapur,कोल्हापूर,Pune,16.7,74.24
+12,Solapur,सोलापूर,Pune,17.66,75.91
+13,Nashik,नाशिक,Nashik,20.0,73.79
+14,Dhule,धुळे,Nashik,20.9,74.77
+15,Nandurbar,नंदुरबार,Nashik,21.37,74.24
+16,Jalgaon,जळगाव,Nashik,21.0,75.57
+17,Ahilyanagar,अहिल्यानगर,Nashik,19.09,74.74
+18,Chhatrapati Sambhajinagar,छत्रपती संभाजीनगर,Chhatrapati Sambhajinagar,19.88,75.34
+19,Jalna,जालना,Chhatrapati Sambhajinagar,19.84,75.88
+20,Beed,बीड,Chhatrapati Sambhajinagar,18.99,75.76
+21,Dharashiv,धाराशिव,Chhatrapati Sambhajinagar,18.18,76.04
+22,Latur,लातूर,Chhatrapati Sambhajinagar,18.4,76.58
+23,Nanded,नांदेड,Chhatrapati Sambhajinagar,19.15,77.32
+24,Parbhani,परभणी,Chhatrapati Sambhajinagar,19.27,76.77
+25,Hingoli,हिंगोली,Chhatrapati Sambhajinagar,19.72,77.15
+26,Amravati,अमरावती,Amravati,20.93,77.75
+27,Akola,अकोला,Amravati,20.71,77.0
+28,Washim,वाशीम,Amravati,20.11,77.13
+29,Buldhana,बुलढाणा,Amravati,20.53,76.18
+30,Yavatmal,यवतमाळ,Amravati,20.39,78.12
+31,Nagpur,नागपूर,Nagpur,21.15,79.09
+32,Wardha,वर्धा,Nagpur,20.74,78.6
+33,Bhandara,भंडारा,Nagpur,21.17,79.65
+34,Gondia,गोंदिया,Nagpur,21.46,80.19
+35,Chandrapur,चंद्रपूर,Nagpur,19.96,79.3
+36,Gadchiroli,गडचिरोली,Nagpur,20.18,80.0

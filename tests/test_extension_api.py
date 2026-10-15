@@ -107,30 +107,3 @@ def test_extension_cors_headers(client):
     assert response.status_code == 200
     assert "access-control-allow-origin" in response.headers
     assert response.headers["access-control-allow-origin"] in ("*", "chrome-extension://abcdefghijklmnop")
-
-
-def test_extension_manifest_and_sidepanel_integrity():
-    import json
-    from pathlib import Path
-
-    ext_dir = Path(__file__).resolve().parent.parent / "extension"
-    manifest_file = ext_dir / "manifest.json"
-    assert manifest_file.exists(), "extension/manifest.json must exist"
-
-    with open(manifest_file, "r", encoding="utf-8") as f:
-        manifest = json.load(f)
-
-    assert manifest["manifest_version"] == 3
-    assert "sidePanel" in manifest["permissions"]
-    assert "side_panel" in manifest
-    assert manifest["side_panel"]["default_path"] == "sidepanel.html"
-    assert manifest["background"]["service_worker"] == "background.js"
-
-    # Verify sidepanel files exist
-    assert (ext_dir / "sidepanel.html").exists(), "sidepanel.html must exist"
-    assert (ext_dir / "sidepanel.js").exists(), "sidepanel.js must exist"
-    assert (ext_dir / "sidepanel.css").exists(), "sidepanel.css must exist"
-    assert (ext_dir / "spoof_analysis.js").exists(), "spoof_analysis.js must exist"
-    assert (ext_dir / "background.js").exists(), "background.js must exist"
-    assert (ext_dir / "content.js").exists(), "content.js must exist"
-

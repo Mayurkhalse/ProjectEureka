@@ -12,10 +12,16 @@ dependencies = [
     "httpx>=0.27.0",
     "networkx>=3.2",
     "numpy>=1.26.0",
+    "onnx>=1.23.2",
+    "onnxruntime>=1.24.3",
+    "onnxscript>=0.7.2",
     "psutil>=7.2.2",
     "pydantic>=2.6.0",
     "python-dotenv>=1.2.4",
     "scipy>=1.12.0",
+    "torch>=2.14.1",
+    "torch-geometric>=2.8.1",
+    "tritonclient[grpc]>=2.73.0",
     "uvicorn>=0.29.0",
 ]
 
@@ -30,6 +36,8 @@ db = [
     "psycopg2-binary>=2.9.9",
     "sqlalchemy>=2.0.28",
 ]
+
+
 
 [build-system]
 requires = ["uv_build>=0.11.28,<0.12.0"]

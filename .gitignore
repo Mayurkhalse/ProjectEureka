@@ -1,33 +1,52 @@
-# Python & virtual environment
-.venv/
-venv/
-ENV/
+# Byte-compiled / optimized / Python cache
 __pycache__/
 *.py[cod]
 *$py.class
-
-# Pytest / Test Cache
+*.so
 .pytest_cache/
 .coverage
 htmlcov/
 
-# Databases
+# Environments and dependencies
+.venv/
+venv/
+ENV/
+env/
+
+# Environment variables and secrets
+.env
+.env.*
+!.env.example
+!.env.vps.example
+
+# Logs and databases
+*.log
+logs/
 *.db
 *.sqlite
 *.sqlite3
+celerybeat-schedule*
 
-# OS / Editor files
+# Prevent large datasets from crashing GitHub 100MB limit
+*.csv
+seed_data/
+Maha_Command_Center_Student_Pack/
+
+# Whitelist essential benchmark seed data (< 1.5MB total) needed by the 38-test suite
+!project-eureka/seed_data/
+!project-eureka/seed_data/*.csv
+
+# Scratch & temporary ONNX export artifacts
+*.onnx.data
+*.data
+batched_stgnn_*.onnx
+fang_test*.onnx
+fast_stgnn*.onnx
+stgnn_test*.onnx
+sym_shape_infer_temp.onnx
+
+# OS and IDE files
 .DS_Store
 Thumbs.db
 .vscode/
 .idea/
-
-# Local Environment & Credentials
-.env
-.env.*
-!.env.example
-context.md
-
-# Local runtime & cloned references
-data/
-chrome-extensions-samples/

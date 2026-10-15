@@ -1,0 +1,251 @@
+ticket_id,district_id,incident,detected_at,rebuttal_published_at,status,resolution_time_minutes
+1,1,Rumour: fake closure notice,2026-07-02T01:41:00Z,2026-07-02T02:50:24Z,approved,69.4
+2,1,Rumour: fake closure notice,2026-09-30T15:02:00Z,2026-09-30T16:17:54Z,approved,75.9
+3,1,Rumour: wrong disaster alert,2026-09-02T16:01:00Z,2026-09-02T16:43:54Z,approved,42.9
+4,1,Rumour: false notice about scheme deadline,2026-07-29T12:46:00Z,2026-07-29T13:57:12Z,approved,71.2
+5,1,Rumour: shortage of essential supplies,2026-09-21T16:05:00Z,2026-09-21T16:29:06Z,approved,24.1
+6,1,Rumour: fake closure notice,2026-07-12T01:54:00Z,2026-07-12T02:13:00Z,approved,19.0
+7,1,Rumour: wrong disaster alert,2026-07-16T06:30:00Z,2026-07-16T06:51:06Z,approved,21.1
+8,1,Rumour: doctored video of local event,2026-09-26T08:07:00Z,2026-09-26T09:03:12Z,approved,56.2
+9,1,Rumour: wrong disaster alert,2026-09-26T06:36:00Z,2026-09-26T07:32:54Z,approved,56.9
+10,1,Rumour: shortage of essential supplies,2026-09-08T06:07:00Z,2026-09-08T08:57:54Z,approved,170.9
+11,2,Rumour: fake closure notice,2026-08-31T07:01:00Z,2026-08-31T07:47:24Z,approved,46.4
+12,2,Rumour: shortage of essential supplies,2026-09-04T04:02:00Z,2026-09-04T04:31:00Z,approved,29.0
+13,2,Rumour: shortage of essential supplies,2026-09-05T07:43:00Z,2026-09-05T08:05:30Z,approved,22.5
+14,2,Rumour: fake closure notice,2026-07-21T16:28:00Z,2026-07-21T17:33:18Z,approved,65.3
+15,2,Rumour: fake closure notice,2026-07-14T06:46:00Z,2026-07-14T07:10:00Z,approved,24.0
+16,2,Rumour: shortage of essential supplies,2026-07-20T05:20:00Z,2026-07-20T05:47:00Z,approved,27.0
+17,2,Rumour: fake closure notice,2026-07-27T12:29:00Z,2026-07-27T13:33:24Z,approved,64.4
+18,2,Rumour: false notice about scheme deadline,2026-09-08T10:43:00Z,2026-09-08T11:22:12Z,approved,39.2
+19,2,Rumour: wrong disaster alert,2026-09-02T13:25:00Z,2026-09-02T14:21:54Z,approved,56.9
+20,2,Rumour: doctored video of local event,2026-07-13T06:01:00Z,2026-07-13T06:44:48Z,approved,43.8
+21,2,Rumour: doctored video of local event,2026-07-01T11:59:00Z,2026-07-01T12:33:24Z,approved,34.4
+22,2,Rumour: fake closure notice,2026-08-19T10:42:00Z,2026-08-19T12:07:06Z,approved,85.1
+23,2,Rumour: fake closure notice,2026-09-25T06:16:00Z,2026-09-25T08:54:30Z,approved,158.5
+24,2,Rumour: false notice about scheme deadline,2026-07-29T02:15:00Z,2026-07-29T04:35:06Z,approved,140.1
+25,3,Rumour: wrong disaster alert,2026-08-09T10:19:00Z,2026-08-09T11:32:54Z,approved,73.9
+26,3,Rumour: shortage of essential supplies,2026-09-06T15:08:00Z,2026-09-06T16:16:06Z,approved,68.1
+27,3,Rumour: fake closure notice,2026-07-19T09:40:00Z,2026-07-19T10:12:36Z,approved,32.6
+28,3,Rumour: shortage of essential supplies,2026-09-10T08:44:00Z,2026-09-10T09:44:36Z,approved,60.6
+29,3,Rumour: fake closure notice,2026-08-28T05:45:00Z,2026-08-28T07:06:42Z,approved,81.7
+30,3,Rumour: shortage of essential supplies,2026-08-06T14:28:00Z,2026-08-06T15:27:42Z,approved,59.7
+31,3,Rumour: wrong disaster alert,2026-07-13T12:47:00Z,2026-07-13T13:26:42Z,approved,39.7
+32,3,Rumour: wrong disaster alert,2026-08-02T07:06:00Z,2026-08-02T07:25:06Z,approved,19.1
+33,3,Rumour: wrong disaster alert,2026-07-30T07:32:00Z,2026-07-30T08:20:42Z,approved,48.7
+34,3,Rumour: wrong disaster alert,2026-08-23T03:35:00Z,2026-08-23T04:12:48Z,approved,37.8
+35,3,Rumour: shortage of essential supplies,2026-07-26T09:58:00Z,2026-07-26T10:35:54Z,approved,37.9
+36,3,Rumour: doctored video of local event,2026-09-28T16:16:00Z,2026-09-28T17:27:54Z,approved,71.9
+37,4,Rumour: false notice about scheme deadline,2026-07-17T11:32:00Z,2026-07-17T12:41:06Z,approved,69.1
+38,4,Rumour: doctored video of local event,2026-07-16T10:08:00Z,2026-07-16T10:42:18Z,approved,34.3
+39,4,Rumour: shortage of essential supplies,2026-09-13T11:28:00Z,2026-09-13T12:28:48Z,approved,60.8
+40,4,Rumour: fake closure notice,2026-08-20T15:41:00Z,2026-08-20T16:18:30Z,approved,37.5
+41,4,Rumour: fake closure notice,2026-07-21T01:32:00Z,2026-07-21T02:15:48Z,approved,43.8
+42,4,Rumour: doctored video of local event,2026-07-14T11:07:00Z,2026-07-14T12:26:54Z,approved,79.9
+43,4,Rumour: wrong disaster alert,2026-09-16T06:59:00Z,2026-09-16T07:52:48Z,approved,53.8
+44,4,Rumour: doctored video of local event,2026-09-19T06:45:00Z,2026-09-19T07:39:12Z,approved,54.2
+45,4,Rumour: false notice about scheme deadline,2026-07-06T10:34:00Z,2026-07-06T11:37:06Z,approved,63.1
+46,4,Rumour: doctored video of local event,2026-09-04T12:55:00Z,2026-09-04T14:16:48Z,approved,81.8
+47,4,Rumour: wrong disaster alert,2026-08-20T05:53:00Z,2026-08-20T07:56:42Z,approved,123.7
+48,5,Rumour: fake closure notice,2026-08-31T07:47:00Z,2026-08-31T08:12:42Z,approved,25.7
+49,5,Rumour: wrong disaster alert,2026-07-22T04:58:00Z,2026-07-22T06:06:30Z,approved,68.5
+50,5,Rumour: wrong disaster alert,2026-09-21T08:07:00Z,2026-09-21T08:42:12Z,approved,35.2
+51,5,Rumour: false notice about scheme deadline,2026-07-27T10:09:00Z,2026-07-27T11:15:06Z,approved,66.1
+52,5,Rumour: fake closure notice,2026-09-16T06:52:00Z,2026-09-16T07:13:54Z,approved,21.9
+53,5,Rumour: fake closure notice,2026-09-15T16:20:00Z,2026-09-15T17:47:48Z,approved,87.8
+54,5,Rumour: false notice about scheme deadline,2026-07-01T05:52:00Z,2026-07-01T06:56:00Z,approved,64.0
+55,5,Rumour: wrong disaster alert,2026-09-25T03:39:00Z,2026-09-25T04:05:12Z,approved,26.2
+56,5,Rumour: fake closure notice,2026-09-24T04:58:00Z,2026-09-24T08:49:30Z,approved,231.5
+57,6,Rumour: false notice about scheme deadline,2026-07-19T02:39:00Z,2026-07-19T02:59:12Z,approved,20.2
+58,6,Rumour: false notice about scheme deadline,2026-07-08T05:04:00Z,2026-07-08T06:20:18Z,approved,76.3
+59,6,Rumour: fake closure notice,2026-09-17T09:59:00Z,2026-09-17T10:52:42Z,approved,53.7
+60,6,Rumour: wrong disaster alert,2026-08-27T06:21:00Z,2026-08-27T07:23:24Z,approved,62.4
+61,6,Rumour: wrong disaster alert,2026-08-26T06:21:00Z,2026-08-26T07:35:00Z,approved,74.0
+62,6,Rumour: false notice about scheme deadline,2026-09-03T02:36:00Z,2026-09-03T03:08:00Z,approved,32.0
+63,6,Rumour: shortage of essential supplies,2026-08-11T03:51:00Z,2026-08-11T05:51:24Z,approved,120.4
+64,7,Rumour: wrong disaster alert,2026-09-02T08:36:00Z,2026-09-02T09:30:24Z,approved,54.4
+65,7,Rumour: doctored video of local event,2026-09-09T14:51:00Z,2026-09-09T15:17:36Z,approved,26.6
+66,7,Rumour: shortage of essential supplies,2026-08-16T09:07:00Z,2026-08-16T09:43:24Z,approved,36.4
+67,7,Rumour: doctored video of local event,2026-07-11T11:11:00Z,2026-07-11T12:28:42Z,approved,77.7
+68,7,Rumour: fake closure notice,2026-09-02T04:43:00Z,2026-09-02T05:27:42Z,approved,44.7
+69,8,Rumour: false notice about scheme deadline,2026-07-29T08:17:00Z,2026-07-29T08:53:48Z,approved,36.8
+70,8,Rumour: doctored video of local event,2026-08-29T09:18:00Z,2026-08-29T10:21:00Z,approved,63.0
+71,8,Rumour: wrong disaster alert,2026-07-28T15:26:00Z,2026-07-28T16:54:24Z,approved,88.4
+72,8,Rumour: wrong disaster alert,2026-08-28T07:45:00Z,2026-08-28T08:15:48Z,approved,30.8
+73,8,Rumour: shortage of essential supplies,2026-08-15T08:01:00Z,2026-08-15T08:53:54Z,approved,52.9
+74,8,Rumour: shortage of essential supplies,2026-09-06T10:37:00Z,2026-09-06T11:56:00Z,approved,79.0
+75,8,Rumour: fake closure notice,2026-09-20T06:24:00Z,2026-09-20T07:13:42Z,approved,49.7
+76,8,Rumour: shortage of essential supplies,2026-09-26T13:58:00Z,2026-09-26T15:23:00Z,approved,85.0
+77,8,Rumour: false notice about scheme deadline,2026-08-27T06:21:00Z,2026-08-27T07:20:54Z,approved,59.9
+78,8,Rumour: shortage of essential supplies,2026-09-08T14:39:00Z,2026-09-08T15:24:30Z,approved,45.5
+79,8,Rumour: false notice about scheme deadline,2026-07-01T02:29:00Z,2026-07-01T03:40:24Z,approved,71.4
+80,8,Rumour: fake closure notice,2026-09-16T05:58:00Z,2026-09-16T07:25:36Z,approved,87.6
+81,8,Rumour: doctored video of local event,2026-07-12T10:34:00Z,2026-07-12T11:20:24Z,approved,46.4
+82,8,Rumour: wrong disaster alert,2026-09-17T13:42:00Z,2026-09-17T14:43:36Z,approved,61.6
+83,8,Rumour: wrong disaster alert,2026-07-25T14:01:00Z,2026-07-25T14:34:42Z,approved,33.7
+84,8,Rumour: false notice about scheme deadline,2026-09-04T10:56:00Z,2026-09-04T13:01:54Z,approved,125.9
+85,9,Rumour: shortage of essential supplies,2026-09-10T01:52:00Z,2026-09-10T03:19:42Z,approved,87.7
+86,9,Rumour: shortage of essential supplies,2026-08-27T02:04:00Z,2026-08-27T02:42:24Z,approved,38.4
+87,9,Rumour: doctored video of local event,2026-08-08T05:18:00Z,2026-08-08T06:03:00Z,approved,45.0
+88,9,Rumour: shortage of essential supplies,2026-08-23T08:53:00Z,2026-08-23T09:13:42Z,approved,20.7
+89,9,Rumour: fake closure notice,2026-07-16T12:26:00Z,2026-07-16T13:34:48Z,approved,68.8
+90,9,Rumour: wrong disaster alert,2026-08-14T16:12:00Z,2026-08-14T19:07:48Z,approved,175.8
+91,10,Rumour: doctored video of local event,2026-08-08T08:20:00Z,2026-08-08T09:25:30Z,approved,65.5
+92,10,Rumour: fake closure notice,2026-07-12T02:51:00Z,2026-07-12T03:25:06Z,approved,34.1
+93,10,Rumour: doctored video of local event,2026-09-08T11:43:00Z,2026-09-08T12:52:54Z,approved,69.9
+94,10,Rumour: fake closure notice,2026-08-09T08:04:00Z,2026-08-09T08:39:06Z,approved,35.1
+95,10,Rumour: wrong disaster alert,2026-08-14T04:00:00Z,2026-08-14T07:49:42Z,approved,229.7
+96,11,Rumour: fake closure notice,2026-09-04T14:55:00Z,2026-09-04T16:12:30Z,approved,77.5
+97,11,Rumour: false notice about scheme deadline,2026-08-20T03:23:00Z,2026-08-20T04:29:30Z,approved,66.5
+98,11,Rumour: doctored video of local event,2026-07-09T05:32:00Z,2026-07-09T06:48:30Z,approved,76.5
+99,11,Rumour: doctored video of local event,2026-07-04T07:52:00Z,2026-07-04T09:01:18Z,approved,69.3
+100,11,Rumour: wrong disaster alert,2026-07-18T11:28:00Z,2026-07-18T12:40:36Z,approved,72.6
+101,11,Rumour: shortage of essential supplies,2026-08-06T08:17:00Z,2026-08-06T09:26:24Z,approved,69.4
+102,11,Rumour: fake closure notice,2026-07-08T02:15:00Z,2026-07-08T03:22:12Z,approved,67.2
+103,11,Rumour: fake closure notice,2026-08-09T13:49:00Z,2026-08-09T14:18:30Z,approved,29.5
+104,12,Rumour: doctored video of local event,2026-09-07T02:26:00Z,2026-09-07T03:10:42Z,approved,44.7
+105,12,Rumour: fake closure notice,2026-08-10T12:25:00Z,2026-08-10T13:31:54Z,approved,66.9
+106,12,Rumour: doctored video of local event,2026-07-26T06:03:00Z,2026-07-26T06:27:06Z,approved,24.1
+107,12,Rumour: fake closure notice,2026-07-06T12:23:00Z,2026-07-06T13:40:18Z,approved,77.3
+108,12,Rumour: false notice about scheme deadline,2026-09-04T16:20:00Z,2026-09-04T17:21:48Z,approved,61.8
+109,12,Rumour: doctored video of local event,2026-09-18T11:03:00Z,2026-09-18T12:55:18Z,approved,112.3
+110,12,Rumour: doctored video of local event,2026-07-27T16:21:00Z,2026-07-27T18:37:54Z,approved,136.9
+111,13,Rumour: doctored video of local event,2026-08-03T15:54:00Z,2026-08-03T17:01:06Z,approved,67.1
+112,13,Rumour: shortage of essential supplies,2026-07-27T04:30:00Z,2026-07-27T05:57:12Z,approved,87.2
+113,13,Rumour: fake closure notice,2026-07-29T03:12:00Z,2026-07-29T03:52:54Z,approved,40.9
+114,13,Rumour: fake closure notice,2026-08-04T12:02:00Z,2026-08-04T12:54:30Z,approved,52.5
+115,13,Rumour: fake closure notice,2026-09-26T11:51:00Z,2026-09-26T13:14:18Z,approved,83.3
+116,13,Rumour: fake closure notice,2026-09-28T16:11:00Z,2026-09-28T17:38:42Z,approved,87.7
+117,13,Rumour: wrong disaster alert,2026-07-19T14:03:00Z,2026-07-19T15:29:12Z,approved,86.2
+118,13,Rumour: wrong disaster alert,2026-08-20T11:15:00Z,2026-08-20T11:45:30Z,approved,30.5
+119,13,Rumour: fake closure notice,2026-07-26T10:45:00Z,2026-07-26T11:16:48Z,approved,31.8
+120,13,Rumour: shortage of essential supplies,2026-08-28T06:29:00Z,2026-08-28T07:55:12Z,approved,86.2
+121,13,Rumour: false notice about scheme deadline,2026-09-03T04:58:00Z,2026-09-03T06:41:18Z,approved,103.3
+122,14,Rumour: fake closure notice,2026-08-28T15:12:00Z,2026-08-28T15:32:30Z,approved,20.5
+123,14,Rumour: wrong disaster alert,2026-09-10T11:34:00Z,2026-09-10T12:09:42Z,approved,35.7
+124,14,Rumour: doctored video of local event,2026-08-02T02:16:00Z,2026-08-02T06:01:18Z,approved,225.3
+125,14,Rumour: doctored video of local event,2026-09-15T10:55:00Z,2026-09-15T13:33:54Z,approved,158.9
+126,15,Rumour: fake closure notice,2026-07-08T04:18:00Z,2026-07-08T05:09:00Z,approved,51.0
+127,15,Rumour: wrong disaster alert,2026-09-29T06:06:00Z,2026-09-29T06:56:24Z,approved,50.4
+128,15,Rumour: doctored video of local event,2026-09-10T10:58:00Z,2026-09-10T13:00:24Z,approved,122.4
+129,16,Rumour: shortage of essential supplies,2026-07-28T04:34:00Z,2026-07-28T05:50:48Z,approved,76.8
+130,16,Rumour: fake closure notice,2026-08-08T15:29:00Z,2026-08-08T16:21:42Z,approved,52.7
+131,16,Rumour: wrong disaster alert,2026-08-29T09:04:00Z,2026-08-29T09:43:18Z,approved,39.3
+132,16,Rumour: doctored video of local event,2026-08-04T08:28:00Z,2026-08-04T08:57:36Z,approved,29.6
+133,16,Rumour: doctored video of local event,2026-07-11T11:16:00Z,2026-07-11T12:42:30Z,approved,86.5
+134,16,Rumour: shortage of essential supplies,2026-08-31T06:26:00Z,2026-08-31T06:46:24Z,approved,20.4
+135,16,Rumour: false notice about scheme deadline,2026-07-28T12:14:00Z,2026-07-28T14:34:48Z,approved,140.8
+136,16,Rumour: wrong disaster alert,2026-09-01T11:04:00Z,2026-09-01T13:25:36Z,approved,141.6
+137,17,Rumour: shortage of essential supplies,2026-07-30T16:11:00Z,2026-07-30T17:09:42Z,approved,58.7
+138,17,Rumour: fake closure notice,2026-09-20T11:11:00Z,2026-09-20T11:56:12Z,approved,45.2
+139,17,Rumour: shortage of essential supplies,2026-08-24T07:15:00Z,2026-08-24T07:50:12Z,approved,35.2
+140,17,Rumour: fake closure notice,2026-07-02T02:22:00Z,2026-07-02T02:45:42Z,approved,23.7
+141,17,Rumour: doctored video of local event,2026-08-21T15:11:00Z,2026-08-21T15:56:30Z,approved,45.5
+142,17,Rumour: shortage of essential supplies,2026-08-11T08:41:00Z,2026-08-11T09:30:30Z,approved,49.5
+143,17,Rumour: shortage of essential supplies,2026-07-30T03:01:00Z,2026-07-30T03:38:24Z,approved,37.4
+144,17,Rumour: doctored video of local event,2026-09-04T04:37:00Z,2026-09-04T05:30:42Z,approved,53.7
+145,17,Rumour: false notice about scheme deadline,2026-07-04T03:52:00Z,2026-07-04T05:33:48Z,approved,101.8
+146,18,Rumour: fake closure notice,2026-08-03T08:12:00Z,2026-08-03T09:01:48Z,approved,49.8
+147,18,Rumour: wrong disaster alert,2026-09-15T11:24:00Z,2026-09-15T12:25:48Z,approved,61.8
+148,18,Rumour: shortage of essential supplies,2026-09-05T14:27:00Z,2026-09-05T15:29:06Z,approved,62.1
+149,18,Rumour: wrong disaster alert,2026-09-29T04:24:00Z,2026-09-29T05:48:36Z,approved,84.6
+150,18,Rumour: false notice about scheme deadline,2026-08-04T08:11:00Z,2026-08-04T08:55:00Z,approved,44.0
+151,18,Rumour: fake closure notice,2026-08-17T05:14:00Z,2026-08-17T06:17:48Z,approved,63.8
+152,18,Rumour: fake closure notice,2026-07-31T14:17:00Z,2026-07-31T14:44:12Z,approved,27.2
+153,18,Rumour: wrong disaster alert,2026-08-09T04:19:00Z,2026-08-09T05:16:42Z,approved,57.7
+154,18,Rumour: doctored video of local event,2026-08-10T03:11:00Z,2026-08-10T04:35:54Z,approved,84.9
+155,18,Rumour: shortage of essential supplies,2026-09-16T07:58:00Z,2026-09-16T08:53:48Z,approved,55.8
+156,18,Rumour: shortage of essential supplies,2026-08-23T10:48:00Z,2026-08-23T12:50:12Z,approved,122.2
+157,18,Rumour: shortage of essential supplies,2026-07-29T08:33:00Z,2026-07-29T10:34:36Z,approved,121.6
+158,19,Rumour: wrong disaster alert,2026-09-18T14:31:00Z,2026-09-18T15:14:00Z,approved,43.0
+159,19,Rumour: fake closure notice,2026-07-01T10:49:00Z,2026-07-01T11:27:48Z,approved,38.8
+160,19,Rumour: shortage of essential supplies,2026-09-25T15:06:00Z,2026-09-25T15:48:24Z,approved,42.4
+161,19,Rumour: fake closure notice,2026-07-30T15:06:00Z,2026-07-30T16:47:06Z,approved,101.1
+162,19,Rumour: false notice about scheme deadline,2026-07-22T12:57:00Z,2026-07-22T16:16:00Z,approved,199.0
+163,20,Rumour: shortage of essential supplies,2026-07-22T15:38:00Z,2026-07-22T16:45:48Z,approved,67.8
+164,20,Rumour: wrong disaster alert,2026-07-13T13:39:00Z,2026-07-13T14:08:00Z,approved,29.0
+165,20,Rumour: wrong disaster alert,2026-07-10T02:45:00Z,2026-07-10T03:55:30Z,approved,70.5
+166,20,Rumour: shortage of essential supplies,2026-07-08T05:49:00Z,2026-07-08T07:19:36Z,approved,90.6
+167,20,Rumour: wrong disaster alert,2026-07-08T12:27:00Z,2026-07-08T16:16:36Z,approved,229.6
+168,20,Rumour: wrong disaster alert,2026-08-20T13:15:00Z,2026-08-20T15:49:48Z,approved,154.8
+169,21,Rumour: shortage of essential supplies,2026-09-29T05:00:00Z,2026-09-29T06:05:36Z,approved,65.6
+170,21,Rumour: doctored video of local event,2026-08-10T05:26:00Z,2026-08-10T06:45:54Z,approved,79.9
+171,21,Rumour: fake closure notice,2026-08-02T06:14:00Z,2026-08-02T09:40:00Z,approved,206.0
+172,21,Rumour: shortage of essential supplies,2026-08-12T11:25:00Z,2026-08-12T14:06:06Z,approved,161.1
+173,22,Rumour: shortage of essential supplies,2026-09-20T13:14:00Z,2026-09-20T14:15:54Z,approved,61.9
+174,22,Rumour: false notice about scheme deadline,2026-08-01T02:44:00Z,2026-08-01T03:22:18Z,approved,38.3
+175,22,Rumour: wrong disaster alert,2026-07-02T06:42:00Z,2026-07-02T08:01:48Z,approved,79.8
+176,22,Rumour: false notice about scheme deadline,2026-08-31T04:33:00Z,2026-08-31T05:04:54Z,approved,31.9
+177,22,Rumour: wrong disaster alert,2026-08-18T01:31:00Z,2026-08-18T01:59:12Z,approved,28.2
+178,22,Rumour: false notice about scheme deadline,2026-09-08T15:42:00Z,2026-09-08T17:22:18Z,approved,100.3
+179,22,Rumour: doctored video of local event,2026-09-19T02:20:00Z,2026-09-19T04:27:54Z,approved,127.9
+180,23,Rumour: wrong disaster alert,2026-09-26T02:39:00Z,2026-09-26T04:04:00Z,approved,85.0
+181,23,Rumour: false notice about scheme deadline,2026-08-04T15:08:00Z,2026-08-04T16:12:54Z,approved,64.9
+182,23,Rumour: wrong disaster alert,2026-09-14T07:36:00Z,2026-09-14T08:15:06Z,approved,39.1
+183,23,Rumour: false notice about scheme deadline,2026-09-24T07:38:00Z,2026-09-24T08:32:48Z,approved,54.8
+184,23,Rumour: false notice about scheme deadline,2026-09-06T03:46:00Z,2026-09-06T04:07:36Z,approved,21.6
+185,23,Rumour: fake closure notice,2026-07-06T11:53:00Z,2026-07-06T12:35:12Z,approved,42.2
+186,23,Rumour: fake closure notice,2026-07-19T05:19:00Z,2026-07-19T07:00:36Z,approved,101.6
+187,23,Rumour: wrong disaster alert,2026-09-23T10:13:00Z,2026-09-23T14:11:18Z,approved,238.3
+188,24,Rumour: shortage of essential supplies,2026-09-27T09:10:00Z,2026-09-27T09:52:00Z,approved,42.0
+189,24,Rumour: doctored video of local event,2026-09-18T04:40:00Z,2026-09-18T05:01:42Z,approved,21.7
+190,24,Rumour: wrong disaster alert,2026-07-18T06:57:00Z,2026-07-18T10:11:18Z,approved,194.3
+191,24,Rumour: false notice about scheme deadline,2026-08-24T06:28:00Z,2026-08-24T08:19:54Z,approved,111.9
+192,24,Rumour: shortage of essential supplies,2026-09-22T04:01:00Z,2026-09-22T07:10:36Z,approved,189.6
+193,26,Rumour: doctored video of local event,2026-09-21T11:22:00Z,2026-09-21T11:47:30Z,approved,25.5
+194,26,Rumour: fake closure notice,2026-08-02T09:47:00Z,2026-08-02T10:33:42Z,approved,46.7
+195,26,Rumour: false notice about scheme deadline,2026-08-06T08:08:00Z,2026-08-06T09:33:00Z,approved,85.0
+196,26,Rumour: fake closure notice,2026-08-31T01:41:00Z,2026-08-31T02:12:00Z,approved,31.0
+197,26,Rumour: shortage of essential supplies,2026-08-10T06:55:00Z,2026-08-10T07:14:18Z,approved,19.3
+198,26,Rumour: wrong disaster alert,2026-08-25T03:59:00Z,2026-08-25T05:08:36Z,approved,69.6
+199,26,Rumour: false notice about scheme deadline,2026-07-08T12:28:00Z,2026-07-08T16:20:00Z,approved,232.0
+200,27,Rumour: wrong disaster alert,2026-09-23T15:04:00Z,2026-09-23T15:37:42Z,approved,33.7
+201,27,Rumour: false notice about scheme deadline,2026-09-24T13:17:00Z,2026-09-24T13:39:42Z,approved,22.7
+202,27,Rumour: doctored video of local event,2026-07-03T08:43:00Z,2026-07-03T09:04:06Z,approved,21.1
+203,27,Rumour: shortage of essential supplies,2026-09-05T06:18:00Z,2026-09-05T07:28:54Z,approved,70.9
+204,27,Rumour: wrong disaster alert,2026-08-12T03:20:00Z,2026-08-12T06:25:48Z,approved,185.8
+205,28,Rumour: shortage of essential supplies,2026-09-03T11:37:00Z,2026-09-03T14:17:12Z,approved,160.2
+206,28,Rumour: wrong disaster alert,2026-09-23T09:50:00Z,2026-09-23T13:35:48Z,approved,225.8
+207,29,Rumour: doctored video of local event,2026-09-10T09:27:00Z,2026-09-10T10:35:54Z,approved,68.9
+208,29,Rumour: fake closure notice,2026-08-19T10:59:00Z,2026-08-19T11:41:42Z,approved,42.7
+209,29,Rumour: wrong disaster alert,2026-09-28T13:22:00Z,2026-09-28T14:29:24Z,approved,67.4
+210,29,Rumour: doctored video of local event,2026-07-03T15:40:00Z,2026-07-03T18:29:06Z,approved,169.1
+211,29,Rumour: fake closure notice,2026-07-23T13:08:00Z,2026-07-23T14:48:42Z,approved,100.7
+212,30,Rumour: fake closure notice,2026-09-18T10:09:00Z,2026-09-18T10:40:36Z,approved,31.6
+213,30,Rumour: wrong disaster alert,2026-07-03T03:36:00Z,2026-07-03T04:12:42Z,approved,36.7
+214,30,Rumour: shortage of essential supplies,2026-09-15T13:13:00Z,2026-09-15T14:18:54Z,approved,65.9
+215,30,Rumour: doctored video of local event,2026-08-31T09:39:00Z,2026-08-31T11:52:06Z,approved,133.1
+216,30,Rumour: fake closure notice,2026-09-14T12:43:00Z,2026-09-14T15:50:36Z,approved,187.6
+217,30,Rumour: false notice about scheme deadline,2026-07-27T16:06:00Z,2026-07-27T17:40:00Z,approved,94.0
+218,31,Rumour: fake closure notice,2026-09-15T04:47:00Z,2026-09-15T05:12:54Z,approved,25.9
+219,31,Rumour: false notice about scheme deadline,2026-07-09T01:36:00Z,2026-07-09T02:29:36Z,approved,53.6
+220,31,Rumour: false notice about scheme deadline,2026-08-06T02:15:00Z,2026-08-06T03:21:12Z,approved,66.2
+221,31,Rumour: doctored video of local event,2026-08-02T08:34:00Z,2026-08-02T09:03:00Z,approved,29.0
+222,31,Rumour: doctored video of local event,2026-08-20T10:16:00Z,2026-08-20T11:34:24Z,approved,78.4
+223,31,Rumour: doctored video of local event,2026-08-14T04:20:00Z,2026-08-14T05:32:54Z,approved,72.9
+224,31,Rumour: fake closure notice,2026-08-21T08:18:00Z,2026-08-21T09:28:24Z,approved,70.4
+225,31,Rumour: fake closure notice,2026-09-08T14:40:00Z,2026-09-08T15:39:06Z,approved,59.1
+226,31,Rumour: fake closure notice,2026-08-06T14:32:00Z,2026-08-06T15:56:36Z,approved,84.6
+227,31,Rumour: wrong disaster alert,2026-09-26T01:35:00Z,2026-09-26T03:02:12Z,approved,87.2
+228,31,Rumour: false notice about scheme deadline,2026-08-07T01:59:00Z,2026-08-07T03:15:48Z,approved,76.8
+229,31,Rumour: false notice about scheme deadline,2026-08-12T09:52:00Z,2026-08-12T11:08:06Z,approved,76.1
+230,31,Rumour: false notice about scheme deadline,2026-08-24T09:57:00Z,2026-08-24T12:56:00Z,approved,179.0
+231,32,Rumour: shortage of essential supplies,2026-09-09T10:01:00Z,2026-09-09T11:29:00Z,approved,88.0
+232,32,Rumour: wrong disaster alert,2026-07-26T02:16:00Z,2026-07-26T02:55:42Z,approved,39.7
+233,32,Rumour: fake closure notice,2026-08-31T10:57:00Z,2026-08-31T11:51:24Z,approved,54.4
+234,32,Rumour: doctored video of local event,2026-08-16T08:13:00Z,2026-08-16T10:25:54Z,approved,132.9
+235,33,Rumour: wrong disaster alert,2026-08-28T05:49:00Z,2026-08-28T06:49:24Z,approved,60.4
+236,33,Rumour: doctored video of local event,2026-08-30T02:26:00Z,2026-08-30T03:22:24Z,approved,56.4
+237,33,Rumour: shortage of essential supplies,2026-07-17T11:04:00Z,2026-07-17T14:28:18Z,approved,204.3
+238,34,Rumour: doctored video of local event,2026-09-13T01:37:00Z,2026-09-13T02:13:30Z,approved,36.5
+239,34,Rumour: doctored video of local event,2026-07-27T10:11:00Z,2026-07-27T11:17:36Z,approved,66.6
+240,34,Rumour: fake closure notice,2026-09-11T07:17:00Z,2026-09-11T08:17:54Z,approved,60.9
+241,34,Rumour: doctored video of local event,2026-08-05T12:02:00Z,2026-08-05T13:55:24Z,approved,113.4
+242,35,Rumour: doctored video of local event,2026-08-10T06:42:00Z,2026-08-10T07:12:06Z,approved,30.1
+243,35,Rumour: fake closure notice,2026-09-15T07:49:00Z,2026-09-15T08:53:30Z,approved,64.5
+244,35,Rumour: shortage of essential supplies,2026-08-05T01:56:00Z,2026-08-05T03:01:30Z,approved,65.5
+245,35,Rumour: doctored video of local event,2026-09-13T01:58:00Z,2026-09-13T03:01:48Z,approved,63.8
+246,35,Rumour: false notice about scheme deadline,2026-07-16T02:08:00Z,2026-07-16T02:31:12Z,approved,23.2
+247,35,Rumour: false notice about scheme deadline,2026-09-24T15:22:00Z,2026-09-24T18:08:36Z,approved,166.6
+248,31,Rumour: boundary test exactly 90.0 min,2026-09-29T04:30:00Z,2026-09-29T06:00:00Z,approved,90.0
+249,8,Rumour: still pending (no rebuttal yet),2026-09-30T05:00:00Z,,pending_verification,
+250,8,Rumour: awaiting Collector approval,2026-09-30T05:20:00Z,,awaiting_collector,

@@ -1,0 +1,10 @@
+user_id,email,display_name,role,district_id
+u1,dg.admin@example.test,DG State Admin (test),dg_admin,
+u2,div.konkan@example.test,Divisional Commissioner Konkan (test),dg_admin,
+u3,collector.thane@example.test,Collector Thane (test),collector,3
+u4,collector.palghar@example.test,Collector Palghar (test),collector,4
+u5,collector.raigad@example.test,Collector Raigad (test),collector,5
+u6,dio.thane@example.test,DIO Desk Thane (test),dio_desk,3
+u7,dio.palghar@example.test,DIO Desk Palghar (test),dio_desk,4
+u8,dio.raigad@example.test,DIO Desk Raigad (test),dio_desk,5
+u9,dio.pune@example.test,DIO Desk Pune (test),dio_desk,8

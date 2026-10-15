@@ -57,13 +57,7 @@ class FirecrawlScraper:
                 clean = re.sub(r"\s+", " ", clean).strip()
                 return clean[:4000], {"url": url, "parser": "httpx_fallback"}
         except Exception:
-            domain = urlparse(url).netloc or "wire-service"
-            topic = url.strip("/").split("/")[-1].replace("-", " ").replace("_", " ").title() or "Investigative Analysis"
-            realistic_text = (
-                f"Financial and geopolitical dispatches from {domain} indicate developing market activity regarding {topic}. "
-                f"Preliminary metrics indicate verification against secondary consensus sources and institutional data feeds."
-            )
-            return realistic_text, {"url": url, "parser": "offline_realistic_fallback", "title": topic}
+            return f"Harvested content from {url}", {"url": url, "parser": "offline_fallback"}
 
 
 class WebIngestionAgent(BaseIngestionAgent):
