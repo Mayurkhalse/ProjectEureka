@@ -27,16 +27,22 @@ def resolve_db_path() -> str:
 
 @router.get("/district-performance", summary="Generate 100-Point District Leaderboard Report")
 def get_district_performance_report() -> Dict[str, Any]:
-    db_path = resolve_db_path()
+    database_url = os.getenv("DATABASE_URL")
+    datastore_name = "PostgreSQL"
 
-    if not os.path.exists(db_path):
-        raise HTTPException(
-            status_code=404,
-            detail="SQLite database 'eureka_db.db' not found. Run 'uv run python backend/src/eureka/db/seeder.py' first.",
-        )
+    if not database_url:
+        db_path = resolve_db_path()
+        if not os.path.exists(db_path):
+            raise HTTPException(
+                status_code=404,
+                detail="SQLite database 'eureka_db.db' not found. Run 'uv run python backend/src/eureka/db/seeder.py' first.",
+            )
+        database_url = f"sqlite:///{Path(db_path).as_posix()}"
+        datastore_name = "SQLite embedded (eureka_db.db)"
+    elif "sqlite" in database_url.lower():
+        datastore_name = "SQLite embedded (eureka_db.db)"
 
     try:
-        database_url = f"sqlite:///{Path(db_path).as_posix()}"
         engine = create_engine(database_url)
 
         # Pull records from the embedded database
@@ -99,7 +105,7 @@ def get_district_performance_report() -> Dict[str, Any]:
         report_data.sort(key=lambda x: x["total_index"], reverse=True)
         return {
             "status": "success",
-            "datastore": "SQLite embedded (eureka_db.db)",
+            "datastore": datastore_name,
             "evaluated_rows": len(df),
             "leaderboard": report_data,
         }

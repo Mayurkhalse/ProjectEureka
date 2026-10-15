@@ -39,7 +39,7 @@ def resolve_paths():
 
 
 DB_PATH, SEED_CSV = resolve_paths()
-DATABASE_URL = f"sqlite:///{Path(DB_PATH).as_posix()}"
+DATABASE_URL = os.getenv("DATABASE_URL", f"sqlite:///{Path(DB_PATH).as_posix()}")
 
 
 def seed_database(limit_rows: int = None, chunk_size: int = 10000):
