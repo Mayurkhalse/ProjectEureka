@@ -18,6 +18,8 @@ jobs:
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
+        with:
+          submodules: false
 
       - name: Set up uv
         uses: astral-sh/setup-uv@v2
@@ -29,19 +31,21 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Install PyTorch (CPU)
-        run: |
-          uv venv
-          uv pip install torch --index-url https://download.pytorch.org/whl/cpu
-
       - name: Install Dependencies
         run: |
+          uv venv
+          # Ensure pip is up-to-date in the uv venv
+          uv pip install --upgrade pip setuptools wheel
+
+          # Install PyTorch into the same uv venv first so torch is importable during builds
+          uv pip install torch -f https://download.pytorch.org/whl/cpu/torch_stable.html
+
+          # Now install the remaining requirements and test tools
           if [ -f "project-eureka/requirements.txt" ]; then
-            uv pip install --no-build-isolation -r project-eureka/requirements.txt
+            uv pip install --no-build-isolation -r project-eureka/requirements.txt pytest pytest-asyncio httpx
           elif [ -f "requirements.txt" ]; then
-            uv pip install --no-build-isolation -r requirements.txt
+            uv pip install --no-build-isolation -r requirements.txt pytest pytest-asyncio httpx
           fi
-          uv pip install pytest pytest-asyncio httpx
 
       - name: Run EUREKA 38-Test Suite
         run: |
