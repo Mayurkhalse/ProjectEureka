@@ -153,7 +153,7 @@ def test_district_performance_report_endpoint(client):
     assert response.status_code == 200
     data = response.json()
     assert data["status"] == "success"
-    assert data["datastore"] == "SQLite embedded (eureka_db.db)"
+    assert ("PostgreSQL" in data["datastore"] or "SQLite" in data["datastore"])
     assert "evaluated_rows" in data
     assert "leaderboard" in data
     assert len(data["leaderboard"]) > 0

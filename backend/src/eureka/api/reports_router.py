@@ -1,4 +1,4 @@
-"""FastAPI router for generating live performance reports and composite index calculations via SQLite."""
+"""FastAPI router for generating live performance reports and composite index calculations via PostgreSQL / SQLite."""
 
 import os
 from pathlib import Path
@@ -25,33 +25,47 @@ def resolve_db_path() -> str:
     return os.path.join(root_dir, "eureka_db.db")
 
 
+DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://postgres:postgres@127.0.0.1:5432/eureka_db")
+
+
+def normalize_db_url(url: str) -> str:
+    """Ensure standard postgresql:// URLs use installed psycopg2 driver in SQLAlchemy 2.0."""
+    if url.startswith("postgresql://") and not url.startswith("postgresql+"):
+        return url.replace("postgresql://", "postgresql+psycopg2://", 1)
+    return url
+
+
 @router.get("/district-performance", summary="Generate 100-Point District Leaderboard Report")
 def get_district_performance_report() -> Dict[str, Any]:
-    database_url = os.getenv("DATABASE_URL")
-    datastore_name = "PostgreSQL"
+    active_db_url = normalize_db_url(os.getenv("DATABASE_URL", DATABASE_URL))
+    datastore_name = "PostgreSQL (127.0.0.1:5432/eureka_db)"
 
-    if not database_url:
-        db_path = resolve_db_path()
-        if not os.path.exists(db_path):
-            raise HTTPException(
-                status_code=404,
-                detail="SQLite database 'eureka_db.db' not found. Run 'uv run python backend/src/eureka/db/seeder.py' first.",
-            )
-        database_url = f"sqlite:///{Path(db_path).as_posix()}"
-        datastore_name = "SQLite embedded (eureka_db.db)"
-    elif "sqlite" in database_url.lower():
-        datastore_name = "SQLite embedded (eureka_db.db)"
+    query = "SELECT district, event_type, turnaround_time_mins, sentiment_score, crisis_resolved FROM media_events"
+    df = None
 
     try:
-        engine = create_engine(database_url)
-
-        # Pull records from the embedded database
-        query = "SELECT district, event_type, turnaround_time_mins, sentiment_score, crisis_resolved FROM media_events"
+        engine = create_engine(active_db_url)
         df = pd.read_sql(query, engine)
+        if "sqlite" in active_db_url.lower():
+            datastore_name = "SQLite embedded (eureka_db.db)"
+    except Exception as pg_err:
+        # Fallback to local SQLite if PostgreSQL connection or table is unavailable
+        db_path = resolve_db_path()
+        if os.path.exists(db_path):
+            sqlite_url = f"sqlite:///{Path(db_path).as_posix()}"
+            engine = create_engine(sqlite_url)
+            df = pd.read_sql(query, engine)
+            datastore_name = "SQLite embedded (eureka_db.db)"
+        else:
+            raise HTTPException(
+                status_code=500,
+                detail=f"Database connection error: {str(pg_err)}",
+            )
 
-        if df.empty:
-            raise HTTPException(status_code=404, detail="Table 'media_events' is empty.")
+    if df is None or df.empty:
+        raise HTTPException(status_code=404, detail="Table 'media_events' is empty or not seeded.")
 
+    try:
         report_data = []
         for district, group in df.groupby("district"):
             total_releases = len(group[group["event_type"] == "Press Release"])
@@ -109,7 +123,5 @@ def get_district_performance_report() -> Dict[str, Any]:
             "evaluated_rows": len(df),
             "leaderboard": report_data,
         }
-    except HTTPException:
-        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

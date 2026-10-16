@@ -39,18 +39,26 @@ def resolve_paths():
 
 
 DB_PATH, SEED_CSV = resolve_paths()
-DATABASE_URL = os.getenv("DATABASE_URL", f"sqlite:///{Path(DB_PATH).as_posix()}")
+DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://postgres:postgres@127.0.0.1:5432/eureka_db")
+
+
+def normalize_db_url(url: str) -> str:
+    """Ensure standard postgresql:// URLs use installed psycopg2 driver in SQLAlchemy 2.0."""
+    if url.startswith("postgresql://") and not url.startswith("postgresql+"):
+        return url.replace("postgresql://", "postgresql+psycopg2://", 1)
+    return url
 
 
 def seed_database(limit_rows: int = None, chunk_size: int = 10000):
-    """Seed the embedded SQLite database from the extreme-scale dataset.
+    """Seed the database from the extreme-scale dataset.
 
     Args:
         limit_rows: Optional row ceiling for fast testing.
-        chunk_size: Size of pandas chunks to stream into SQLite.
+        chunk_size: Size of pandas chunks to stream into database.
     """
-    print(f"Connecting to embedded SQLite database at: {DB_PATH}")
-    engine = create_engine(DATABASE_URL)
+    target_info = DATABASE_URL.split("@")[-1] if "@" in DATABASE_URL else DATABASE_URL
+    print(f"Connecting to database at: {target_info}")
+    engine = create_engine(normalize_db_url(DATABASE_URL))
 
     print("Initializing tables via SQLAlchemy Base metadata...")
     Base.metadata.create_all(bind=engine)
@@ -81,7 +89,7 @@ def seed_database(limit_rows: int = None, chunk_size: int = 10000):
         total_inserted += len(chunk)
         print(f"Inserted chunk {idx + 1} | Cumulative Rows: {total_inserted}")
 
-    print(f"Ingestion successful: {total_inserted} records committed to {DB_PATH}.")
+    print(f"Ingestion successful: {total_inserted} records committed to database ({target_info}).")
     return total_inserted
 
 
