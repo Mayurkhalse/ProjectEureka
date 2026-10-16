@@ -1,5 +1,6 @@
 """Celery application instance configuration for Project EUREKA."""
 
+import os
 from celery import Celery
 from kombu import Exchange, Queue
 
@@ -7,11 +8,18 @@ from eureka.core.config import get_settings
 
 settings = get_settings()
 
+# Redis runs on 127.0.0.1 locally, or the docker service name 'redis' if running inside the network
+REDIS_HOST = os.environ.get("REDIS_HOST", "127.0.0.1")
+REDIS_PORT = os.environ.get("REDIS_PORT", "6379")
+BROKER_URL = os.environ.get("CELERY_BROKER_URL", f"redis://{REDIS_HOST}:{REDIS_PORT}/0")
+BACKEND_URL = os.environ.get("CELERY_RESULT_BACKEND", f"redis://{REDIS_HOST}:{REDIS_PORT}/1")
+
 celery_app = Celery(
-    "eureka",
-    broker=settings.CELERY_BROKER_URL,
-    backend=settings.CELERY_RESULT_BACKEND,
+    "eureka_workers",
+    broker=BROKER_URL,
+    backend=BACKEND_URL,
     include=[
+        "eureka.workers.ingestion_tasks",
         "eureka.quad_ingestion.tasks",
         "eureka.irf_binding.binding_tasks",
         "eureka.processor.muril_tasks",
@@ -45,6 +53,7 @@ celery_app.conf.task_default_routing_key = "default"
 
 # Task routing
 celery_app.conf.task_routes = {
+    "eureka.workers.ingestion_tasks.*": {"queue": "default", "routing_key": "default"},
     "eureka.quad_ingestion.tasks.*": {"queue": "quad_ingestion", "routing_key": "quad_ingestion"},
     "eureka.tasks.quad_tasks.*": {"queue": "quad_ingestion", "routing_key": "quad_ingestion"},
     "eureka.irf_binding.binding_tasks.*": {"queue": "irf_binding", "routing_key": "irf_binding"},
@@ -65,9 +74,10 @@ celery_app.conf.update(
     result_serializer="json",
     timezone="UTC",
     enable_utc=True,
+    task_track_started=True,
     task_acks_late=True,               # Idempotent task design - ack after processing
     task_reject_on_worker_lost=True,   # Re-queue on worker crash
-    worker_prefetch_multiplier=1,      # Fair distribution across workers
+    worker_prefetch_multiplier=4,      # Optimize for high-throughput chunk processing
     broker_connection_retry_on_startup=True,
 )
 
