@@ -1,0 +1,142 @@
+name: PostgreSQL CI
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  postgres-backend-test:
+    name: PostgreSQL Backend Integration
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: test_eureka_db
+          POSTGRES_USER: test_user
+          POSTGRES_PASSWORD: test_password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U test_user -d test_eureka_db"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      ENVIRONMENT: test
+      DATABASE_URL: postgresql+psycopg2://test_user:test_password@localhost:5432/test_eureka_db
+      POSTGRES_HOST: localhost
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: test_eureka_db
+      POSTGRES_USER: test_user
+      POSTGRES_PASSWORD: test_password
+      SAVI_POSTGRES_HOST: localhost
+      SAVI_POSTGRES_PORT: 5432
+      SAVI_POSTGRES_DB: test_eureka_db
+      SAVI_POSTGRES_USER: test_user
+      SAVI_POSTGRES_PASSWORD: test_password
+      PYTHONPATH: backend/src:src
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          submodules: false
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v2
+        with:
+          enable-cache: true
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Dependencies
+        run: |
+          uv venv
+          uv pip install --upgrade pip setuptools wheel
+          uv pip install torch -f https://download.pytorch.org/whl/cpu/torch_stable.html
+          uv pip install --no-build-isolation -r backend/requirements.txt python-dotenv psutil pytest pytest-asyncio httpx
+
+      - name: Verify PostgreSQL Server Readiness
+        run: |
+          echo "Waiting for PostgreSQL service container to accept connections..."
+          for i in {1..30}; do
+            if pg_isready -h localhost -p 5432 -U test_user -d test_eureka_db; then
+              echo "PostgreSQL is ready and accepting connections!"
+              break
+            fi
+            echo "Waiting for PostgreSQL... ($i/30)"
+            sleep 1
+          done
+
+      - name: Verify Application Connection to PostgreSQL
+        run: |
+          uv run python -c "
+          import psycopg2
+          conn = psycopg2.connect(
+              host='localhost',
+              port=5432,
+              dbname='test_eureka_db',
+              user='test_user',
+              password='test_password',
+              connect_timeout=5,
+          )
+          with conn.cursor() as cur:
+              cur.execute('SELECT version();')
+              version = cur.fetchone()[0]
+              print(f'Connected successfully via psycopg2: {version}')
+          conn.close()
+          "
+          uv run python -c "
+          import asyncio
+          import asyncpg
+          async def test_asyncpg():
+              conn = await asyncpg.connect(
+                  user='test_user',
+                  password='test_password',
+                  database='test_eureka_db',
+                  host='localhost',
+                  port=5432,
+              )
+              val = await conn.fetchval('SELECT 1;')
+              assert val == 1, 'SELECT 1 failed'
+              await conn.close()
+              print('Connected successfully via asyncpg!')
+          asyncio.run(test_asyncpg())
+          "
+
+      - name: Initialize PostgreSQL Schema
+        env:
+          PGPASSWORD: test_password
+        run: |
+          echo "Step 1: Applying SAVI Schema & Materialized Views (docker/init_postgres.sql)..."
+          psql -h localhost -p 5432 -U test_user -d test_eureka_db -f docker/init_postgres.sql
+
+          echo "Step 2: Applying EUREKA Relational Schema (Alembic Migrations)..."
+          cd backend
+          uv run alembic upgrade head
+          cd ..
+
+          echo "Step 3: Initializing MediaEvent Schema..."
+          uv run python -c "
+          from eureka.db.models import Base
+          from eureka.core.database import sync_engine
+          Base.metadata.create_all(bind=sync_engine)
+          print('All PostgreSQL schemas and tables initialized successfully!')
+          "
+
+      - name: Run PostgreSQL Integration Tests
+        run: |
+          uv run pytest tests/test_postgres_integration.py backend/tests/test_models.py tests/test_system_health.py -v
