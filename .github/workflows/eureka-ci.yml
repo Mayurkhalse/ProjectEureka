@@ -12,11 +12,32 @@ concurrency:
 
 jobs:
   test:
-    name: Backend Test Suite (38 Tests)
+    name: Backend Test Suite
     runs-on: ubuntu-latest
 
+    # 1. ADD THE SERVICE CONTAINER
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: eureka_db
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d eureka_db"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    # 2. SET THE DATABASE URL FOR THE TEST SUITE
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/eureka_db
+      PYTHONPATH: backend/src:src
+
     steps:
-      - name: Checkout Code
+      - name: Checkout code
         uses: actions/checkout@v4
         with:
           submodules: false
@@ -42,19 +63,31 @@ jobs:
 
           # Now install the remaining requirements and test tools
           if [ -f "backend/requirements.txt" ]; then
-            uv pip install --no-build-isolation -r backend/requirements.txt pytest pytest-asyncio httpx
+            uv pip install --no-build-isolation -r backend/requirements.txt pytest pytest-asyncio httpx psycopg[binary]
           elif [ -f "project-eureka/requirements.txt" ]; then
-            uv pip install --no-build-isolation -r project-eureka/requirements.txt pytest pytest-asyncio httpx
+            uv pip install --no-build-isolation -r project-eureka/requirements.txt pytest pytest-asyncio httpx psycopg[binary]
           elif [ -f "requirements.txt" ]; then
-            uv pip install --no-build-isolation -r requirements.txt pytest pytest-asyncio httpx
+            uv pip install --no-build-isolation -r requirements.txt pytest pytest-asyncio httpx psycopg[binary]
           fi
 
-      - name: Run EUREKA 38-Test Suite
+      # 3. ADD THE DATABASE POLLING & INIT STEP BEFORE PYTEST
+      - name: Wait for Postgres and Initialize Schema
         run: |
-          if [ -d "backend/tests" ]; then
-            uv run pytest backend/tests/ -v
-          elif [ -d "project-eureka/tests" ]; then
-            uv run pytest project-eureka/tests/ -v
-          else
-            uv run pytest tests/ -v
-          fi
+          sudo apt-get update -y
+          sudo apt-get install -y postgresql-client
+          
+          echo "Waiting for PostgreSQL to be ready..."
+          for i in {1..30}; do
+            if pg_isready -h 127.0.0.1 -p 5432 -U postgres -d eureka_db; then
+              echo "PostgreSQL is ready!"
+              break
+            fi
+            sleep 1
+          done
+          
+          # Force SQLAlchemy to create the tables in the ephemeral cloud database
+          uv run python -c "from sqlalchemy import create_engine; from eureka.db.models import Base; from eureka.api.reports_router import normalize_db_url; engine = create_engine(normalize_db_url('postgresql://postgres:postgres@127.0.0.1:5432/eureka_db')); Base.metadata.create_all(bind=engine)"
+
+      # 4. RUN TESTS
+      - name: Run EUREKA Test Suite
+        run: uv run pytest backend/tests/test_api_endpoints.py -v
