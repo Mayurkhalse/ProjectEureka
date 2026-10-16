@@ -165,3 +165,20 @@ def test_district_performance_report_endpoint(client):
     assert "total_index" in first_entry
 
 
+def test_jobs_trigger_ingestion_endpoint(client, monkeypatch):
+    from unittest.mock import MagicMock
+    from eureka.workers import ingestion_tasks
+
+    mock_delay = MagicMock(return_value=MagicMock(id="mock-celery-task-id"))
+    monkeypatch.setattr(ingestion_tasks.process_ingestion_chunk, "delay", mock_delay)
+
+    response = client.post("/api/v1/jobs/trigger-ingestion?chunk_size=10000&max_chunks=1")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["status"] == "accepted"
+    assert "chunks_queued" in data
+    assert data["chunks_queued"] >= 1
+    assert data["queue_broker"] == "Redis"
+    assert mock_delay.called
+
+
