@@ -55,22 +55,10 @@ jobs:
       - name: Install Dependencies
         run: |
           uv venv
-          # Ensure pip is up-to-date in the uv venv
           uv pip install --upgrade pip setuptools wheel
-
-          # Install PyTorch into the same uv venv first so torch is importable during builds
           uv pip install torch -f https://download.pytorch.org/whl/cpu/torch_stable.html
+          uv pip install --no-build-isolation -r backend/requirements.txt python-dotenv psutil pytest pytest-asyncio httpx psycopg[binary]
 
-          # Now install the remaining requirements and test tools
-          if [ -f "backend/requirements.txt" ]; then
-            uv pip install --no-build-isolation -r backend/requirements.txt pytest pytest-asyncio httpx psycopg[binary]
-          elif [ -f "project-eureka/requirements.txt" ]; then
-            uv pip install --no-build-isolation -r project-eureka/requirements.txt pytest pytest-asyncio httpx psycopg[binary]
-          elif [ -f "requirements.txt" ]; then
-            uv pip install --no-build-isolation -r requirements.txt pytest pytest-asyncio httpx psycopg[binary]
-          fi
-
-      # 3. ADD THE DATABASE POLLING & INIT STEP BEFORE PYTEST
       - name: Wait for Postgres and Initialize Schema
         run: |
           sudo apt-get update -y
@@ -85,9 +73,8 @@ jobs:
             sleep 1
           done
           
-          # Force SQLAlchemy to create the tables in the ephemeral cloud database
-          uv run python -c "from sqlalchemy import create_engine; from eureka.db.models import Base; from eureka.api.reports_router import normalize_db_url; engine = create_engine(normalize_db_url('postgresql://postgres:postgres@127.0.0.1:5432/eureka_db')); Base.metadata.create_all(bind=engine)"
+          # FIXED: Complete, un-truncated database initialization command
+          uv run python -c "from sqlalchemy import create_engine; from eureka.db.models import Base; engine = create_engine('postgresql://postgres:postgres@127.0.0.1:5432/eureka_db'); Base.metadata.create_all(bind=engine)"
 
-      # 4. RUN TESTS
       - name: Run EUREKA Test Suite
         run: uv run pytest backend/tests/test_api_endpoints.py -v
