@@ -13,6 +13,7 @@ sqlalchemy>=2.0.28
 asyncpg>=0.29.0
 greenlet>=3.0.0
 psycopg2-binary>=2.9.9
+psycopg[binary]>=3.1.18
 alembic>=1.13.1
 
 # Graph Database (Neo4j 5.x)

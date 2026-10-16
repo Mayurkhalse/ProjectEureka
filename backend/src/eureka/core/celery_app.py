@@ -20,6 +20,7 @@ celery_app = Celery(
     backend=BACKEND_URL,
     include=[
         "eureka.workers.ingestion_tasks",
+        "eureka.workers.neo4j_tasks",
         "eureka.quad_ingestion.tasks",
         "eureka.irf_binding.binding_tasks",
         "eureka.processor.muril_tasks",

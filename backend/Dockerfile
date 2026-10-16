@@ -2,27 +2,24 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-# Install system dependencies including libpq and build essentials
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential \
-    curl \
-    libpq-dev \
-    git \
-    && rm -rf /var/lib/apt/lists/*
+# Install system dependencies
+RUN apt-get update && apt-get install -y libpq-dev gcc curl && rm -rf /var/lib/apt/lists/*
 
-# Install python dependencies
+# Install uv for rapid dependency resolution
+RUN pip install uv
+
+# Copy requirements and install
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN uv pip install --system --no-cache -r requirements.txt
 
-# Copy source code and alembic files
-COPY src ./src
-COPY alembic ./alembic
-COPY alembic.ini .
+# Copy source code and migration metadata
+COPY src/ /app/src/
+COPY alembic/ /app/alembic/
+COPY alembic.ini /app/alembic.ini
 
-# Set PYTHONPATH so src is in module path
+# Set environment paths
 ENV PYTHONPATH=/app/src
 ENV PYTHONUNBUFFERED=1
 
-EXPOSE 8000
-
+# Default command for the API (Overridden by Celery in Compose)
 CMD ["uvicorn", "eureka.api.main:app", "--host", "0.0.0.0", "--port", "8000"]
