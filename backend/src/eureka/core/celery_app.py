@@ -55,6 +55,7 @@ celery_app.conf.task_default_routing_key = "default"
 # Task routing
 celery_app.conf.task_routes = {
     "eureka.workers.ingestion_tasks.*": {"queue": "default", "routing_key": "default"},
+    "eureka.workers.neo4j_tasks.*": {"queue": "default", "routing_key": "default"},
     "eureka.quad_ingestion.tasks.*": {"queue": "quad_ingestion", "routing_key": "quad_ingestion"},
     "eureka.tasks.quad_tasks.*": {"queue": "quad_ingestion", "routing_key": "quad_ingestion"},
     "eureka.irf_binding.binding_tasks.*": {"queue": "irf_binding", "routing_key": "irf_binding"},
