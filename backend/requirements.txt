@@ -26,6 +26,11 @@ celery[redis]>=5.3.6
 # HTTP & Web Scraping (QUAD System)
 httpx>=0.27.0
 crawl4ai>=0.4.0
+requests>=2.31.0
+python-dotenv>=1.0.0
+
+# Cloud NLP & LLM Inference
+groq>=0.9.0
 
 # Multilingual ML & NLP (MuRIL)
 transformers>=4.38.2
