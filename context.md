@@ -310,5 +310,504 @@ The robustness of this backend is demonstrated through our automated testing sui
 
 ---
 
-*Project EUREKA represents the transition of public communications from subjective, retrospective guesswork into an exact, predictive, and mathematically verified science.*
+## 6. Administrative Geography & Regional Narrative Dynamics
+
+To govern narratives effectively across Maharashtra's 112+ million citizens, Project EUREKA maps physical administrative hierarchies to digital information corridors. The state is partitioned into **6 Administrative Revenue Divisions** comprising **36 Districts**. Each region possesses distinct socioeconomic structures, linguistic dialects, media consumption habits, and thematic risk triggers.
+
+```
++----------------------------------------------------------------------------------------------------+
+|                             MAHARASHTRA 6 ADMINISTRATIVE DIVISIONS                                 |
++----------------------------------------------------------------------------------------------------+
+|  1. KONKAN DIVISION (7)     : Mumbai City, Mumbai Sub, Thane, Palghar, Raigad, Ratnagiri, Sindhudurg|
+|  2. PUNE DIVISION (5)       : Pune, Satara, Sangli, Kolhapur, Solapur                              |
+|  3. NASHIK DIVISION (5)     : Nashik, Dhule, Nandurbar, Jalgaon, Ahmednagar (Ahilyanagar)          |
+|  4. SAMBHAJINAGAR (8)       : Chh. Sambhajinagar, Jalna, Parbhani, Hingoli, Nanded, Beed, Latur,    |
+|                               Dharashiv (Osmanabad)                                                |
+|  5. AMRAVATI DIVISION (5)   : Amravati, Akola, Buldhana, Washim, Yavatmal                          |
+|  6. NAGPUR DIVISION (6)     : Nagpur, Wardha, Bhandara, Gondia, Chandrapur, Gadchiroli             |
++----------------------------------------------------------------------------------------------------+
+```
+
+### The 36-District Operational & Risk Matrix
+
+| Division | Code | District Name | Population Baseline | Dominant Dialect / Script | Primary Thematic Triggers | Critical Contagion Borders |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| **Konkan** | MH-01 | Mumbai City | 3.1M | Marathi / English / Hindi | Urban infrastructure, transport, finance | MH-02, MH-03 |
+| **Konkan** | MH-02 | Mumbai Suburban | 9.4M | Marathi / Hindi / Gujarati | Suburban rail disruptions, housing, civic services | MH-01, MH-03, MH-04 |
+| **Konkan** | MH-03 | Thane | 11.1M | Marathi (Koli/Agri) / Hindi | Traffic gridlocks, real estate, civic utilities | MH-02, MH-04, MH-05, MH-14 |
+| **Konkan** | MH-04 | Palghar | 3.0M | Marathi / Warli Tribal Dialect | Tribal welfare, industrial corridors, coastal weather | MH-03, MH-14, MH-15 |
+| **Konkan** | MH-05 | Raigad | 2.6M | Marathi (Agri/Konkani) | Port operations, coastal monsoons, industrial safety | MH-03, MH-06, MH-12, MH-11 |
+| **Konkan** | MH-06 | Ratnagiri | 1.6M | Marathi (Malvani/Konkani) | Mango/fisheries subsidies, coastal infrastructure | MH-05, MH-07, MH-11, MH-10 |
+| **Konkan** | MH-07 | Sindhudurg | 0.8M | Marathi (Malvani) / Konkani | Eco-tourism, Konkan railway, cross-border Goa trade | MH-06, MH-10 |
+| **Pune** | MH-12 | Pune | 9.4M | Marathi (Puneri standard) / English | IT employment, university unrest, water quotas | MH-05, MH-11, MH-13, MH-14 |
+| **Pune** | MH-11 | Satara | 3.0M | Marathi (Western Deshi) | Sugarcane pricing, Koyna dam discharge, tourism | MH-05, MH-06, MH-10, MH-12, MH-13 |
+| **Pune** | MH-10 | Sangli | 2.8M | Marathi / Kannada border dialect | Krishna flood alerts, grape farming, border disputes | MH-06, MH-07, MH-09, MH-11, MH-13 |
+| **Pune** | MH-09 | Kolhapur | 3.9M | Marathi (Kolhapuri) | Sugar mill FRP agitation, flood inundation, textile mills | MH-07, MH-10 |
+| **Pune** | MH-13 | Solapur | 4.3M | Marathi / Kannada / Telugu | Textile labor, Ujjani water disputes, drought | MH-10, MH-11, MH-12, MH-14, MH-24 |
+| **Nashik** | MH-14 | Ahmednagar | 4.5M | Marathi (Deshi) | Sugar cooperatives, Shirdi pilgrim management, drought | MH-03, MH-12, MH-13, MH-15, MH-19 |
+| **Nashik** | MH-15 | Nashik | 6.1M | Marathi (Standard/Khandeshi) | Onion mandi prices, Godavari flooding, Kumbh logistics | MH-04, MH-14, MH-16, MH-18 |
+| **Nashik** | MH-16 | Dhule | 2.1M | Ahirani / Marathi | Cotton trade, tribal land rights, highway transit | MH-15, MH-17, MH-18 |
+| **Nashik** | MH-17 | Nandurbar | 1.6M | Bhili / Pawri / Ahirani | Tribal malnutrition, forest rights, Satpura cross-border | MH-16 |
+| **Nashik** | MH-18 | Jalgaon | 4.2M | Ahirani / Marathi | Banana crop insurance, gold market, irrigation canals | MH-15, MH-16, MH-19, MH-27 |
+| **Chh. Sambhajinagar** | MH-19 | Chh. Sambhajinagar | 3.7M | Marathi (Marathwada) / Urdu | Industrial labor, tourism (Ellora), drinking water scarcity | MH-14, MH-15, MH-18, MH-20, MH-23 |
+| **Chh. Sambhajinagar** | MH-20 | Jalna | 2.0M | Marathi (Marathwada) | Steel manufacturing, agrarian drought, seed production | MH-18, MH-19, MH-21, MH-23 |
+| **Chh. Sambhajinagar** | MH-21 | Parbhani | 1.8M | Marathi (Marathwada) | Cotton procurement, agrarian credit, Godavari basin | MH-20, MH-22, MH-23, MH-25 |
+| **Chh. Sambhajinagar** | MH-22 | Hingoli | 1.2M | Marathi (Marathwada) | Turmeric processing, rural connectivity, health facilities | MH-21, MH-25, MH-28, MH-29 |
+| **Chh. Sambhajinagar** | MH-23 | Beed | 2.6M | Marathi (Marathwada) | Sugarcane cutter migration, drought distress, crop loss | MH-13, MH-14, MH-19, MH-20, MH-21, MH-24 |
+| **Chh. Sambhajinagar** | MH-24 | Latur | 2.5M | Marathi / Kannada border dialect | Summer water trains, education coaching, pulse markets | MH-13, MH-23, MH-25, MH-26 |
+| **Chh. Sambhajinagar** | MH-25 | Nanded | 3.4M | Marathi / Telugu / Punjabi | Gurdwara pilgrimage, border transit, Godavari floods | MH-21, MH-22, MH-24, MH-29 |
+| **Chh. Sambhajinagar** | MH-26 | Dharashiv | 1.7M | Marathi (Marathwada) | Tuljapur pilgrimage, wind energy, severe drought | MH-13, MH-23, MH-24 |
+| **Amravati** | MH-27 | Buldhana | 2.6M | Varhadi / Marathi | Lonar conservation, cotton loan waivers, soybean price | MH-18, MH-20, MH-28, MH-30 |
+| **Amravati** | MH-28 | Akola | 1.8M | Varhadi / Marathi | Cotton pulse trade, seed research, summer heatwaves | MH-22, MH-27, MH-29, MH-30 |
+| **Amravati** | MH-29 | Washim | 1.2M | Varhadi / Marathi | Soybean procurement, irrigation dams, agrarian health | MH-22, MH-25, MH-28, MH-31 |
+| **Amravati** | MH-30 | Amravati | 2.9M | Varhadi / Marathi / Korku | Melghat tribal nutrition, orange farming, textile parks | MH-27, MH-28, MH-31, MH-32 |
+| **Amravati** | MH-31 | Yavatmal | 2.8M | Varhadi / Marathi / Gondi | Agrarian crisis hotspots, pesticide safety, cotton pricing | MH-25, MH-29, MH-30, MH-32, MH-34 |
+| **Nagpur** | MH-32 | Wardha | 1.3M | Marathi (Nagpuri) | Cotton spinning, Sevagram heritage, dry farming | MH-30, MH-31, MH-33, MH-34 |
+| **Nagpur** | MH-33 | Nagpur | 4.7M | Marathi (Nagpuri) / Hindi | Winter Assembly sessions, cargo hub, logistics, health | MH-32, MH-34, MH-35 |
+| **Nagpur** | MH-34 | Chandrapur | 2.2M | Marathi (Nagpuri) / Gondi | Thermal power pollution, coal mines, man-animal conflict | MH-31, MH-32, MH-33, MH-35, MH-36 |
+| **Nagpur** | MH-35 | Bhandara | 1.2M | Marathi (Nagpuri / Zadi Boli) | Rice paddy procurement, brass industry, Wainganga floods | MH-33, MH-34, MH-36 |
+| **Nagpur** | MH-36 | Gondia | 1.3M | Marathi / Hindi / Gondi | LWE border monitoring, rice mills, forest produce | MH-34, MH-35 |
+| **Nagpur** | MH-37 | Gadchiroli | 1.1M | Gondi / Madiya / Marathi | Forest rights, mining projects, LWE security logistics | MH-34, MH-36 |
+
+*(Note: Official state administration maps 36 operational collectorates with Mumbai City and Mumbai Suburban handled as twin headquarters for capital media operations).*
+
+---
+
+## 7. The 24-Hour PR & Communications Operational Lifecycle
+
+Project EUREKA synchronizes continuous digital data harvesting with the strict operational battle rhythm of the Maharashtra Directorate General of Information and Public Relations (DGIPR) and District Collectorates.
+
+```mermaid
+flowchart TD
+    subgraph D1["06:00 - 08:30: Morning Intelligence & CMO Briefing"]
+        direction TB
+        A1["06:00: Autonomous Edge Scraper (NEWS_API.py + Crawl4AI)"] --> A2["06:45: Cloud NLP Sentiment & StGNN Ingestion"]
+        A2 --> A3["07:30: Auto-Generate Dossier 1: Morning Media Intelligence Bulletin"]
+        A3 --> A4["08:00: Dispatch to CMO, Chief Secretary, & DG DGIPR"]
+    end
+
+    subgraph D2["08:30 - 13:00: Field Alignment & Proactive Saturation"]
+        direction TB
+        B1["08:30: DIO Morning Tasking (Target Low-Volume Sectors)"] --> B2["10:00: Departmental Press Releases & Field Circulars Issued"]
+        B2 --> B3["11:30: Real-time Ingestion via Celery Multi-Queue Mesh"]
+    end
+
+    subgraph D3["13:00 - 17:30: Midday Crisis Detection & 90-Min SLA Defense"]
+        direction TB
+        C1["13:00: StGNN Anomaly Spike / FactCheck Ticket Triggered"] --> C2["13:15: Auto-Generate Dossier 2: Crisis SLA Escalation Alert"]
+        C2 --> C3["13:30: District Collector Activates Rebuttal Desk (90m Timer)"]
+        C3 --> C4["14:45: Fact-Check Clarification Dispatched across Print/Web/Social"]
+    end
+
+    subgraph D4["17:30 - 22:00: Evening Synthesis & Spatio-Temporal Projection"]
+        direction TB
+        E1["17:30: Evening Media Harvest & Broadcast News Ingestion"] --> E2["19:00: StGNN Computes 6-Hour Forward Diffusion Radar"]
+        E2 --> E3["19:30: Auto-Generate Dossier 4: Spatio-Temporal Diffusion Warning"]
+        E3 --> E4["20:30: Compute 100-Point Composite Governance Index"]
+        E4 --> E5["21:30: Publish Dossier 3: Weekly / Daily Executive Ranking Dossier"]
+    end
+
+    D1 --> D2 --> D3 --> D4
+```
+
+### Chronological Operational Timeline
+
+| Time Window | Operational Milestone | System Actions & Data Flows | Responsible Bureaucratic Persona | Key System Output |
+| :--- | :--- | :--- | :--- | :--- |
+| **06:00 - 07:00** | Early Morning Sweep | `NEWS_API.py` queries NewsAPI v2 across 36 district keywords; Crawl4AI scrapes morning e-papers (Lokmat, Sakal, Pudhari). Serverless Hugging Face RoBERTa scores regional sentiment. | Automated Ingestion Worker (`default` queue) | 3,000+ raw news records parsed and normalized into PostgreSQL `raw_events`. |
+| **07:00 - 08:00** | Morning Briefing Generation | SemIf-OpenJev correlates raw articles into canonical events. Net Sentiment Index ($NSI$) calculated across all 6 administrative divisions. | Central System Scheduler (`cron`) | **Executive Dossier 1: Daily Morning Media Intelligence Bulletin** delivered via encrypted PDF/REST API. |
+| **08:00 - 09:30** | Leadership Review & Strategy | State leadership reviews statewide sentiment trends, identifies at-risk regions, and issues communication directives for the day. | Chief Minister's Office (CMO) & DG DGIPR | Strategic daily guidance notes issued to Divisional Commissioners and District Collectors. |
+| **09:30 - 12:30** | Field Communication Push | District Information Officers (DIOs) draft and publish authenticated developmental releases to proactively counter information vacuums. | District Information Officers (DIOs) | 250+ authenticated press releases ingested into EUREKA via IPCS / webforms, boosting Pillar 1 Volume scores. |
+| **12:30 - 15:30** | Midday Misinformation Detection | StGNN and Neo4j detect anomalous rumor clusters or viral fake news. Crisis SLA countdown timer triggers upon ticket generation. | Autonomous Graph Engine & DIO Fact-Check Desk | **Executive Dossier 2: Real-Time Crisis SLA Escalation Alert** sent via SMS / Telegram / Webhook to Collector. |
+| **15:30 - 17:30** | Rebuttal Verification & SLA Closure | District Collector reviews proposed factual rebuttal, executes cryptographic sign-off via RBAC, and releases clarification. | District Collector / Magistrate (DM) | Clarification logged; TAT recorded. Crisis SLA score preserved at 25.0 points if refuted within 90 minutes. |
+| **17:30 - 19:30** | Prime-Time Discourse Monitoring | Evening electronic media debates, social chatter, and regional news bulletins ingested and processed through Triton INT8 dynamic batching. | Outbox Worker & Neo4j Batch Ingestion | Neo4j updates node relationships; StGNN extracts 24-hour spatio-temporal feature matrices ($[36, 3, 24]$). |
+| **19:30 - 21:00** | Predictive Diffusion Run | StGNN executes forward inference to forecast rumor contagion vectors across neighboring district borders over the next 6 hours ($T+6\text{h}$). | Spatio-Temporal Neural Model (`A3TGCN`) | **Executive Dossier 4: 6-Hour Spatio-Temporal Diffusion Warning Report** highlighting at-risk adjacent collectorates. |
+| **21:00 - 22:30** | Night Score Tally & Governance Audit | Daily scoring engine tallies the 100-Point Composite Index for all 36 districts over the rolling 24-hour window ($S_{\text{vol}} + S_{\text{tat}} + S_{\text{sent}} + S_{\text{sla}}$). | PostgreSQL Audit Ledger & Reporting Engine | **Executive Dossier 3: Weekly / Daily Governance Ranking Dossier** presented on the MCC Command Dashboard. |
+
+---
+
+## 8. The 4 Executive Operational Dossiers & Output Specifications
+
+Project EUREKA produces **4 Core Operational Dossiers** tailored to distinct stages of governance decision-making. Each dossier possesses a concrete business purpose, layout structure, and machine-readable JSON schema.
+
+---
+
+### Dossier 1: Daily Morning Media Intelligence Bulletin
+
+* **Delivery Schedule:** Daily at 07:30 AM IST.
+* **Target Audience:** Chief Minister's Office (CMO), Chief Secretary, DG DGIPR, Divisional Commissioners.
+* **Core Purpose:** Pre-flight intelligence summarizing the state's narrative climate before morning cabinet and administrative meetings begin.
+
+#### Visual Layout & Key Indicators
+```
++----------------------------------------------------------------------------------------------------+
+| DGIPR MAHARASHTRA | DAILY MORNING MEDIA INTELLIGENCE BULLETIN | 19-OCT-2026 07:30 IST              |
++----------------------------------------------------------------------------------------------------+
+| STATEWIDE NSI: +0.38 [SATISFACTORY] | ACTIVE RUMORS: 2 [UNDER SLA] | ARTICLES PARSED: 4,812        |
++----------------------------------------------------------------------------------------------------+
+| REGIONAL SENTIMENT HEATMAP:                                                                        |
+| • Konkan Division   : +0.52 (High Approval - Metro lines, coastal infrastructure)                 |
+| • Pune Division     : +0.41 (Stable - Industrial expansion, IT policy)                             |
+| • Nashik Division   : -0.12 (Critical - Onion price slump in Lasalgaon mandi)                      |
+| • Sambhajinagar Div : -0.28 (High Risk - Soy crop insurance delays in Beed/Jalna)                 |
+| • Amravati Division : -0.18 (Moderate Risk - Cotton procurement MSP concerns)                     |
+| • Nagpur Division   : +0.31 (Positive - Samruddhi corridor logistics hub expansion)               |
++----------------------------------------------------------------------------------------------------+
+| TOP 3 EMERGENT ISSUES REQUIRING IMMEDIATE PROACTIVE RELEASES:                                      |
+| 1. Beed: Rumor regarding farmer crop insurance claim rejections (Urgency: High, NSI: -0.65)        |
+| 2. Nashik: Protests at Lasalgaon over onion export duty rumors (Urgency: High, NSI: -0.58)         |
+| 3. Thane: False report of water contamination in Ulhasnagar civic supply (Urgency: Medium)        |
++----------------------------------------------------------------------------------------------------+
+```
+
+#### JSON Output Specification (`Dossier1_MorningBulletin.json`)
+```json
+{
+  "$schema": "https://eureka.gov.in/schemas/dossier-morning-bulletin.json",
+  "dossier_id": "D1-20261019-0730",
+  "generated_at": "2026-10-19T07:30:00Z",
+  "reporting_window_hours": 12,
+  "state_summary": {
+    "total_articles_parsed": 4812,
+    "statewide_net_sentiment_index": 0.38,
+    "active_unrefuted_rumors": 2,
+    "top_governance_themes": ["Agriculture", "Infrastructure", "Civic Water Supply"]
+  },
+  "division_sentiment": [
+    {"division": "Konkan", "net_sentiment_index": 0.52, "volume": 1640, "status": "SATISFACTORY"},
+    {"division": "Pune", "net_sentiment_index": 0.41, "volume": 1120, "status": "SATISFACTORY"},
+    {"division": "Nashik", "net_sentiment_index": -0.12, "volume": 580, "status": "WATCHLIST"},
+    {"division": "Chhatrapati Sambhajinagar", "net_sentiment_index": -0.28, "volume": 690, "status": "CRITICAL_ACTION_REQUIRED"},
+    {"division": "Amravati", "net_sentiment_index": -0.18, "volume": 390, "status": "WATCHLIST"},
+    {"division": "Nagpur", "net_sentiment_index": 0.31, "volume": 392, "status": "SATISFACTORY"}
+  ],
+  "emergent_early_warnings": [
+    {
+      "warning_id": "WARN-2026-0041",
+      "district": "Beed",
+      "district_code": "MH-23",
+      "topic": "Agrarian Crop Insurance Claim Delays",
+      "net_sentiment_index": -0.65,
+      "estimated_reach": 85000,
+      "recommended_action": "District Collectorate must issue authenticated tabular breakdown of disbursed insurance funds via DIO within 2 hours."
+    },
+    {
+      "warning_id": "WARN-2026-0042",
+      "district": "Nashik",
+      "district_code": "MH-15",
+      "topic": "Onion Export Duty Rumor",
+      "net_sentiment_index": -0.58,
+      "estimated_reach": 120000,
+      "recommended_action": "Cooperation Department must issue circular confirming zero new export curbs."
+    }
+  ]
+}
+```
+
+---
+
+### Dossier 2: Real-Time Crisis SLA Escalation Alert
+
+* **Delivery Schedule:** Event-driven (Generated instantly when a high-velocity rumor or critical sentiment drop occurs).
+* **Target Audience:** Originating District Collector, District Superintendent of Police, DGIPR Fact-Check Command Desk, Chief Secretary.
+* **Core Purpose:** Enforces the Zero-Tolerance Crisis SLA by providing immediate situational awareness, graph diffusion vectors, and a countdown timer for authenticated rebuttal sign-off.
+
+#### Visual Layout & Key Indicators
+```
++----------------------------------------------------------------------------------------------------+
+| *** URGENT CRISIS ESCALATION *** | EUREKA SLA ALERT ID: SLA-CRISIS-2026-089                       |
++----------------------------------------------------------------------------------------------------+
+| TARGET DISTRICT: BEED (MH-23)       | INCIDENT TIME: 13:12 IST     | SLA DEADLINE: 14:42 IST (90m) |
+| TIME REMAINING: 01 HR 14 MIN        | VIRAL VELOCITY: 420 shares/m | THREAT LEVEL: LEVEL 4 CRITICAL|
++----------------------------------------------------------------------------------------------------+
+| RUMOR CONTENT IDENTIFIED (INDIC REGIONAL MARATHI):                                                 |
+| "बीड जिल्ह्यातील सर्व पीक विमा दावे रद्द - सरकारचा शेतकऱ्यांना मोठा धक्का"                         |
+| [English Translation: "All crop insurance claims in Beed cancelled - major shock to farmers"]      |
++----------------------------------------------------------------------------------------------------+
+| CONTAGION RISK (NEO4J GRAPH HOPS):                                                                 |
+| • Origin District   : Beed (MH-23)                                                                 |
+| • High-Risk Hops    : Jalna (MH-20 - 78% probability), Dharashiv (MH-26 - 64% probability)        |
++----------------------------------------------------------------------------------------------------+
+| ACTION REQUIRED BEFORE SLA BREACH:                                                                 |
+| 1. District Collector Beed must review pre-generated factual rebuttal on MCC Portal.               |
+| 2. Cryptographic sign-off required to authorize release.                                           |
+| 3. If refuted by 14:42 IST: Pillar 4 Score = 25.0 / 25.0.                                          |
+| 4. If unrefuted after 14:42 IST: Pillar 4 Score = 0.0 / 25.0 (Automatic Statewide Demotion).       |
++----------------------------------------------------------------------------------------------------+
+```
+
+#### JSON Output Specification (`Dossier2_CrisisAlert.json`)
+```json
+{
+  "$schema": "https://eureka.gov.in/schemas/dossier-crisis-alert.json",
+  "alert_id": "SLA-CRISIS-2026-089",
+  "triggered_at": "2026-10-19T13:12:45Z",
+  "sla_deadline": "2026-10-19T14:42:45Z",
+  "sla_window_minutes": 90,
+  "origin_district": {
+    "name": "Beed",
+    "code": "MH-23",
+    "collector_notified": true,
+    "dio_contact": "dio.beed@maharashtra.gov.in"
+  },
+  "misinformation_payload": {
+    "detected_claim_marathi": "बीड जिल्ह्यातील सर्व पीक विमा दावे रद्द - सरकारचा शेतकऱ्यांना मोठा धक्का",
+    "english_translation": "All crop insurance claims in Beed cancelled - government delivers major blow to farmers",
+    "source_channels": ["WhatsApp TipLine", "X Regional", "Local Web Portals"],
+    "current_viral_velocity_shares_per_min": 420.5,
+    "sentiment_polarity": -0.89
+  },
+  "graph_diffusion_vector": {
+    "origin_node": "Beed",
+    "direct_physical_neighbors": ["Jalna", "Ahmednagar", "Parbhani", "Latur", "Dharashiv"],
+    "projected_contagion_probabilities": [
+      {"neighbor": "Jalna", "probability": 0.78, "predicted_time_to_infection_minutes": 45},
+      {"neighbor": "Dharashiv", "probability": 0.64, "predicted_time_to_infection_minutes": 70},
+      {"neighbor": "Parbhani", "probability": 0.52, "predicted_time_to_infection_minutes": 95}
+    ]
+  },
+  "governance_sla_impact": {
+    "current_pillar_score": 25.0,
+    "post_breach_penalty_score": 0.0,
+    "overall_district_rank_drop": "Rank 14 -> Rank 34 (Projected)"
+  },
+  "recommended_rebuttal": {
+    "headline_marathi": "बीड जिल्ह्यातील पीक विमा दाव्यांबाबत वस्तुस्थितीदर्शक खुलासा",
+    "factual_points": [
+      "No crop insurance claims have been cancelled.",
+      "Over ₹142 Crore has already been disbursed to 118,000 eligible farmers in Beed as of 18-Oct-2026.",
+      "Remaining verification of 14,000 claims is proceeding on schedule under Deputy Collector supervision."
+    ],
+    "verification_authority": "Office of the District Collector, Beed"
+  }
+}
+```
+
+---
+
+### Dossier 3: Weekly 100-Point District Governance Ranking Dossier
+
+* **Delivery Schedule:** Every Monday at 08:00 AM IST.
+* **Target Audience:** Hon'ble Chief Minister, Deputy Chief Ministers, Cabinet Secretary, Chief Secretary, all 36 District Collectors.
+* **Core Purpose:** The definitive, auditable scorecard establishing transparency and performance competition across all collectorates using the 100-Point Composite Index.
+
+#### Visual Layout & Key Indicators
+```
++----------------------------------------------------------------------------------------------------+
+| MAHARASHTRA DISTRICT GOVERNANCE INDEX | WEEKLY LEAGUE TABLE (WEEK 42 - OCT 2026)                   |
++----------------------------------------------------------------------------------------------------+
+| RANK | DISTRICT       | COMPOSITE SCORE | VOLUME (25) | TAT (25) | SENTIMENT (25) | CRISIS SLA (25)|
++------+----------------+-----------------+-------------+----------+----------------+----------------+
+|  01  | Thane          |      94.20      |    24.50    |  23.80   |     20.90      |     25.00      |
+|  02  | Pune           |      91.80      |    25.00    |  22.40   |     19.40      |     25.00      |
+|  03  | Nagpur         |      89.50      |    23.10    |  24.10   |     17.30      |     25.00      |
+|  04  | Kolhapur       |      88.10      |    22.00    |  23.50   |     17.60      |     25.00      |
+|  05  | Sindhudurg     |      87.40      |    20.80    |  24.90   |     16.70      |     25.00      |
+| ...  | ...            |       ...       |     ...     |   ...    |      ...       |      ...       |
+|  32  | Jalgaon        |      62.30      |    18.20    |  14.50   |     14.60      |     15.00      |
+|  33  | Nandurbar      |      58.10      |    12.40    |  12.10   |     13.60      |     20.00      |
+|  34  | Nashik         |      55.40      |    24.10    |  11.20   |     07.60      |     12.50      |
+|  35  | Buldhana       |      49.80      |    14.20    |  10.40   |     10.20      |     15.00      |
+|  36  | Beed           |      42.10      |    19.00    |  09.80   |     08.30      |     05.00      |
++----------------------------------------------------------------------------------------------------+
+| TOP MOVER: Thane (+4 Ranks due to sub-30min TAT on civic flood rebuttal)                           |
+| CRITICAL CONCERN: Beed (-18 Ranks due to breached Crisis SLA and persistent agrarian rumor)         |
++----------------------------------------------------------------------------------------------------+
+```
+
+#### JSON Output Specification (`Dossier3_WeeklyGovernanceRankings.json`)
+```json
+{
+  "$schema": "https://eureka.gov.in/schemas/dossier-weekly-rankings.json",
+  "dossier_id": "D3-WEEK-42-2026",
+  "evaluation_period": {
+    "start_date": "2026-10-12T00:00:00Z",
+    "end_date": "2026-10-18T23:59:59Z"
+  },
+  "state_performance_averages": {
+    "composite_index": 76.84,
+    "volume_pillar": 20.45,
+    "tat_pillar": 18.22,
+    "sentiment_pillar": 16.12,
+    "crisis_sla_pillar": 22.05
+  },
+  "league_table": [
+    {
+      "rank": 1,
+      "previous_rank": 5,
+      "rank_delta": 4,
+      "district": "Thane",
+      "district_code": "MH-03",
+      "division": "Konkan",
+      "composite_score": 94.20,
+      "pillars": {
+        "volume": {"score": 24.50, "raw_releases": 294},
+        "turnaround_time": {"score": 23.80, "avg_tat_minutes": 48.2},
+        "sentiment": {"score": 20.90, "net_sentiment_index": 0.67},
+        "crisis_sla": {"score": 25.00, "active_rumors": 0, "sla_breaches": 0}
+      },
+      "key_achievement": "Sub-45m rebuttal issued during Ulhasnagar civic rumor; perfect SLA retention."
+    },
+    {
+      "rank": 36,
+      "previous_rank": 18,
+      "rank_delta": -18,
+      "district": "Beed",
+      "district_code": "MH-23",
+      "division": "Chhatrapati Sambhajinagar",
+      "composite_score": 42.10,
+      "pillars": {
+        "volume": {"score": 19.00, "raw_releases": 228},
+        "turnaround_time": {"score": 09.80, "avg_tat_minutes": 142.5},
+        "sentiment": {"score": 08.30, "net_sentiment_index": -0.34},
+        "crisis_sla": {"score": 05.00, "active_rumors": 3, "sla_breaches": 2}
+      },
+      "remedial_directive": "Cabinet directive issued to Divisional Commissioner to deploy emergency communication officer to Beed."
+    }
+  ]
+}
+```
+
+---
+
+### Dossier 4: 6-Hour Spatio-Temporal Diffusion Warning Report
+
+* **Delivery Schedule:** Automated Trigger (Issued when StGNN neural model predicts $P_{\text{diffusion}} \ge 0.70$ across district borders within 6 hours).
+* **Target Audience:** State Emergency Operations Center (SEOC), ADG Law & Order, Bordering District Collectors, DG DGIPR.
+* **Core Purpose:** Proactive narrative defense. Equips downstream collectorates with pre-emptive counter-narratives before a viral rumor physically or digitally penetrates their jurisdiction.
+
+#### Visual Layout & Key Indicators
+```
++----------------------------------------------------------------------------------------------------+
+| EUREKA RADAR | 6-HOUR SPATIO-TEMPORAL DIFFUSION FORECAST | 19-OCT-2026 19:30 IST                   |
++----------------------------------------------------------------------------------------------------+
+| OUTBREAK EPICENTER: NASHIK (MH-15) - ONION MANDI EXPORT CURB RUMOR                                |
+| NEURAL CONFIDENCE: 84.6% (StGNN A3TGCN) | FORECAST HORIZON: T+0h TO T+6h (UNTIL 01:30 IST)         |
++----------------------------------------------------------------------------------------------------+
+| PREDICTED CONTAGION TIMELINE & PATHWAYS:                                                           |
+|                                                                                                    |
+|   [NASHIK (MH-15)]  ==================>  [AHMEDNAGAR (MH-14)]  =======>  [PUNE (MH-12)]            |
+|   (Epicenter: T=0h)     P = 86.4%           (Predicted: T+2h)    P=62.1%  (Predicted: T+5h)        |
+|          ||                                       ||                                               |
+|          || P = 79.2%                             || P = 71.5%                                     |
+|          \/                                       \/                                               |
+|   [JALGAON (MH-18)]                      [CHH. SAMBHAJINAGAR (MH-19)]                              |
+|   (Predicted: T+2.5h)                    (Predicted: T+4h)                                         |
++----------------------------------------------------------------------------------------------------+
+| PRE-EMPTIVE INTERVENTION PROTOCOL:                                                                 |
+| 1. Ahmednagar & Jalgaon DIOs must publish clarifying agricultural circulars immediately.            |
+| 2. Local mandi secretaries instructed to display official state denial on electronic APMC boards.  |
+| 3. Preventative deployment halts narrative diffusion before morning trading at 08:00 IST.          |
++----------------------------------------------------------------------------------------------------+
+```
+
+#### JSON Output Specification (`Dossier4_DiffusionWarning.json`)
+```json
+{
+  "$schema": "https://eureka.gov.in/schemas/dossier-diffusion-warning.json",
+  "dossier_id": "D4-STGNN-20261019-1930",
+  "generated_at": "2026-10-19T19:30:00Z",
+  "forecast_horizon_hours": 6,
+  "neural_model": "StGNN-A3TGCN-INT8",
+  "model_confidence_score": 0.846,
+  "epicenter": {
+    "district": "Nashik",
+    "district_code": "MH-15",
+    "event_summary": "Unverified rumor claiming reimposition of 40% export duty on onion produce.",
+    "current_velocity_index": 78.4,
+    "current_sentiment": -0.62
+  },
+  "predicted_contagion_pathways": [
+    {
+      "destination_district": "Ahmednagar",
+      "destination_code": "MH-14",
+      "geographic_relation": "Direct Southern Border / Shared Agricultural Trade Corridor",
+      "contagion_probability": 0.864,
+      "projected_impact_time": "2026-10-19T21:30:00Z",
+      "projected_sentiment_drop": -0.45,
+      "recommended_preemptive_actions": [
+        "Issue authenticated notice to Ahmednagar APMC secretaries denying export curbs.",
+        "Broadcast video statement from Director of Marketing via regional WhatsApp networks."
+      ]
+    },
+    {
+      "destination_district": "Jalgaon",
+      "destination_code": "MH-18",
+      "geographic_relation": "Direct Eastern Border / Khandesh Transport Highway",
+      "contagion_probability": 0.792,
+      "projected_impact_time": "2026-10-19T22:00:00Z",
+      "projected_sentiment_drop": -0.38,
+      "recommended_preemptive_actions": [
+        "DIO Jalgaon to push joint circular with Agriculture Department by 20:30 IST."
+      ]
+    },
+    {
+      "destination_district": "Chhatrapati Sambhajinagar",
+      "destination_code": "MH-19",
+      "geographic_relation": "Secondary Graph Hop via Ahmednagar / Jalna Highway",
+      "contagion_probability": 0.715,
+      "projected_impact_time": "2026-10-19T23:30:00Z",
+      "projected_sentiment_drop": -0.31,
+      "recommended_preemptive_actions": [
+        "Alert Marathwada regional media desk; schedule morning press briefing."
+      ]
+    }
+  ]
+}
+```
+
+---
+
+## 9. Bureaucratic Roles, Governance Personas & Escalation Workflows
+
+Project EUREKA reflects the real-world administrative hierarchy of the Maharashtra Civil Services. Access control, action authorization, and reporting are partitioned across **4 Bureaucratic Personas** using cryptographically signed JSON Web Tokens (JWT).
+
+```mermaid
+flowchart LR
+    subgraph P1["Persona 1: Central Command"]
+        DG["DG State Admin<br/>(DGIPR Central HQ)"]
+    end
+
+    subgraph P2["Persona 2: Executive Leadership"]
+        CMO["CMO / Cabinet Observer<br/>(Chief Minister's Office)"]
+    end
+
+    subgraph P3["Persona 3: Executive Ground Authority"]
+        DM["District Collector / Magistrate<br/>(District Level - e.g. MH-12)"]
+    end
+
+    subgraph P4["Persona 4: Operational Field Desk"]
+        DIO["District Information Officer<br/>(DIO Desk - Ground Operations)"]
+    end
+
+    DIO -->|"Submits Releases & Fact-Checks"| DM
+    DM -->|"Signs Off Rebuttals (90m SLA)"| DG
+    DG -->|"Statewide Audited Aggregates"| CMO
+    DG -.->|"Issues Policy Overrides"| DM
+    CMO -.->|"Strategic Inquiries & Directives"| DG
+```
+
+### Role-Based Access Control (RBAC) Matrix
+
+| Persona / Role | Administrative Scope | Authentication Guard (`Role`) | Maha-Command Center (MCC) Views | Authorized System Actions | SLA & Escalation Accountability |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **Director General (DG) State Admin** | Statewide (All 36 Districts, 6 Divisions) | `ROLE_STATE_ADMIN` | Statewide Master HUD, 36-District League Table, Cross-Division Contagion Radar, Audit Ledger | • Override system-generated scores<br/>• Reassign fact-check tickets across districts<br/>• Configure statewide SLA thresholds<br/>• Issue inter-departmental inquiries | Accountable to Chief Secretary & Hon'ble Minister (IPR) for statewide communication cohesion. |
+| **District Collector / Magistrate (DM)** | District Specific (e.g., `MH-04` Thane) | `ROLE_DISTRICT_COLLECTOR` | District War Room HUD, 90-Minute Crisis Countdown Timer, Departmental TAT Tracker | • Cryptographically authorize crisis rebuttals<br/>• Sign off on official press statements<br/>• Request state-level fact-check assistance<br/>• View localized StGNN diffusion forecasts | Sole authority responsible for District Crisis SLA (Pillar 4 score: 25.0 vs 0.0 points). |
+| **District Information Officer (DIO Desk)** | District Field Operations | `ROLE_DIO_DESK` | Field Ingestion Desk, Clipping Upload Portal, Fact-Check Ticket Queue, Local Media Directory | • Ingest official releases and circulars<br/>• Upload and annotate regional press clippings<br/>• Draft preliminary rebuttal copy for DM sign-off<br/>• Log local press conference transcripts | Accountable for Pillar 1 Volume saturation and sub-45 minute response time (Pillar 2 TAT). |
+| **CMO / Cabinet Observer** | Statewide Executive (Read-Only) | `ROLE_CABINET_OBSERVER` | Executive High-Level Briefing, 4 Executive Dossiers, Real-Time Crisis War Room | • View real-time statewide sentiment index<br/>• Inspect 6-hour predictive diffusion vectors<br/>• Export audited PDF dossiers for cabinet meetings<br/>• Drill down into historical district rankings | Zero operational input; provides real-time strategic awareness for the Chief Minister and Council of Ministers. |
+
+---
+
+## 10. Summary & Strategic Impact for Democratic Governance
+
+Project EUREKA marks the definitive transition of public communications from retrospective, intuitive guesswork into an **exact, predictive, and mathematically verified science**:
+
+1. **Democratic Accountability:** The 100-Point Composite Index provides the first objective, auditable metric measuring how transparently and rapidly government institutions communicate with their citizens.
+2. **Pre-Emptive Narrative Defense:** Rather than chasing rumors hours after they spark panic, the StGNN neural engine alerts leadership 6 hours in advance, enabling preventative truth dissemination.
+3. **Linguistic Equity:** Native Indic language processing (MuRIL Devanagari normalization) ensures rural voices in Varhadi, Ahirani, or Marathwada dialects receive the exact same high-priority administrative responsiveness as urban English publications.
+4. **Frugal Architectural Excellence:** Through INT8 post-training quantization, centralized NVIDIA Triton micro-batching, serverless cloud NLP evaluation, and asynchronous Celery/Redis chunk streaming, EUREKA achieves massive state scale with minimal infrastructure footprint.
+
+---
+
+*Project EUREKA: Empowering governance through truth, speed, and mathematical rigor.*
 

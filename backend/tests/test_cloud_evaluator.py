@@ -17,7 +17,8 @@ def test_evaluate_sentiment_cloud_fallback_when_empty():
 
 
 def test_evaluate_sentiment_cloud_mocked_hf():
-    with patch("eureka.llm.cloud_evaluator.requests.post") as mock_post:
+    with patch.dict("os.environ", {"HF_TOKEN": "mock_hf_token"}), \
+         patch("eureka.llm.cloud_evaluator.requests.post") as mock_post:
         mock_resp = MagicMock()
         mock_resp.status_code = 200
         mock_resp.json.return_value = [[
@@ -32,7 +33,8 @@ def test_evaluate_sentiment_cloud_mocked_hf():
 
 
 def test_evaluate_crisis_sla_groq_mocked():
-    with patch("eureka.llm.cloud_evaluator.Groq") as mock_groq_cls:
+    with patch.dict("os.environ", {"GROQ_API_KEY": "mock_groq_key"}), \
+         patch("eureka.llm.cloud_evaluator.Groq") as mock_groq_cls:
         mock_client = MagicMock()
         mock_groq_cls.return_value = mock_client
         mock_completion = MagicMock()
