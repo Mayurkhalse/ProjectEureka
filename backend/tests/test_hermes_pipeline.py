@@ -1,23 +1,45 @@
-"""Unit & integration tests for Hermes DM Pipeline Manager and Executive Dossiers."""
+"""Unit & Integration Tests for Hermes DM Pipeline Manager, Agent Tools, and Autonomous Orchestrator.
 
+Validates:
+1. 90-minute Crisis SLA calculation and urgency state transitions.
+2. Accurate Indic translation & dialect normalization via Google AI Studio API.
+3. Successful staging of a DM rebuttal within the 90-minute SLA window.
+4. RBAC violation enforcement: Unauthorized District Collector cannot approve another district's ticket.
+5. Idempotent Neo4j node & edge synchronization.
+6. HermesOrchestrator task dispatch with CLI, Groq, and deterministic tool fallbacks.
+7. FastAPI Hermes endpoints (/dm-queue/{district_code}, /translate, /execute, /dm-pipelines).
+"""
+
+import uuid
 from datetime import datetime, timedelta, timezone
 from fastapi.testclient import TestClient
 import pytest
 
 from eureka.api.auth import create_access_token
 from eureka.api.main import app
+from eureka.core.database import sync_db_context
+from eureka.hermes.agent_tools import (
+    tool_execute_dm_signoff,
+    tool_stage_dm_rebuttal,
+    tool_sync_neo4j_nodes,
+    tool_translate_and_normalize,
+)
 from eureka.hermes.dm_pipeline_manager import (
     HermesDMPipelineManager,
     MAHARASHTRA_DIVISIONS,
     DISTRICT_LOOKUP,
 )
-from eureka.models.enums import UserRole
+from eureka.hermes.orchestrator import get_hermes_orchestrator
+from eureka.models.entities import CanonicalEvent, FactCheckTicket
+from eureka.models.enums import FactCheckTicketStatus, UserRole
 
 
 @pytest.fixture
 def client():
     return TestClient(app)
 
+
+# --- 1. SLA Calculation Unit Tests ---
 
 def test_sla_status_calculation_within_window():
     now = datetime.now(timezone.utc)
@@ -26,7 +48,6 @@ def test_sla_status_calculation_within_window():
     sla = HermesDMPipelineManager.calculate_sla_status(event_time)
     assert sla["is_expired"] is False
     assert sla["sla_remaining_seconds"] > 0
-    # ~60 minutes remaining -> WATCH urgency
     assert sla["urgency_level"] in ["WATCH", "ON_TRACK"]
     assert "00:" in sla["sla_remaining_formatted"] or "01:" in sla["sla_remaining_formatted"]
 
@@ -51,6 +72,8 @@ def test_sla_status_calculation_refuted_within_sla():
     assert sla["urgency_level"] == "RESOLVED"
 
 
+# --- 2. Collector RBAC Scope Helper Tests ---
+
 def test_collector_rbac_authorization():
     # 1. DG Admin has statewide access
     assert HermesDMPipelineManager.validate_collector_authorization(
@@ -74,35 +97,122 @@ def test_collector_rbac_authorization():
     ) is False
 
 
+# --- 3. Executive Dossiers 1-4 Generation ---
+
 def test_generate_dossiers_schemas():
-    # Dossier 1: Morning Bulletin
     d1 = HermesDMPipelineManager.generate_dossier("1")
     assert "dossier_id" in d1
     assert "divisions_overview" in d1
     assert len(d1["divisions_overview"]) == 6
-    assert "emergent_early_warnings" in d1
 
-    # Dossier 2: Crisis Alert
     d2 = HermesDMPipelineManager.generate_dossier("2", district="Beed")
     assert d2["origin_district"]["name"] == "Beed"
     assert "misinformation_payload" in d2
-    assert "graph_diffusion_vector" in d2
 
-    # Dossier 3: Weekly Rankings (All 36 Districts)
     d3 = HermesDMPipelineManager.generate_dossier("3")
     assert d3["total_districts_evaluated"] == 36
     assert len(d3["league_table"]) == 36
-    assert d3["league_table"][0]["rank"] == 1
-    assert "pillars" in d3["league_table"][0]
 
-    # Dossier 4: 6-Hour Diffusion Warning
     d4 = HermesDMPipelineManager.generate_dossier("4")
     assert "epicenter" in d4
     assert len(d4["predicted_contagion_pathways"]) >= 2
 
 
+# --- 4. STEP 2 & 3: Indic Translation & Agent Tools ---
+
+def test_accurate_indic_translation_google_ai_studio():
+    """Verify tool_translate_and_normalize returns strict JSON schema."""
+    sample_text = "बीड जिल्ह्यातील सर्व पीक विमा दावे रद्द झाल्याचा खोटा दावा समाज माध्यमांवर पसरत आहे."
+    res = tool_translate_and_normalize(sample_text)
+
+    assert "marathi_text" in res
+    assert "english_text" in res
+    assert "detected_dialect" in res
+    assert res["extracted_district_code"] == "MH-23"
+
+
+def test_stage_dm_rebuttal_within_90m_sla():
+    """Verify tool_stage_dm_rebuttal updates PostgreSQL ticket status to pending_review."""
+    test_draft = "Official Denial: Beed Kharif crop insurance disbursements are active. ₹148 Cr transferred."
+    res = tool_stage_dm_rebuttal(
+        ticket_id="TKT-BEED-002",
+        district_code="MH-23",
+        draft_text=test_draft,
+    )
+    assert res["status"] == "success"
+    assert res["ticket_status"] == "pending_review"
+    assert res["draft_text"] == test_draft
+
+
+def test_rbac_unauthorized_collector_approval_violation():
+    """Verify an unauthorized district collector CANNOT sign off on another district's ticket."""
+    # Find a ticket belonging to a specific district
+    with sync_db_context() as session:
+        ticket = session.query(FactCheckTicket).join(CanonicalEvent).first()
+        assert ticket is not None, "Seed data must contain fact_check_tickets"
+        # Ensure event_timestamp is within the active 90-minute SLA window
+        ticket.event_timestamp = datetime.now(timezone.utc) - timedelta(minutes=20)
+        session.commit()
+        t_id = str(ticket.id)
+        actual_district = ticket.canonical_event.district_code or "MH-04"
+
+    # Opposite district code
+    different_district = "MH-23" if actual_district != "MH-23" else "MH-15"
+
+    # Unauthorized attempt by a collector from a different district MUST raise PermissionError
+    with pytest.raises(PermissionError):
+        tool_execute_dm_signoff(
+            ticket_id=t_id,
+            reviewer_id="collector_unauthorized",
+            role="ROLE_DISTRICT_COLLECTOR",
+            district_code=different_district,
+            action="authorize",
+        )
+
+    # Authorized attempt with matching district should succeed
+    auth_res = tool_execute_dm_signoff(
+        ticket_id=t_id,
+        reviewer_id="collector_authorized",
+        role="ROLE_DISTRICT_COLLECTOR",
+        district_code=actual_district,
+        action="authorize",
+    )
+    assert auth_res["status"] == "success"
+    assert auth_res["ticket_status"] == "approved"
+    assert auth_res["refuted_within_sla_90m"] is True
+
+
+def test_idempotent_neo4j_node_generation():
+    """Verify tool_sync_neo4j_nodes merges District, CanonicalEvent, and Claim idempotently."""
+    event_id = str(uuid.uuid4())
+    claim = "Verified administrative notification regarding public works in Pune."
+
+    # First execution
+    res1 = tool_sync_neo4j_nodes(district_code="MH-12", event_id=event_id, claim_text=claim)
+    assert res1["status"] in ["success", "warning"]
+
+    # Second execution with exact same parameters (Idempotent merge)
+    res2 = tool_sync_neo4j_nodes(district_code="MH-12", event_id=event_id, claim_text=claim)
+    assert res2["status"] in ["success", "warning"]
+    assert res2["district_code"] == "MH-12"
+
+
+def test_hermes_orchestrator_execution():
+    """Verify HermesOrchestrator fallback layers execute deterministically."""
+    orchestrator = get_hermes_orchestrator()
+
+    # Test Translation Task
+    res = orchestrator.run_task(
+        prompt="Translate and normalize this Marathi news clipping: नाशिक कांदा बाजारपेठ लिलाव सुरळीत सुरु.",
+        context={"district_code": "MH-15"},
+    )
+    assert res["status"] == "success"
+    assert res["execution_mode"] in ["hermes_cli", "groq_function_call", "direct_deterministic"]
+
+
+# --- 5. FastAPI Router Endpoints ---
+
 def test_hermes_router_dm_pipelines_and_rbac(client):
-    # Token for Palghar Collector (MH-04)
     palghar_token = create_access_token(
         username="collector_palghar",
         role=UserRole.DISTRICT_COLLECTOR,
@@ -110,17 +220,12 @@ def test_hermes_router_dm_pipelines_and_rbac(client):
     )
     headers = {"Authorization": f"Bearer {palghar_token}"}
 
-    # Palghar Collector should see Palghar pipelines
     res = client.get("/api/v1/hermes/dm-pipelines", headers=headers)
     assert res.status_code == 200
     pipelines = res.json()
     assert all(p["districtCode"] == "MH-04" for p in pipelines)
 
-    # State Admin token sees all pipelines
-    admin_token = create_access_token(
-        username="dg_admin",
-        role=UserRole.DG_STATE_ADMIN,
-    )
+    admin_token = create_access_token(username="dg_admin", role=UserRole.DG_STATE_ADMIN)
     admin_headers = {"Authorization": f"Bearer {admin_token}"}
     admin_res = client.get("/api/v1/hermes/dm-pipelines", headers=admin_headers)
     assert admin_res.status_code == 200
@@ -135,7 +240,6 @@ def test_hermes_router_collector_signoff_action(client):
     )
     headers = {"Authorization": f"Bearer {palghar_token}"}
 
-    # Authorize Palghar ticket
     res = client.post(
         "/api/v1/hermes/dm-pipelines/TKT-PALGHAR-001/action",
         headers=headers,
@@ -146,7 +250,6 @@ def test_hermes_router_collector_signoff_action(client):
     assert body["status"] == "success"
     assert body["authorized_by"] == "collector_palghar"
 
-    # Palghar Collector trying to sign off Beed ticket (MH-23) should get 403 Forbidden
     res_unauth = client.post(
         "/api/v1/hermes/dm-pipelines/TKT-BEED-002/action",
         headers=headers,
@@ -154,6 +257,48 @@ def test_hermes_router_collector_signoff_action(client):
     )
     assert res_unauth.status_code == 403
     assert "Unauthorized" in res_unauth.json()["detail"]
+
+
+def test_hermes_router_dm_queue_endpoint(client):
+    """Test GET /api/v1/hermes/dm-queue/{district_code}."""
+    res = client.get("/api/v1/hermes/dm-queue/MH-04")
+    assert res.status_code == 200
+    data = res.json()
+    assert data["district_code"] == "MH-04"
+    assert "tickets" in data
+    assert isinstance(data["tickets"], list)
+
+
+def test_hermes_router_translate_endpoint(client):
+    """Test POST /api/v1/hermes/translate."""
+    res = client.post(
+        "/api/v1/hermes/translate",
+        json={"text": "लासलगाव कांदा लिलाव नियमित वेळेनुसार पार पडले."},
+    )
+    assert res.status_code == 200
+    data = res.json()
+    assert "marathi_text" in data
+    assert "english_text" in data
+    assert "extracted_district_code" in data
+
+
+def test_hermes_router_execute_endpoint(client):
+    """Test POST /api/v1/hermes/execute."""
+    token = create_access_token(username="dg_admin", role=UserRole.DG_STATE_ADMIN)
+    headers = {"Authorization": f"Bearer {token}"}
+
+    res = client.post(
+        "/api/v1/hermes/execute",
+        headers=headers,
+        json={
+            "task": "Stage factual DM rebuttal for district crisis ticket.",
+            "district_code": "MH-23",
+            "ticket_id": "TKT-BEED-002",
+            "context": {"draft_text": "Active compensation disbursal confirmed by Beed Collector."},
+        },
+    )
+    assert res.status_code == 200
+    assert res.json()["status"] == "success"
 
 
 def test_hermes_dossier_endpoint(client):

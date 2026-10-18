@@ -61,6 +61,7 @@ DISTRICT_CODE_MAP = {
     "nagpur": "MH-33",
     "chandrapur": "MH-34",
     "bhandara": "MH-35",
+    "gondia": "MH-36",
     "gadchiroli": "MH-37",
     # Devanagari Marathi names
     "मुंबई": "MH-01", "ठाणे": "MH-03", "पालघर": "MH-04", "रायगड": "MH-05",
@@ -77,32 +78,68 @@ DISTRICT_CODE_MAP = {
 
 SYS_PROMPT = (
     "You are an Indic linguistic intelligence parser for the Directorate General of Information "
-    "and Public Relations (DGIPR), Government of Maharashtra. "
+    "and Public Relations (DGIPR), Government of Maharashtra.\n"
     "Analyze the provided text and output strictly a valid JSON object with zero conversational commentary.\n\n"
     "Expected JSON schema:\n"
     "{\n"
-    '  "detected_language": "mr | hi | en",\n'
-    '  "dialect_region": "Standard Marathi | Varhadi | Ahirani | Marathwada | Konkani | Hindi | English",\n'
-    '  "marathi_translation": "Official Devanagari Marathi text for GIGW 3.0 bilingual compliance",\n'
-    '  "english_translation": "Crisp, bureaucratic English translation with zero filler",\n'
+    '  "marathi_text": "Official Devanagari Marathi text for GIGW 3.0 bilingual compliance",\n'
+    '  "english_text": "Crisp, bureaucratic English translation with zero filler",\n'
+    '  "detected_dialect": "Standard Marathi | Varhadi | Ahirani | Marathwada | Konkani | Hindi | English",\n'
     '  "extracted_district_code": "MH-XX or null",\n'
+    '  "detected_language": "mr | hi | en",\n'
     '  "extracted_department": "Official Maharashtra Dept Name or General Administration"\n'
     "}"
 )
 
 
 def _clean_json_response(raw_text: str) -> Dict[str, Any]:
-    """Extracts and parses JSON from Gemini model output."""
+    """Extracts and parses JSON from Gemini model output, stripping markdown fencing."""
+    if not raw_text:
+        return {}
     raw = raw_text.strip()
-    # Strip markdown fences if present
+    # Strip ```json ... ``` or ``` ... ``` markdown fences
     match = re.search(r"```(?:json)?\s*([\s\S]*?)\s*```", raw)
     if match:
         raw = match.group(1).strip()
     try:
-        return json.loads(raw)
+        data = json.loads(raw)
+        if isinstance(data, dict):
+            return data
     except Exception as e:
         logger.warning("JSON parse failed on Gemini response: %s. Raw: %s", e, raw[:200])
-        return {}
+    return {}
+
+
+def _standardize_payload(data: Dict[str, Any], raw_fallback: str) -> Dict[str, Any]:
+    """Ensures deterministic schema with both primary and backward-compatible keys."""
+    marathi = data.get("marathi_text") or data.get("marathi_translation") or raw_fallback
+    english = data.get("english_text") or data.get("english_translation") or raw_fallback
+    dialect = data.get("detected_dialect") or data.get("dialect_region") or "Standard Marathi"
+    district = data.get("extracted_district_code")
+
+    # If district code not detected, perform fallback extraction
+    if not district and raw_fallback:
+        lower_text = raw_fallback.lower()
+        for name, code in DISTRICT_CODE_MAP.items():
+            if name in lower_text:
+                district = code
+                break
+
+    dept = data.get("extracted_department") or "General Administration Department"
+    lang = data.get("detected_language") or ("mr" if any("\u0900" <= ch <= "\u097f" for ch in marathi) else "en")
+
+    return {
+        "marathi_text": marathi,
+        "english_text": english,
+        "detected_dialect": dialect,
+        "extracted_district_code": district,
+        # Backward compatibility aliases
+        "marathi_translation": marathi,
+        "english_translation": english,
+        "dialect_region": dialect,
+        "detected_language": lang,
+        "extracted_department": dept,
+    }
 
 
 def _fallback_translation(text: str) -> Dict[str, Any]:
@@ -119,18 +156,30 @@ def _fallback_translation(text: str) -> Dict[str, Any]:
             district_code = code
             break
 
+    marathi = clean if detected_lang == "mr" else "माहिती व जनसंपर्क महासंचालनालय अधिकृत प्रसिद्धी पत्रक"
+    english = clean if detected_lang == "en" else "DGIPR Official Press Communication"
+    dialect = "Standard Marathi" if detected_lang == "mr" else "English"
+
     return {
-        "detected_language": detected_lang,
-        "dialect_region": "Standard Marathi" if detected_lang == "mr" else "English",
-        "marathi_translation": clean if detected_lang == "mr" else "माहिती व जनसंपर्क महासंचालनालय अधिकृत प्रसिद्धी पत्रक",
-        "english_translation": clean if detected_lang == "en" else "DGIPR Official Press Communication",
+        "marathi_text": marathi,
+        "english_text": english,
+        "detected_dialect": dialect,
         "extracted_district_code": district_code,
+        # Backward compatibility aliases
+        "detected_language": detected_lang,
+        "dialect_region": dialect,
+        "marathi_translation": marathi,
+        "english_translation": english,
         "extracted_department": "General Administration Department",
     }
 
 
 def translate_and_normalize_indic(text: str, source_hint: str = "auto") -> Dict[str, Any]:
-    """Synchronous translation and Indic normalization via gemini-flash-latest."""
+    """Synchronous translation and Indic normalization via gemini-flash-latest.
+    
+    Returns strict JSON:
+    {"marathi_text": "...", "english_text": "...", "detected_dialect": "...", "extracted_district_code": "MH-XX"}
+    """
     clean_text = (text or "").strip()
     if not clean_text:
         return _fallback_translation("")
@@ -164,8 +213,8 @@ def translate_and_normalize_indic(text: str, source_hint: str = "auto") -> Dict[
                     parts = candidates[0].get("content", {}).get("parts", [])
                     if parts:
                         parsed = _clean_json_response(parts[0].get("text", ""))
-                        if parsed and "marathi_translation" in parsed:
-                            return parsed
+                        if parsed:
+                            return _standardize_payload(parsed, clean_text)
             else:
                 logger.warning("Gemini API error %s: %s", resp.status_code, resp.text[:200])
     except Exception as exc:
@@ -208,8 +257,8 @@ async def translate_and_normalize_indic_async(text: str, source_hint: str = "aut
                     parts = candidates[0].get("content", {}).get("parts", [])
                     if parts:
                         parsed = _clean_json_response(parts[0].get("text", ""))
-                        if parsed and "marathi_translation" in parsed:
-                            return parsed
+                        if parsed:
+                            return _standardize_payload(parsed, clean_text)
     except Exception as exc:
         logger.warning("Async Gemini translation exception: %s", exc)
 
