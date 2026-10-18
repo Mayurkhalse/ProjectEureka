@@ -108,6 +108,21 @@ class TextNormalizer:
                 entities["department"] = dept
                 break
 
+        # Indic multilingual normalization & translation enrichment
+        try:
+            from eureka.llm.multilingual_translator import translate_and_normalize_indic
+            indic_norm = translate_and_normalize_indic(clean[:1500])
+            if indic_norm:
+                entities["english_translation"] = indic_norm.get("english_translation")
+                entities["marathi_translation"] = indic_norm.get("marathi_translation")
+                entities["dialect_region"] = indic_norm.get("dialect_region")
+                if indic_norm.get("extracted_district_code"):
+                    entities["district_code"] = indic_norm.get("extracted_district_code")
+                if indic_norm.get("extracted_department"):
+                    entities["department"] = indic_norm.get("extracted_department")
+        except Exception:
+            pass
+
         # Claims extraction
         claims = [s.strip() for s in clean.split(".") if len(s.strip()) > 30][:5]
 

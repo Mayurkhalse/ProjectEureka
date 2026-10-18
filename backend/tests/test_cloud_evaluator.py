@@ -80,5 +80,5 @@ def test_dispatch_to_celery_schema_mapping():
         assert record["sentiment_score"] == 0.75
         assert record["crisis_resolved"] is True
         assert record["turnaround_time_mins"] == 30.0
-        assert "PWD" in record["english_content"] or "repairs" in record["english_content"]
+        assert any(term in record["english_content"].lower() for term in ["repair", "pwd", "public works"])
         assert "record_id" in record

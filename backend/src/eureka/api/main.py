@@ -9,7 +9,7 @@ from typing import Optional
 from eureka.api.auth import create_access_token
 from eureka.api.jobs_router import router as jobs_router
 from eureka.api.reports_router import router as reports_router
-from eureka.api.routers import conclusions, graph, health, quad, scoring
+from eureka.api.routers import conclusions, graph, health, hermes_router, quad, scoring
 from eureka.core.config import get_settings
 from eureka.core.neo4j_driver import Neo4jGraphService
 from eureka.models.enums import UserRole
@@ -78,3 +78,4 @@ app.include_router(scoring.router)
 app.include_router(graph.router)
 app.include_router(reports_router)
 app.include_router(jobs_router)
+app.include_router(hermes_router.router)

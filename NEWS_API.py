@@ -237,6 +237,14 @@ def dispatch_to_celery(scraped_articles: list, district_name: str):
         sentiment = evaluate_sentiment_cloud(content)
         crisis_resolved = evaluate_crisis_sla_groq(district_name, content)
 
+        # Multilingual Indic normalization & translation (Gemini Flash)
+        try:
+            from eureka.llm.multilingual_translator import translate_and_normalize_indic
+            indic_res = translate_and_normalize_indic(content[:1500])
+            en_content = indic_res.get("english_translation") or content
+        except Exception:
+            en_content = content
+
         records.append({
             "record_id": str(uuid.uuid4()),
             "district": district_name,
@@ -245,7 +253,7 @@ def dispatch_to_celery(scraped_articles: list, district_name: str):
             "turnaround_time_mins": 30.0,  # Estimated baseline
             "sentiment_score": sentiment,
             "crisis_resolved": crisis_resolved,
-            "english_content": content,
+            "english_content": en_content,
         })
 
     if records:
