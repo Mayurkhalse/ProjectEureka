@@ -8,7 +8,14 @@ from eureka.llm.cloud_evaluator import (
     evaluate_sentiment_cloud,
     evaluate_crisis_sla_groq,
 )
-from NEWS_API import dispatch_to_celery
+try:
+    from NEWS_API import dispatch_to_celery
+except ImportError:
+    import os
+    import sys
+    sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
+    sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "scripts")))
+    from NEWS_API import dispatch_to_celery
 
 
 def test_evaluate_sentiment_cloud_fallback_when_empty():

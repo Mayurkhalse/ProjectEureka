@@ -34,21 +34,32 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(me
 logger = logging.getLogger(__name__)
 
 # Ensure backend/src is on PYTHONPATH
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "src")))
-
-from eureka.models.base import Base
-from eureka.models.entities import (
+from eureka.models import (
+    Base,
     BindingDecision,
     CanonicalEvent,
+    Department,
+    District,
+    DistrictAdjacency,
+    DistrictAlias,
+    Division,
+    EntrySocialMetric,
     EventSourceLink,
     FactCheckTicket,
     HumanReviewAction,
+    InformationOffice,
     IngestionRun,
     NormalizedRecord,
     OutboxEvent,
     PillarScoreSnapshot,
     RawEvent,
+    ReportEntry,
+    ReportParameter,
+    ReportPeriod,
+    ReportSubmission,
+    ScoringConfigVersion,
     SourceRegistry,
+    User,
 )
 from eureka.db.models import MediaEvent
 from eureka.models.enums import (
@@ -500,14 +511,24 @@ def main():
     init_relational_database(target_engine)
 
     try:
-        from scripts.multiply_database import (
-            populate_reference_layers,
-            populate_report_entries,
-            populate_relational_pipeline_events,
-            populate_pillar_snapshots,
-            populate_media_events_high_throughput,
-            mirror_sqlite_database,
-        )
+        try:
+            from multiply_database import (
+                populate_reference_layers,
+                populate_report_entries,
+                populate_relational_pipeline_events,
+                populate_pillar_snapshots,
+                populate_media_events_high_throughput,
+                mirror_sqlite_database,
+            )
+        except ImportError:
+            from scripts.multiply_database import (
+                populate_reference_layers,
+                populate_report_entries,
+                populate_relational_pipeline_events,
+                populate_pillar_snapshots,
+                populate_media_events_high_throughput,
+                mirror_sqlite_database,
+            )
         Session = sessionmaker(bind=target_engine)
         session = Session()
         try:
