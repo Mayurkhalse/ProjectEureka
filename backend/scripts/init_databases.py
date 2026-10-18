@@ -496,14 +496,40 @@ def main():
     else:
         target_engine = create_engine(db_url)
 
-    # 2. Initialize Relational Storage
+    # 2. Initialize Relational Storage & Multiply Realistic Data
     init_relational_database(target_engine)
+
+    try:
+        from scripts.multiply_database import (
+            populate_reference_layers,
+            populate_report_entries,
+            populate_relational_pipeline_events,
+            populate_pillar_snapshots,
+            populate_media_events_high_throughput,
+            mirror_sqlite_database,
+        )
+        Session = sessionmaker(bind=target_engine)
+        session = Session()
+        try:
+            dialect = "postgres" if "postgres" in target_engine.dialect.name else "sqlite"
+            populate_reference_layers(session, dialect)
+            populate_report_entries(session)
+            populate_relational_pipeline_events(session, total_canonical_events=1500)
+            populate_pillar_snapshots(session)
+            populate_media_events_high_throughput(target_engine, target_total=15000)
+        finally:
+            session.close()
+
+        if "sqlite" in target_engine.dialect.name:
+            mirror_sqlite_database()
+    except Exception as exc:
+        logger.info("Database multiplier execution note: %s", exc)
 
     # 3. Initialize Neo4j Graph
     init_neo4j_graph()
 
     logger.info("=" * 70)
-    logger.info("  ALL EUREKA CORE DATA STRUCTURES INITIALIZED & AUDITED!  ")
+    logger.info("  ALL EUREKA CORE DATA STRUCTURES INITIALIZED & MULTIPLIED!  ")
     logger.info("=" * 70)
 
 

@@ -4,6 +4,7 @@ import uuid
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 from sqlalchemy import (
+    BigInteger,
     Boolean,
     DateTime,
     Float,
@@ -282,3 +283,204 @@ class OutboxEvent(Base, UUIDPrimaryKeyMixin):
     __table_args__ = (
         Index("ix_outbox_events_status_created", "status", "created_at"),
     )
+
+
+class Division(Base, TimestampMixin):
+    """9 DGIPR divisional information-office divisions."""
+
+    __tablename__ = "divisions"
+
+    division_code: Mapped[str] = mapped_column(String(50), primary_key=True)
+    name_en: Mapped[str] = mapped_column(String(255), nullable=False, unique=True)
+    name_mr: Mapped[str] = mapped_column(String(255), nullable=False, unique=True)
+    hq_district_code: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+    display_order: Mapped[int] = mapped_column(Integer, nullable=False)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+
+
+class District(Base, TimestampMixin):
+    """36 Districts of Maharashtra."""
+
+    __tablename__ = "districts"
+
+    district_code: Mapped[str] = mapped_column(String(50), primary_key=True)
+    division_code: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
+    name_en: Mapped[str] = mapped_column(String(255), nullable=False, unique=True)
+    name_mr: Mapped[str] = mapped_column(String(255), nullable=False, unique=True)
+    former_name_en: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    lgd_code: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    centroid_lat: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    centroid_lon: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    display_order: Mapped[int] = mapped_column(Integer, nullable=False)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+
+
+class DistrictAlias(Base):
+    """Spellings seen in government sheets and historical news feeds."""
+
+    __tablename__ = "district_aliases"
+
+    alias_id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    district_code: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
+    alias_text: Mapped[str] = mapped_column(String(255), nullable=False, unique=True)
+    language: Mapped[str] = mapped_column(String(10), nullable=False)
+    alias_type: Mapped[str] = mapped_column(String(50), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
+
+
+class DistrictAdjacency(Base):
+    """Physical land borders and transit corridors for StGNN diffusion modeling."""
+
+    __tablename__ = "district_adjacency"
+
+    adjacency_id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    district_a: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
+    district_b: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
+    relation_type: Mapped[str] = mapped_column(String(50), default="LAND_BORDER", nullable=False)
+    verified: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    source: Mapped[str] = mapped_column(String(100), default="curated_v1", nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
+
+
+class Department(Base, TimestampMixin):
+    """21 Administrative Line Departments of Maharashtra Government."""
+
+    __tablename__ = "departments"
+
+    department_code: Mapped[str] = mapped_column(String(50), primary_key=True)
+    name_en: Mapped[str] = mapped_column(String(255), nullable=False, unique=True)
+    name_mr: Mapped[str] = mapped_column(String(255), nullable=False, unique=True)
+    display_order: Mapped[int] = mapped_column(Integer, nullable=False)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+
+
+class InformationOffice(Base, TimestampMixin):
+    """45 Information Offices: 9 Divisional + 36 District Information Offices."""
+
+    __tablename__ = "information_offices"
+
+    office_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    office_code: Mapped[str] = mapped_column(String(50), nullable=False, unique=True)
+    office_level: Mapped[str] = mapped_column(String(50), nullable=False)
+    division_code: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
+    district_code: Mapped[Optional[str]] = mapped_column(String(50), nullable=True, index=True)
+    name_en: Mapped[str] = mapped_column(String(255), nullable=False)
+    name_mr: Mapped[str] = mapped_column(String(255), nullable=False)
+    sheet_label_mr: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    in_source_sheet: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+
+
+class User(Base, TimestampMixin):
+    """Governance actors and RBAC accounts."""
+
+    __tablename__ = "users"
+
+    user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    username: Mapped[str] = mapped_column(String(100), nullable=False, unique=True)
+    email: Mapped[Optional[str]] = mapped_column(String(255), nullable=True, unique=True)
+    full_name_en: Mapped[str] = mapped_column(String(255), nullable=False)
+    full_name_mr: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    role: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
+    division_code: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+    district_code: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+    password_hash: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    is_placeholder: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    last_login_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class ReportParameter(Base, TimestampMixin):
+    """51 reporting parameters from the official DGIPR daily/monthly report format."""
+
+    __tablename__ = "report_parameters"
+
+    param_code: Mapped[str] = mapped_column(String(50), primary_key=True)
+    sheet_column_index: Mapped[int] = mapped_column(Integer, nullable=False, unique=True)
+    name_mr: Mapped[str] = mapped_column(Text, nullable=False)
+    name_en: Mapped[str] = mapped_column(Text, nullable=False)
+    param_group: Mapped[str] = mapped_column(String(100), nullable=False)
+    value_kind: Mapped[str] = mapped_column(String(50), nullable=False)
+    applies_to: Mapped[str] = mapped_column(String(50), default="BOTH", nullable=False)
+    department_code: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+    social_platform: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+    feeds_volume: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    feeds_sentiment: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    volume_weight: Mapped[float] = mapped_column(Float, default=1.0, nullable=False)
+    display_order: Mapped[int] = mapped_column(Integer, nullable=False)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+
+
+class ReportPeriod(Base):
+    """Monthly and daily field reporting periods."""
+
+    __tablename__ = "report_periods"
+
+    period_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    label: Mapped[str] = mapped_column(String(50), nullable=False, unique=True)
+    period_type: Mapped[str] = mapped_column(String(20), default="MONTH", nullable=False)
+    period_start: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    period_end: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    status: Mapped[str] = mapped_column(String(50), default="OPEN", nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
+
+
+class ReportSubmission(Base, TimestampMixin):
+    """Field report submission instances per office per period."""
+
+    __tablename__ = "report_submissions"
+
+    submission_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    period_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("report_periods.period_id"), nullable=False, index=True)
+    office_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("information_offices.office_id"), nullable=False, index=True)
+    status: Mapped[str] = mapped_column(String(50), default="approved", nullable=False)
+    submitted_by: Mapped[Optional[uuid.UUID]] = mapped_column(UUID(as_uuid=True), nullable=True)
+    source_file_name: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    source_sheet_row: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    submitted_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    reviewed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class ReportEntry(Base, TimestampMixin):
+    """Individual reporting cell entries for P01-P51."""
+
+    __tablename__ = "report_entries"
+
+    entry_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    submission_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("report_submissions.submission_id", ondelete="CASCADE"), nullable=False, index=True)
+    param_code: Mapped[str] = mapped_column(String(50), ForeignKey("report_parameters.param_code"), nullable=False, index=True)
+    raw_value: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    raw_cell_ref: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+    parse_status: Mapped[str] = mapped_column(String(50), default="PARSED", nullable=False)
+    item_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    items: Mapped[Dict[str, Any]] = mapped_column(JSONB, default=list, nullable=False)
+    attachment_mentioned: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    quality_flags: Mapped[Dict[str, Any]] = mapped_column(JSONB, default=list, nullable=False)
+
+
+class EntrySocialMetric(Base):
+    """Granular social engagement metrics for platform metrics parameters."""
+
+    __tablename__ = "entry_social_metrics"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    entry_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("report_entries.entry_id", ondelete="CASCADE"), nullable=False, index=True)
+    platform_key: Mapped[str] = mapped_column(String(50), default="ALL", nullable=False)
+    posts: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    likes: Mapped[int] = mapped_column(BigInteger, default=0, nullable=False)
+    views: Mapped[int] = mapped_column(BigInteger, default=0, nullable=False)
+    comments: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    shares: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+
+
+class ScoringConfigVersion(Base):
+    """Scoring configuration parameters and weight sets."""
+
+    __tablename__ = "scoring_config_versions"
+
+    version: Mapped[int] = mapped_column(Integer, primary_key=True)
+    weights: Mapped[Dict[str, Any]] = mapped_column(JSONB, default=dict, nullable=False)
+    parameters: Mapped[Dict[str, Any]] = mapped_column(JSONB, default=dict, nullable=False)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
