@@ -214,8 +214,8 @@ export const Header: React.FC = () => {
 
             <span className="text-slate-700 select-none font-mono text-xs">/</span>
 
-            <span className="bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs font-mono px-2.5 py-0.5 rounded-md flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
+            <span className="text-amber-300 text-xs font-mono flex items-center gap-1.5 whitespace-nowrap">
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse shrink-0" />
               <span>
                 {pathname === '/system-monitoring/raw-ingestion'
                   ? (language === 'mr' ? 'कच्चा डेटा अंतर्ग्रहण' : 'Raw Ingestion')
@@ -384,12 +384,21 @@ export const Header: React.FC = () => {
             className="hover:bg-slate-900/80 border border-slate-700/60 hover:border-slate-600/70 bg-slate-900/40 px-2.5 py-1.5 rounded-lg transition-all cursor-pointer flex items-center gap-2 select-none shadow-2xs"
             title={`${language === 'mr' ? 'अधिकारी प्रोफाइल:' : 'Officer Profile:'} ${displayName}`}
           >
-            <div className="w-7 h-7 rounded-full bg-amber-500/15 border border-amber-500/40 text-amber-400 font-bold text-xs flex items-center justify-center shrink-0">
-              {displayInitials}
-            </div>
-            <span className="text-xs font-semibold text-white leading-tight truncate max-w-[140px] hidden sm:inline">
-              {displayName}
-            </span>
+            {!currentUser ? (
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-full bg-slate-700/80 animate-shimmer-dark shrink-0" />
+                <div className="w-20 h-3.5 rounded bg-slate-700/80 animate-shimmer-dark hidden sm:inline" />
+              </div>
+            ) : (
+              <>
+                <div className="w-7 h-7 rounded-full bg-amber-500/15 border border-amber-500/40 text-amber-400 font-bold text-xs flex items-center justify-center shrink-0">
+                  {displayInitials}
+                </div>
+                <span className="text-xs font-semibold text-white leading-tight truncate max-w-[140px] hidden sm:inline">
+                  {displayName}
+                </span>
+              </>
+            )}
             <ChevronDownIcon
               className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-150 shrink-0 ${
                 isProfileMenuOpen ? 'rotate-180' : ''

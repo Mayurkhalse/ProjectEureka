@@ -4,6 +4,7 @@ import React, { memo, useCallback, useEffect, useRef, useState } from 'react';
 import { useDashboardStore } from '@/stores/dashboardStore';
 import { useTranslation } from '@/lib/translations';
 import { getLocalizedStatus, getOfficerInfo } from '@/lib/dataLocalization';
+import { GISMapSkeleton } from '@/components/skeletons/GISMapSkeleton';
 import {
   DISTRICT_BY_ID,
   DISTRICT_GEOMETRY,
@@ -163,7 +164,7 @@ const LABEL_PX = 9;
 const LABEL_CHAR_PX = 5;
 
 export const GISMap: React.FC = () => {
-  const { language, selectedDistrictId, setSelectedDistrictId } = useDashboardStore();
+  const { language, selectedDistrictId, setSelectedDistrictId, isLoadingData } = useDashboardStore();
   const t = useTranslation(language);
   const selectedId = resolveDistrictId(selectedDistrictId);
 
@@ -314,15 +315,19 @@ export const GISMap: React.FC = () => {
     ? (language === 'mr' ? (getOfficerInfo(inspectedDio.officer, 'mr')?.name || inspectedDio.officer) : inspectedDio.officer)
     : (language === 'en' ? 'Not assigned' : 'नियुक्त नाही');
 
+  if (isLoadingData) {
+    return <GISMapSkeleton />;
+  }
+
   return (
-    <div className="bg-surface border border-slate-200 rounded-lg flex flex-col h-full shadow-xs overflow-hidden">
-      {/* 1. Locked Safe Header (Fixed 52px height) */}
-      <div className="px-4 py-2 border-b border-slate-200 bg-surface flex items-center justify-between gap-3 h-[52px] min-h-[52px] max-h-[52px] shrink-0">
+    <div className="bg-white rounded-xl shadow-sm border border-slate-200/80 flex flex-col overflow-hidden">
+      {/* 1. Locked Safe Header */}
+      <div className="px-5 py-4 border-b border-slate-200/80 bg-white flex items-center justify-between gap-3 shrink-0">
         <div className="min-w-0 flex-1">
           <h3 className="text-sm font-bold text-gov-primary tracking-tight truncate" title={t.leadership.gisTitle}>
             {t.leadership.gisTitle}
           </h3>
-          <p className="text-[11px] text-slate-500 font-medium truncate" title={t.leadership.gisSub}>
+          <p className="text-[11px] text-slate-500 font-medium truncate mt-0.5" title={t.leadership.gisSub}>
             {t.leadership.gisSub}
           </p>
         </div>
@@ -365,12 +370,12 @@ export const GISMap: React.FC = () => {
         </div>
       </div>
 
-      {/* 2. Main Safe Body (Columns with Locked Geometry) */}
-      <div className="p-3 flex-1 flex flex-col md:flex-row gap-3.5 items-stretch min-w-0">
-        {/* Left: Map Canvas Column (58% width, aspect locked) */}
-        <div className="w-full md:w-[58%] flex flex-col justify-between gap-2 min-w-0">
+      {/* 2. Main Body: Full-Width Map Canvas with Telemetry Strip Below */}
+      <div className="p-4 sm:p-5 flex flex-col gap-4 min-w-0">
+        {/* Map Canvas (100% width) */}
+        <div className="w-full flex flex-col gap-2 min-w-0">
           <div
-            className="relative w-full aspect-[800/664] bg-gradient-to-b from-slate-50 to-blue-50/30 rounded-lg border border-slate-200 overflow-hidden shadow-inner shrink-0"
+            className="relative w-full aspect-[800/664] min-h-[300px] sm:min-h-[360px] max-h-[440px] flex items-center justify-center bg-slate-50/60 rounded-xl p-4 border border-slate-200 overflow-hidden shadow-inner shrink-0"
           >
             <svg
               ref={svgRef}
@@ -570,107 +575,100 @@ export const GISMap: React.FC = () => {
           </p>
         </div>
 
-        {/* Right: Locked Safe Hover Card (42% width, invariant height and row bounds) */}
-        <div className="w-full md:w-[42%] border-2 border-gov-blue/30 p-3 rounded-lg bg-white shadow-xs flex flex-col justify-between h-full min-h-[280px] max-h-[380px] overflow-hidden min-w-0">
-          {/* Card Header (Fixed bounds with truncation) */}
-          <div className="pb-2 border-b border-slate-200 shrink-0">
-            <div className="flex items-center justify-between gap-1 mb-0.5">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 whitespace-nowrap">
+        {/* District Live State Telemetry Sub-Panel (Horizontal Info Strip directly below map) */}
+        <div className="w-full border border-gov-blue/20 p-3.5 sm:p-4 rounded-xl bg-slate-50/80 shadow-xs flex flex-col gap-3 min-w-0">
+          {/* Sub-Panel Header */}
+          <div className="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-slate-200/80">
+            <div className="flex items-center gap-2">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 whitespace-nowrap">
                 {language === 'mr' ? 'जिल्हा थेट स्थिती' : 'District Live State'}
               </span>
-              <div className="flex items-center gap-1.5 shrink-0">
-                <span
-                  className={`w-1.5 h-1.5 rounded-full shrink-0 ${
-                    inspectedStatus === 'Active'
-                      ? 'bg-emerald-500 animate-pulse'
-                      : inspectedStatus === 'Standby'
-                      ? 'bg-amber-500'
-                      : inspectedStatus === 'Field Operation'
-                      ? 'bg-blue-500'
-                      : 'bg-slate-400'
-                  }`}
-                />
-                <span
-                  className={`text-[10px] font-semibold ${
-                    inspectedStatus === 'Active'
-                      ? 'text-emerald-600'
-                      : inspectedStatus === 'Standby'
-                      ? 'text-amber-600'
-                      : inspectedStatus === 'Field Operation'
-                      ? 'text-blue-600'
-                      : 'text-slate-500'
-                  }`}
-                >
-                  {language === 'mr' ? 'माहिती अधिकारी:' : 'DIO:'} {getLocalizedStatus(inspectedStatus, language)}
-                </span>
-              </div>
+              <span className="text-slate-300">|</span>
+              <h4 className="text-sm font-bold text-gov-primary truncate">
+                {districtTitle}
+              </h4>
+              <span className="text-[11px] text-slate-500 truncate">
+                ({divisionName})
+              </span>
             </div>
-            <h4
-              className="text-sm font-bold text-gov-primary truncate"
-              title={language === 'mr' ? inspected.nameMr : inspected.name}
-            >
-              {districtTitle}
-            </h4>
-            <p lang={language} className="text-[11px] text-slate-500 truncate" title={districtSub}>
-              {districtSub}
-            </p>
+
+            <div className="flex items-center gap-1.5 shrink-0">
+              <span
+                className={`w-2 h-2 rounded-full shrink-0 ${
+                  inspectedStatus === 'Active'
+                    ? 'bg-emerald-500 animate-pulse'
+                    : inspectedStatus === 'Standby'
+                    ? 'bg-amber-500'
+                    : inspectedStatus === 'Field Operation'
+                    ? 'bg-blue-500'
+                    : 'bg-slate-400'
+                }`}
+              />
+              <span
+                className={`text-xs font-semibold whitespace-nowrap ${
+                  inspectedStatus === 'Active'
+                    ? 'text-emerald-700 font-bold'
+                    : inspectedStatus === 'Standby'
+                    ? 'text-amber-700 font-bold'
+                    : inspectedStatus === 'Field Operation'
+                    ? 'text-blue-700 font-bold'
+                    : 'text-slate-500'
+                }`}
+              >
+                {language === 'mr' ? 'माहिती अधिकारी:' : 'DIO:'} {getLocalizedStatus(inspectedStatus, language)}
+              </span>
+            </div>
           </div>
 
-          {/* Card Data Rows: 4 Invariant Height Rows (24px each with truncation) */}
-          <div className="py-2 space-y-1.5 text-xs text-slate-700 shrink-0">
-            <div className="flex items-center justify-between gap-2 h-6 border-b border-slate-100 pb-1">
-              <span className="text-slate-500 shrink-0 text-[11px]">
+          {/* Sub-Panel 4 Data Cells in Spacious Multi-Column Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 text-xs">
+            <div className="p-2.5 bg-white rounded-lg border border-slate-200/80 flex flex-col gap-0.5">
+              <span className="text-slate-500 text-[10px] font-medium">
                 {language === 'en' ? 'Liaison Officer:' : 'संपर्क अधिकारी:'}
               </span>
-              <strong
-                className="text-slate-900 text-right truncate flex-1 min-w-0 text-[11px]"
-                title={officerName}
-              >
+              <strong className="text-slate-900 truncate text-xs" title={officerName}>
                 {officerName}
               </strong>
             </div>
 
-            <div className="flex items-center justify-between gap-2 h-6 border-b border-slate-100 pb-1">
-              <span className="text-slate-500 shrink-0 text-[11px]">
+            <div className="p-2.5 bg-white rounded-lg border border-slate-200/80 flex flex-col gap-0.5">
+              <span className="text-slate-500 text-[10px] font-medium">
                 {language === 'mr' ? 'प्रशासकीय विभाग:' : 'Administrative Division:'}
               </span>
-              <strong
-                className="text-slate-900 text-right truncate flex-1 min-w-0 text-[11px]"
-                title={divisionName}
-              >
+              <strong className="text-slate-900 truncate text-xs" title={divisionName}>
                 {divisionName}
               </strong>
             </div>
 
-            <div className="flex items-center justify-between gap-2 h-6 border-b border-slate-100 pb-1">
-              <span className="text-slate-500 shrink-0 text-[11px]">
+            <div className="p-2.5 bg-white rounded-lg border border-slate-200/80 flex flex-col gap-0.5">
+              <span className="text-slate-500 text-[10px] font-medium">
                 {language === 'mr' ? 'माहिती गेटवे:' : 'DIO Gateway:'}
               </span>
               {inspectedDio ? (
-                <span className="font-mono text-emerald-700 font-semibold text-[10px]">
+                <span className="font-mono text-emerald-700 font-bold text-xs">
                   {language === 'mr' ? '२४x७ जोडलेले' : '24x7 Connected'}
                 </span>
               ) : (
-                <span className="font-mono text-slate-400 font-semibold text-[10px]">
+                <span className="font-mono text-slate-400 font-medium text-xs">
                   {language === 'mr' ? 'कॉन्फिगर नाही' : 'Not configured'}
                 </span>
               )}
             </div>
 
-            <div className="flex items-center justify-between gap-2 h-6">
-              <span className="text-slate-500 shrink-0 text-[11px]">
+            <div className="p-2.5 bg-white rounded-lg border border-slate-200/80 flex flex-col gap-0.5">
+              <span className="text-slate-500 text-[10px] font-medium">
                 {language === 'mr' ? 'जनगणना / एलजीडी कोड:' : 'Census / LGD Code:'}
               </span>
-              <span className="font-mono text-slate-600 text-[10px]">
+              <span className="font-mono text-slate-700 font-semibold text-xs">
                 {inspected.censusCode} / {inspected.lgdCode}
               </span>
             </div>
           </div>
 
-          {/* Card Action Button (Fixed 32px height) */}
+          {/* Card Action Button */}
           <button
             onClick={() => selectDistrict(inspectedId)}
-            className="w-full h-8 bg-gov-primary hover:bg-gov-primary-dark text-white rounded text-[11px] font-bold transition-colors shadow-2xs truncate px-2 shrink-0 flex items-center justify-center mt-1"
+            className="w-full h-8 bg-gov-primary hover:bg-gov-primary-dark text-white rounded-lg text-xs font-bold transition-colors shadow-2xs truncate px-3 shrink-0 flex items-center justify-center cursor-pointer"
             title={language === 'mr' ? 'तपशीलवार जिल्हा डॅशबोर्ड उघडा' : 'View Full District Telemetry'}
           >
             {language === 'mr' ? 'तपशीलवार जिल्हा डॅशबोर्ड उघडा' : 'View Full District Telemetry'}

@@ -4,7 +4,14 @@ import React, { useMemo, useState } from 'react';
 import { DistrictData } from '@/types/dashboard';
 import { useDashboardStore } from '@/stores/dashboardStore';
 import { useTranslation } from '@/lib/translations';
-import { MaterialIcon } from '@/components/shared/MaterialIcon';
+import {
+  ArrowUpRightIcon,
+  ChevronUpIcon,
+  ChevronDownIcon,
+  ChevronUpDownIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
+} from '@heroicons/react/20/solid';
 import { getDistrictName, getDivisionName } from '@/lib/dataLocalization';
 
 interface DistrictTableProps {
@@ -77,12 +84,12 @@ export const DistrictTable: React.FC<DistrictTableProps> = ({
 
   const renderSortIcon = (col: SortColumn) => {
     if (sortColumn !== col) {
-      return <MaterialIcon name="unfold_more" size="xs" className="text-slate-400 opacity-60 group-hover:opacity-100" />;
+      return <ChevronUpDownIcon className="w-3.5 h-3.5 text-slate-400 opacity-60 group-hover:opacity-100 shrink-0" />;
     }
     return sortOrder === 'asc' ? (
-      <MaterialIcon name="arrow_upward" size="xs" className="text-amber-300 font-bold" />
+      <ChevronUpIcon className="w-3.5 h-3.5 text-amber-300 font-bold shrink-0" />
     ) : (
-      <MaterialIcon name="arrow_downward" size="xs" className="text-amber-300 font-bold" />
+      <ChevronDownIcon className="w-3.5 h-3.5 text-amber-300 font-bold shrink-0" />
     );
   };
 
@@ -99,9 +106,9 @@ export const DistrictTable: React.FC<DistrictTableProps> = ({
   };
 
   return (
-    <div className="flex flex-col space-y-2">
-      <div className="overflow-x-auto border border-slate-300 rounded-lg shadow-2xs bg-white">
-        <table className="w-full text-left text-xs min-w-[720px]">
+    <div className="flex-1 flex flex-col justify-between gap-3 w-full">
+      <div className="overflow-x-auto -mx-1 px-1 border border-slate-200/90 rounded-lg shadow-2xs bg-white w-full">
+        <table className="w-full text-left text-xs min-w-[500px]">
           <thead className="bg-gov-primary text-white font-semibold border-b border-gov-primary-dark select-none">
             <tr>
               {/* Rank */}
@@ -110,42 +117,27 @@ export const DistrictTable: React.FC<DistrictTableProps> = ({
                 onKeyDown={(e) => handleHeaderKeyDown(e, 'rank')}
                 tabIndex={0}
                 aria-sort={getAriaSort('rank')}
-                className="py-2.5 px-3 w-14 text-center cursor-pointer hover:bg-gov-primary-light focus-visible:bg-gov-primary-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 transition-colors group"
+                className="py-3 px-3 w-10 text-center cursor-pointer hover:bg-gov-primary-light focus-visible:bg-gov-primary-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 transition-colors group"
                 title="Sort by Rank"
               >
-                <div className="flex items-center justify-center gap-1">
+                <div className="flex items-center justify-center gap-0.5">
                   <span>{t.zone2.rankCol}</span>
                   {renderSortIcon('rank')}
                 </div>
               </th>
 
-              {/* District */}
+              {/* District & Division */}
               <th
                 onClick={() => handleSort('name')}
                 onKeyDown={(e) => handleHeaderKeyDown(e, 'name')}
                 tabIndex={0}
                 aria-sort={getAriaSort('name')}
-                className="py-2.5 px-3 cursor-pointer hover:bg-gov-primary-light focus-visible:bg-gov-primary-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 transition-colors group"
+                className="py-3 px-3 cursor-pointer hover:bg-gov-primary-light focus-visible:bg-gov-primary-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 transition-colors group"
                 title="Sort by District"
               >
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-0.5">
                   <span>{t.zone2.districtCol}</span>
                   {renderSortIcon('name')}
-                </div>
-              </th>
-
-              {/* Division */}
-              <th
-                onClick={() => handleSort('division')}
-                onKeyDown={(e) => handleHeaderKeyDown(e, 'division')}
-                tabIndex={0}
-                aria-sort={getAriaSort('division')}
-                className="py-2.5 px-3 cursor-pointer hover:bg-gov-primary-light focus-visible:bg-gov-primary-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 transition-colors group"
-                title="Sort by Division"
-              >
-                <div className="flex items-center gap-1">
-                  <span>{t.zone2.divisionCol}</span>
-                  {renderSortIcon('division')}
                 </div>
               </th>
 
@@ -155,10 +147,10 @@ export const DistrictTable: React.FC<DistrictTableProps> = ({
                 onKeyDown={(e) => handleHeaderKeyDown(e, 'releases')}
                 tabIndex={0}
                 aria-sort={getAriaSort('releases')}
-                className="py-2.5 px-3 text-right cursor-pointer hover:bg-gov-primary-light focus-visible:bg-gov-primary-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 transition-colors group"
+                className="py-3 px-3 text-right cursor-pointer hover:bg-gov-primary-light focus-visible:bg-gov-primary-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 transition-colors group"
                 title="Sort by Releases"
               >
-                <div className="flex items-center justify-end gap-1">
+                <div className="flex items-center justify-end gap-0.5">
                   <span>{t.zone2.releasesCol}</span>
                   {renderSortIcon('releases')}
                 </div>
@@ -170,10 +162,10 @@ export const DistrictTable: React.FC<DistrictTableProps> = ({
                 onKeyDown={(e) => handleHeaderKeyDown(e, 'avgTAT')}
                 tabIndex={0}
                 aria-sort={getAriaSort('avgTAT')}
-                className="py-2.5 px-3 text-right cursor-pointer hover:bg-gov-primary-light focus-visible:bg-gov-primary-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 transition-colors group"
+                className="py-3 px-3 text-right cursor-pointer hover:bg-gov-primary-light focus-visible:bg-gov-primary-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 transition-colors group"
                 title="Sort by Turnaround Time"
               >
-                <div className="flex items-center justify-end gap-1">
+                <div className="flex items-center justify-end gap-0.5">
                   <span>{t.zone2.tatCol}</span>
                   {renderSortIcon('avgTAT')}
                 </div>
@@ -185,10 +177,10 @@ export const DistrictTable: React.FC<DistrictTableProps> = ({
                 onKeyDown={(e) => handleHeaderKeyDown(e, 'sentiment')}
                 tabIndex={0}
                 aria-sort={getAriaSort('sentiment')}
-                className="py-2.5 px-3 text-right cursor-pointer hover:bg-gov-primary-light focus-visible:bg-gov-primary-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 transition-colors group"
+                className="py-3 px-3 text-right cursor-pointer hover:bg-gov-primary-light focus-visible:bg-gov-primary-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 transition-colors group"
                 title="Sort by Sentiment"
               >
-                <div className="flex items-center justify-end gap-1">
+                <div className="flex items-center justify-end gap-0.5">
                   <span>{t.zone2.sentimentCol}</span>
                   {renderSortIcon('sentiment')}
                 </div>
@@ -200,10 +192,10 @@ export const DistrictTable: React.FC<DistrictTableProps> = ({
                 onKeyDown={(e) => handleHeaderKeyDown(e, 'crisisSLA')}
                 tabIndex={0}
                 aria-sort={getAriaSort('crisisSLA')}
-                className="py-2.5 px-3 text-right cursor-pointer hover:bg-gov-primary-light focus-visible:bg-gov-primary-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 transition-colors group"
+                className="py-3 px-3 text-right cursor-pointer hover:bg-gov-primary-light focus-visible:bg-gov-primary-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 transition-colors group"
                 title="Sort by Crisis SLA"
               >
-                <div className="flex items-center justify-end gap-1">
+                <div className="flex items-center justify-end gap-0.5">
                   <span>{t.zone2.crisisCol}</span>
                   {renderSortIcon('crisisSLA')}
                 </div>
@@ -215,17 +207,17 @@ export const DistrictTable: React.FC<DistrictTableProps> = ({
                 onKeyDown={(e) => handleHeaderKeyDown(e, 'cpi')}
                 tabIndex={0}
                 aria-sort={getAriaSort('cpi')}
-                className="py-2.5 px-3 text-right font-bold cursor-pointer hover:bg-gov-primary-light focus-visible:bg-gov-primary-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 transition-colors group"
+                className="py-3 px-3 text-right font-bold cursor-pointer hover:bg-gov-primary-light focus-visible:bg-gov-primary-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 transition-colors group"
                 title="Sort by CPI Composite Performance Index"
               >
-                <div className="flex items-center justify-end gap-1">
+                <div className="flex items-center justify-end gap-0.5">
                   <span>{t.zone2.cpiCol}</span>
                   {renderSortIcon('cpi')}
                 </div>
               </th>
 
               {/* Action */}
-              <th className="py-2.5 px-3 text-center w-24">{t.zone2.actionCol}</th>
+              <th className="py-3 px-3 text-center w-16">{t.zone2.actionCol}</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-200 text-slate-800 bg-white">
@@ -259,29 +251,32 @@ export const DistrictTable: React.FC<DistrictTableProps> = ({
                       : 'hover:bg-slate-50'
                   }`}
                 >
-                  <td className="py-2.5 px-3 font-mono text-center text-slate-500 font-semibold">
+                  <td className="py-3 px-2 font-mono text-center text-slate-500 font-semibold">
                     #{d.rank}
                   </td>
-                  <td className="py-2.5 px-3 font-bold text-gov-primary">
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      <span>{language === 'mr' ? (d.nameMr || getDistrictName(d.name, 'mr')) : d.name}</span>
-                      {isUserDistrictScoped && d.name.toLowerCase() === assignedDistrictName && (
-                        <span className="text-[9px] px-1.5 py-0.5 bg-gov-accent text-white rounded font-sans font-bold shadow-2xs">
-                          {language === 'mr' ? 'आपला जिल्हा' : 'Your District'}
-                        </span>
-                      )}
+                  <td className="py-3 px-2.5 font-bold text-gov-primary">
+                    <div className="flex flex-col">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span>{language === 'mr' ? (d.nameMr || getDistrictName(d.name, 'mr')) : d.name}</span>
+                        {isUserDistrictScoped && d.name.toLowerCase() === assignedDistrictName && (
+                          <span className="inline-flex items-center gap-1 text-[10px] font-sans font-bold text-amber-700 whitespace-nowrap">
+                            <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
+                            <span>{language === 'mr' ? 'आपला' : 'Your District'}</span>
+                          </span>
+                        )}
+                      </div>
+                      <span className="text-[11px] font-normal text-slate-500">
+                        {language === 'mr' ? getDivisionName(d.division, 'mr') : d.division}
+                      </span>
                     </div>
                   </td>
-                  <td className="py-2.5 px-3 text-slate-600 font-medium">
-                    {language === 'mr' ? getDivisionName(d.division, 'mr') : d.division}
-                  </td>
-                  <td className="py-2.5 px-3 text-right font-mono font-medium">{d.releases}</td>
-                  <td className="py-2.5 px-3 text-right font-mono">
+                  <td className="py-3 px-3 text-right font-mono font-medium">{d.releases}</td>
+                  <td className="py-3 px-3 text-right font-mono">
                     <span className={d.avgTAT <= 45 ? 'text-emerald-700 font-semibold' : 'text-slate-700'}>
                       {d.avgTAT}{language === 'mr' ? ' मि' : 'm'}
                     </span>
                   </td>
-                  <td className="py-2.5 px-3 text-right font-mono">
+                  <td className="py-3 px-3 text-right font-mono">
                     <span
                       className={`inline-flex items-center justify-end gap-1.5 cursor-help ${
                         d.sentiment >= 70
@@ -308,29 +303,29 @@ export const DistrictTable: React.FC<DistrictTableProps> = ({
                       <span>{d.sentiment}%</span>
                     </span>
                   </td>
-                  <td className="py-2.5 px-3 text-right font-mono">
+                  <td className="py-3 px-3 text-right font-mono">
                     <span className={d.crisisSLA >= 85 ? 'text-emerald-700 font-semibold' : 'text-amber-700 font-semibold'}>
                       {d.crisisSLA}%
                     </span>
                   </td>
-                  <td className={`py-2.5 px-3 text-right font-mono text-sm ${cpiColorClass}`}>
+                  <td className={`py-3 px-3 text-right font-mono text-xs sm:text-sm ${cpiColorClass}`}>
                     {d.cpi}
                   </td>
-                  <td className="py-2.5 px-3 text-center">
+                  <td className="py-3 px-3 text-center">
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
                         onSelectDistrict(d.id);
                       }}
                       aria-label={language === 'mr' ? `${d.nameMr || getDistrictName(d.name, 'mr')} कामगिरी विश्लेषण` : `Inspect ${d.name} performance metrics`}
-                      className={`inline-flex items-center justify-center gap-1 px-2.5 py-1 text-[11px] rounded transition-colors cursor-pointer ${
+                      className={`inline-flex items-center justify-center gap-1 px-2.5 py-1 text-[10px] rounded transition-colors cursor-pointer ${
                         isSelected
                           ? 'text-amber-700 bg-amber-500/10 border-l-2 border-amber-500 font-semibold rounded-l-none'
                           : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 font-medium'
                       }`}
                     >
                       <span>{isSelected ? t.zone2.selectedBtn : t.zone2.viewBtn}</span>
-                      <span className="text-[10px]">↗</span>
+                      <ArrowUpRightIcon className="w-3 h-3 shrink-0" />
                     </button>
                   </td>
                 </tr>
@@ -341,7 +336,7 @@ export const DistrictTable: React.FC<DistrictTableProps> = ({
       </div>
 
       {/* Pagination & Density Controls */}
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-2 px-1 text-xs text-slate-500 pt-1">
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-2 px-1 text-xs text-slate-500 pt-2 border-t border-slate-100 mt-auto">
         <div className="flex items-center gap-2">
           <span>
             {language === 'mr' ? (
@@ -382,7 +377,7 @@ export const DistrictTable: React.FC<DistrictTableProps> = ({
               title={language === 'mr' ? 'मागील पृष्ठ' : 'Previous Page'}
               aria-label={language === 'mr' ? 'मागील पृष्ठ' : 'Previous Page'}
             >
-              <MaterialIcon name="chevron_left" size="xs" />
+              <ChevronLeftIcon className="w-3.5 h-3.5 shrink-0" />
             </button>
             <span className="font-mono text-xs font-semibold px-2 text-slate-800">
               {safePage} / {totalPages}
@@ -395,7 +390,7 @@ export const DistrictTable: React.FC<DistrictTableProps> = ({
               title={language === 'mr' ? 'पुढील पृष्ठ' : 'Next Page'}
               aria-label={language === 'mr' ? 'पुढील पृष्ठ' : 'Next Page'}
             >
-              <MaterialIcon name="chevron_right" size="xs" />
+              <ChevronRightIcon className="w-3.5 h-3.5 shrink-0" />
             </button>
           </div>
         )}

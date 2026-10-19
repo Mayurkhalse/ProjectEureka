@@ -559,7 +559,7 @@ export const CopilotDrawer: React.FC = () => {
           <div
             className="w-full max-w-lg bg-slate-50 h-full shadow-2xl flex flex-col border-l border-slate-200 animate-in slide-in-from-right duration-300"
             role="dialog"
-            aria-label="DGIPR OpenUI Copilot Interface"
+            aria-label="DGIPR Open UI Copilot Interface"
           >
             {/* Header */}
             <div className="bg-slate-900 text-white p-4 flex items-center justify-between border-b border-slate-800">

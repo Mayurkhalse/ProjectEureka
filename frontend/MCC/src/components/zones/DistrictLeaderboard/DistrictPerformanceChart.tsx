@@ -26,10 +26,11 @@ export const DistrictPerformanceChart: React.FC<DistrictPerformanceChartProps> =
     const categories = top5.map((d) => (language === 'mr' ? (d.nameMr || getDistrictName(d.name, 'mr')) : d.name));
 
     return {
-      grid: { top: 32, right: 15, bottom: 25, left: 35 },
+      grid: { top: 38, right: 15, bottom: 25, left: 35 },
       legend: {
-        top: 2,
+        top: 4,
         right: 10,
+        itemGap: 14,
         textStyle: { fontSize: 10, color: '#475569' },
         itemWidth: 10,
         itemHeight: 10,
@@ -112,15 +113,8 @@ export const DistrictPerformanceChart: React.FC<DistrictPerformanceChartProps> =
   }, [districts, language]);
 
   return (
-    <div>
-      <div className="flex items-center justify-between text-xs font-semibold text-slate-700 mb-1">
-        <span>
-          {language === 'mr'
-            ? 'शीर्ष ५ जिल्हे — ४-घटक संमिश्र कामगिरी निर्देशांक (२५/२५/२५/२५)'
-            : 'Top 5 Districts by 4-Pillar Composite Index (25/25/25/25)'}
-        </span>
-      </div>
-      <div className="h-48 w-full bg-slate-50/50 rounded-lg p-1 border border-slate-100">
+    <div className="w-full">
+      <div className="h-52 w-full bg-slate-50/50 rounded-lg p-2 border border-slate-100">
         <ReactECharts
           option={chartOption}
           style={{ height: '100%', width: '100%' }}

@@ -2,12 +2,17 @@
 
 import React, { useMemo } from 'react';
 import { KPICard } from './KPICard';
+import { KPIRibbonSkeleton } from '@/components/skeletons/KPIRibbonSkeleton';
 import { useDashboardStore } from '@/stores/dashboardStore';
 import { useTranslation } from '@/lib/translations';
 import { getDistrictName } from '@/lib/dataLocalization';
 import { getDistrictSentiment } from '@/lib/sentimentEngine';
 
-export const KPIRibbon: React.FC = () => {
+export interface KPIRibbonProps {
+  layout?: 'ribbon' | 'column';
+}
+
+export const KPIRibbon: React.FC<KPIRibbonProps> = ({ layout = 'ribbon' }) => {
   const {
     language,
     overviewMetrics,
@@ -15,6 +20,7 @@ export const KPIRibbon: React.FC = () => {
     selectedPeriod,
     districts,
     incidents,
+    isLoadingData,
   } = useDashboardStore();
   const t = useTranslation(language);
 
@@ -125,6 +131,10 @@ export const KPIRibbon: React.FC = () => {
     };
   }, [selectedDistrictId, selectedPeriod, districts, incidents, language, t]);
 
+  if (isLoadingData) {
+    return <KPIRibbonSkeleton cardsCount={4} />;
+  }
+
   return (
     <section className="w-full space-y-2 select-none" aria-label={t.zone1.sectionTitle}>
       {/* Scope Sub-label */}
@@ -140,8 +150,14 @@ export const KPIRibbon: React.FC = () => {
         </span>
       </div>
 
-      {/* Single Horizontal Full-Width Ribbon: Exactly 4 Equal Columns */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 w-full items-stretch">
+      {/* KPI Cards: 2x2 grid in column mode, 4-col in ribbon mode */}
+      <div
+        className={
+          layout === 'ribbon'
+            ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-4 xl:gap-5 w-full items-stretch'
+            : 'grid grid-cols-1 sm:grid-cols-2 gap-2.5 w-full items-stretch'
+        }
+      >
         {/* 1. Total Releases */}
         <KPICard
           icon="description"

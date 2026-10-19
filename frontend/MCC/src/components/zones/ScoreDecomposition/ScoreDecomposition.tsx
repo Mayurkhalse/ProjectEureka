@@ -4,12 +4,13 @@ import React, { useMemo } from 'react';
 import { useDashboardStore } from '@/stores/dashboardStore';
 import { useTranslation } from '@/lib/translations';
 import { ScoreMetricBar } from './ScoreMetricBar';
+import { ScoreDecompositionSkeleton } from '@/components/skeletons/ScoreDecompositionSkeleton';
 import { getDistrictName } from '@/lib/dataLocalization';
 import { getDistrictSentiment } from '@/lib/sentimentEngine';
 import { MaterialIcon } from '@/components/shared/MaterialIcon';
 
 export const ScoreDecomposition: React.FC = () => {
-  const { districts, selectedDistrictId, selectedPeriod, language } = useDashboardStore();
+  const { districts, selectedDistrictId, selectedPeriod, language, isLoadingData } = useDashboardStore();
   const t = useTranslation(language);
 
   const selected =
@@ -20,12 +21,17 @@ export const ScoreDecomposition: React.FC = () => {
     return getDistrictSentiment(selected.id, selectedPeriod);
   }, [selected.id, selectedPeriod]);
 
+  // Safeguard #1: Return skeleton directly at root level to prevent double card wrappers
+  if (isLoadingData) {
+    return <ScoreDecompositionSkeleton />;
+  }
+
   return (
-    <div className="bg-surface border border-slate-200 rounded-lg flex flex-col shadow-xs overflow-hidden">
+    <div className="bg-white rounded-xl shadow-sm border border-slate-200/80 flex flex-col overflow-hidden">
       {/* Header */}
-      <div className="px-4 py-3 border-b border-slate-200 bg-surface flex items-center justify-between flex-wrap gap-2">
+      <div className="p-5 border-b border-slate-200/80 bg-white flex items-center justify-between flex-wrap gap-2">
         <div>
-          <h3 className="text-sm font-bold text-gov-primary tracking-tight">
+          <h3 className="text-sm font-bold text-gov-primary tracking-tight mb-1">
             {t.zone3.title} — {language === 'mr' ? (selected.nameMr || getDistrictName(selected.name, 'mr')) : selected.name}
           </h3>
           <p className="text-[11px] text-slate-500 font-medium">
@@ -45,7 +51,7 @@ export const ScoreDecomposition: React.FC = () => {
       </div>
 
       {/* 4 Constituent Scores */}
-      <div className="p-4 space-y-4 bg-white">
+      <div className="p-5 space-y-4 bg-white">
         {/* 1. Volume Score */}
         <ScoreMetricBar
           icon="newspaper"
@@ -78,42 +84,52 @@ export const ScoreDecomposition: React.FC = () => {
           />
 
           {/* 4-Channel Weighted Breakdown Badges */}
-          <div className="mt-1 pl-7 pt-1 border-t border-slate-100 flex items-center gap-3 flex-wrap">
-            <span className="text-[10px] font-semibold text-slate-500 flex items-center gap-1">
+          <div className="mt-2 pt-2 border-t border-slate-100">
+            <div className="text-[10px] font-semibold text-slate-500 flex items-center gap-1 mb-1.5">
               <MaterialIcon name="bar_chart" size="xs" className="text-slate-400" />
               <span>{language === 'mr' ? '४-प्रवाह घटक:' : '4-Channel Mix:'}</span>
-            </span>
-            <div
-              className="inline-flex items-center gap-1.5 pl-2 border-l-2 border-blue-500 text-[11px]"
-              title="Print Media OCR (35% weight in composite tone score)"
-            >
-              <span className="text-slate-700 font-medium">{language === 'mr' ? 'प्रिंट ओसीआर' : 'Print OCR'}</span>
-              <span className="font-mono font-bold text-slate-900">{sentimentBreakdown.printOcr}%</span>
-              <span className="text-slate-400 text-[10px]">(35%)</span>
             </div>
-            <div
-              className="inline-flex items-center gap-1.5 pl-2 border-l-2 border-purple-500 text-[11px]"
-              title="Broadcast TV Telemetry - DD Sahyadri & Regional News (25% weight)"
-            >
-              <span className="text-slate-700 font-medium">{language === 'mr' ? 'टीव्ही प्रसारण' : 'Broadcast TV'}</span>
-              <span className="font-mono font-bold text-slate-900">{sentimentBreakdown.broadcastTv}%</span>
-              <span className="text-slate-400 text-[10px]">(25%)</span>
-            </div>
-            <div
-              className="inline-flex items-center gap-1.5 pl-2 border-l-2 border-emerald-500 text-[11px]"
-              title="Social Listening - X/Twitter, FB, Insta, YouTube (25% weight)"
-            >
-              <span className="text-slate-700 font-medium">{language === 'mr' ? 'सोशल ऐकणे' : 'Social'}</span>
-              <span className="font-mono font-bold text-slate-900">{sentimentBreakdown.socialListening}%</span>
-              <span className="text-slate-400 text-[10px]">(25%)</span>
-            </div>
-            <div
-              className="inline-flex items-center gap-1.5 pl-2 border-l-2 border-amber-500 text-[11px]"
-              title="Citizen/User Comments & Public Feedback (15% weight)"
-            >
-              <span className="text-slate-700 font-medium">{language === 'mr' ? 'नागरिक टिप्पण्या' : 'Comments'}</span>
-              <span className="font-mono font-bold text-slate-900">{sentimentBreakdown.userComments}%</span>
-              <span className="text-slate-400 text-[10px]">(15%)</span>
+            <div className="grid grid-cols-2 gap-2 p-3 bg-slate-50/80 rounded-lg border border-slate-100">
+              <div
+                className="flex items-center justify-between gap-1 pl-2 border-l-2 border-blue-500 text-[11px]"
+                title="Print Media OCR (35% weight in composite tone score)"
+              >
+                <span className="text-slate-700 font-medium truncate">{language === 'mr' ? 'प्रिंट ओसीआर' : 'Print OCR'}</span>
+                <div className="flex items-center gap-1 shrink-0 font-mono text-[11px]">
+                  <strong className="text-slate-900">{sentimentBreakdown.printOcr}%</strong>
+                  <span className="text-slate-400 text-[10px]">(35%)</span>
+                </div>
+              </div>
+              <div
+                className="flex items-center justify-between gap-1 pl-2 border-l-2 border-purple-500 text-[11px]"
+                title="Broadcast TV Telemetry - DD Sahyadri & Regional News (25% weight)"
+              >
+                <span className="text-slate-700 font-medium truncate">{language === 'mr' ? 'टीव्ही प्रसारण' : 'Broadcast TV'}</span>
+                <div className="flex items-center gap-1 shrink-0 font-mono text-[11px]">
+                  <strong className="text-slate-900">{sentimentBreakdown.broadcastTv}%</strong>
+                  <span className="text-slate-400 text-[10px]">(25%)</span>
+                </div>
+              </div>
+              <div
+                className="flex items-center justify-between gap-1 pl-2 border-l-2 border-emerald-500 text-[11px]"
+                title="Social Listening - X/Twitter, FB, Insta, YouTube (25% weight)"
+              >
+                <span className="text-slate-700 font-medium truncate">{language === 'mr' ? 'सोशल ऐकणे' : 'Social'}</span>
+                <div className="flex items-center gap-1 shrink-0 font-mono text-[11px]">
+                  <strong className="text-slate-900">{sentimentBreakdown.socialListening}%</strong>
+                  <span className="text-slate-400 text-[10px]">(25%)</span>
+                </div>
+              </div>
+              <div
+                className="flex items-center justify-between gap-1 pl-2 border-l-2 border-amber-500 text-[11px]"
+                title="Citizen/User Comments & Public Feedback (15% weight)"
+              >
+                <span className="text-slate-700 font-medium truncate">{language === 'mr' ? 'नागरिक टिप्पण्या' : 'Comments'}</span>
+                <div className="flex items-center gap-1 shrink-0 font-mono text-[11px]">
+                  <strong className="text-slate-900">{sentimentBreakdown.userComments}%</strong>
+                  <span className="text-slate-400 text-[10px]">(15%)</span>
+                </div>
+              </div>
             </div>
           </div>
         </div>

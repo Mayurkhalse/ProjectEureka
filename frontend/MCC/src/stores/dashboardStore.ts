@@ -121,6 +121,10 @@ interface DashboardStore {
   setCopilotOpen: (open: boolean) => void;
 }
 
+// Internal sequence and timer tracking to debounce and prevent overlapping filter transitions
+let filterRequestSeq = 0;
+let filterTimeout: NodeJS.Timeout | null = null;
+
 export const useDashboardStore = create<DashboardStore>((set, get) => ({
   // Authentication Defaults
   isAuthenticated: false,
@@ -267,12 +271,18 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
     get().fetchAllData();
   },
   selectedPeriod: 'Last 7 days',
-  setSelectedPeriod: (selectedPeriod) => set({ selectedPeriod }),
+  setSelectedPeriod: (selectedPeriod) => {
+    set({ selectedPeriod });
+    get().fetchAllData();
+  },
   searchDistrict: '',
   setSearchDistrict: (searchDistrict) => set({ searchDistrict }),
 
   selectedDistrictId: 'thane',
-  setSelectedDistrictId: (selectedDistrictId) => set({ selectedDistrictId }),
+  setSelectedDistrictId: (selectedDistrictId) => {
+    set({ selectedDistrictId });
+    get().fetchAllData();
+  },
 
   selectedDepartmentId: 'dept-agri',
   setSelectedDepartmentId: (selectedDepartmentId) => set({ selectedDepartmentId }),
@@ -378,14 +388,32 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
   },
 
   fetchAllData: async () => {
+    filterRequestSeq += 1;
+    const currentSeq = filterRequestSeq;
+
+    if (filterTimeout) {
+      clearTimeout(filterTimeout);
+      filterTimeout = null;
+    }
+
     set({ isLoadingData: true });
+
     await Promise.all([
       get().fetchOverviewMetrics(),
       get().fetchDistricts(),
       get().fetchIncidents(),
       get().fetchOcrFeed(),
+      new Promise<void>((resolve) => {
+        filterTimeout = setTimeout(() => {
+          resolve();
+        }, 350);
+      }),
     ]);
-    set({ isLoadingData: false });
+
+    // Safeguard #4: Only conclude loading if this is still the most recent request sequence
+    if (currentSeq === filterRequestSeq) {
+      set({ isLoadingData: false });
+    }
   },
 
   authorizeRebuttalApi: async (incidentId, action = 'authorize') => {
