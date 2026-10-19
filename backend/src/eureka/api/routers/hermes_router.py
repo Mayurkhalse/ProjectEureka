@@ -77,14 +77,21 @@ _ACTIVE_PIPELINES = [
 ]
 
 
-# --- New Endpoints (Step 5) ---
+# --- Hermes Status & Execution Endpoints ---
+
+@router.get("/health", summary="Check Hermes Agent Status & Connectivity")
+async def get_hermes_health():
+    """Returns real-time status of the Hermes API Server and local CLI binary."""
+    orchestrator = get_hermes_orchestrator()
+    return orchestrator.check_health()
+
 
 @router.post("/execute", summary="Execute Orchestrated Hermes Autonomous Task")
 async def execute_hermes_task(
     payload: HermesExecuteRequest,
     current_user: Optional[TokenData] = Depends(get_current_user),
 ):
-    """Runs an orchestrated governance task via Hermes CLI with Groq and deterministic tool fallbacks."""
+    """Runs an orchestrated governance task via Hermes Agent API Server with allowlisted guardrails."""
     orchestrator = get_hermes_orchestrator()
     ctx = payload.context or {}
     if payload.district_code:
@@ -95,8 +102,19 @@ async def execute_hermes_task(
         ctx["reviewer_id"] = current_user.username
         ctx["role"] = current_user.role
 
-    result = orchestrator.run_task(prompt=payload.task, context=ctx)
-    return result
+    try:
+        result = orchestrator.run_task(prompt=payload.task, context=ctx)
+        return result
+    except PermissionError as perm_err:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=str(perm_err),
+        )
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Hermes execution error: {exc}",
+        )
 
 
 @router.get("/dm-queue/{district_code}", summary="Get Collector's 90-Minute Crisis War Room Queue")

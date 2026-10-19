@@ -12,6 +12,8 @@ htmlcov/
 venv/
 ENV/
 env/
+node_modules/
+.next/
 
 # Environment variables and secrets
 .env

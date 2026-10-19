@@ -207,7 +207,8 @@ def test_hermes_orchestrator_execution():
         context={"district_code": "MH-15"},
     )
     assert res["status"] == "success"
-    assert res["execution_mode"] in ["hermes_cli", "groq_function_call", "direct_deterministic"]
+    assert res["engine"] in ["hermes_api_server", "hermes_cli_oneshot", "deterministic_staging_fallback"]
+    assert res["tool_called"] == "tool_translate_and_normalize"
 
 
 # --- 5. FastAPI Router Endpoints ---

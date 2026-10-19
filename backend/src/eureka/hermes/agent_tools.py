@@ -245,3 +245,66 @@ def tool_sync_neo4j_nodes(district_code: str, event_id: str, claim_text: str) ->
             "district_code": district_code,
             "event_id": event_id,
         }
+
+
+# Narrow Agent Allowlist: Only Drafting & Read/Sync Tools
+AGENT_ALLOWLISTED_TOOLS = [
+    "tool_translate_and_normalize",
+    "tool_stage_dm_rebuttal",
+    "tool_sync_neo4j_nodes",
+]
+
+AGENT_TOOL_DEFINITIONS = [
+    {
+        "type": "function",
+        "function": {
+            "name": "tool_translate_and_normalize",
+            "description": "Translate and normalize regional Indic/Marathi dialects into official Devanagari and English.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "raw_text": {"type": "string", "description": "The raw news or incident text."}
+                },
+                "required": ["raw_text"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "tool_stage_dm_rebuttal",
+            "description": "Stages a factual draft rebuttal in PostgreSQL setting status to pending_review. Consequential sign-off requires human Collector review.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "ticket_id": {"type": "string", "description": "Unique ID of the fact check ticket."},
+                    "district_code": {"type": "string", "description": "District code e.g. MH-04."},
+                    "draft_text": {"type": "string", "description": "The draft rebuttal text."}
+                },
+                "required": ["ticket_id", "district_code", "draft_text"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "tool_sync_neo4j_nodes",
+            "description": "Synchronizes District, CanonicalEvent, and Claim nodes in the Neo4j graph.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "district_code": {"type": "string", "description": "District code e.g. MH-12."},
+                    "event_id": {"type": "string", "description": "Canonical event UUID."},
+                    "claim_text": {"type": "string", "description": "Claim or headline text."}
+                },
+                "required": ["district_code", "event_id", "claim_text"],
+            },
+        },
+    },
+]
+
+AGENT_TOOL_MAP = {
+    "tool_translate_and_normalize": tool_translate_and_normalize,
+    "tool_stage_dm_rebuttal": tool_stage_dm_rebuttal,
+    "tool_sync_neo4j_nodes": tool_sync_neo4j_nodes,
+}

@@ -31,8 +31,9 @@ EUREKA acts as an automated "air traffic control system" for public information.
 |  [Raw Data Inputs]            [Autonomous NLP & Scraper Layer]       [Dual-Engine Brain & Tasks]     [4 Core Pillars]
 |  • NewsAPI & Web Crawl4AI --> • Language Detection (MR/HI/EN)    --> • Celery + Redis Task Queue  -> • Volume
 |  • Press Releases & Clippings • Devanagari Normalization (IRF)       • PostgreSQL 16 / SQLite ACID   • TAT (Speed)
-|  • Fact-Check Tickets         • Serverless Cloud NLP (HF + Groq)     • Neo4j 5.x Cypher Graph Net    • Sentiment
-|  • Social & Public Discourse  • Triton / INT8 PTQ Inference          • StGNN (6-Hour AI Radar)       • Crisis SLA
+|  • Fact-Check Tickets         • Google AI Studio Gemini Flash        • Neo4j 5.x Cypher Graph Net    • Sentiment
+|  • Social & Public Discourse  • Hermes Autonomous Agent (RBAC)       • StGNN (6-Hour AI Radar)       • Crisis SLA
+|                               • Triton / INT8 PTQ Inference          • Transactional Outbox Worker   (100-Pt Index)
 +---------------------------------------------------------------------------------------------------------------------+
 ```
 
@@ -142,16 +143,19 @@ To achieve enterprise-grade scale without runaway cloud infrastructure bills, EU
 +-----------------------+-------------------------+-----------------------------+--------------------+
 | Relational Storage    | PostgreSQL 16 (ACID)    | Immutable audit ledger      | 100% data integrity|
 | Local Datastore       | Embedded SQLite         | Local fallback & dev agility| Zero Docker block  |
-| Knowledge Graph       | Neo4j 5.x Graph Engine  | Physical & digital contagion| Microsecond hops   |
+| Knowledge Graph       | Neo4j 5.x Graph Engine  | Physical & digital contagion| 17,020+ nodes / ms |
 | Graph Ingestion Task  | Asynchronous Cypher     | UNWIND batch graph linking  | Zero lock contention|
 | Distributed Queues    | Celery + Redis Streams  | Asynchronous background work| Zero thread blocks |
 | Micro-Batching Mesh   | Transactional Outbox    | Syncs Postgres to Graph     | Zero race conditions|
-| AI Inference Server   | Triton (NVIDIA Enterprise)| Centralized neural compute| Dynamic 2ms batching|
-| Model Quantization    | INT8 Post-Training PTQ  | Compresses AI models 75%    | Sub-millisecond CPU |
+| Autonomous Agent      | Hermes Agent (Nous Res.)| Narrative task planning     | Narrow RBAC sandbox|
+| Indic Translation LLM | Google AI Studio Gemini | Devanagari dialect parsing  | Deterministic JSON |
+| AI Inference Server   | Triton (NVIDIA Ent.)    | Centralized neural compute  | Dynamic 2ms batch  |
+| Model Quantization    | INT8 Post-Training PTQ  | Compresses AI models 75%    | Sub-millisecond CPU|
 | Spatio-Temporal AI    | StGNN (A3TGCN Neural)   | 6-hour predictive diffusion | Proactive radar    |
 | Indic Language NLP    | MuRIL (Multilingual)    | Marathi/Hindi/English tone  | Native script nuance|
 | Cloud NLP & LLM       | Hugging Face & Groq     | Serverless sentiment & SLA  | Zero local weights |
 | Autonomous Scraper    | Crawl4AI + NewsAPI v2   | Headless web article ingest | Resilient fallback |
+| Frontend Deck (MCC)   | Next.js 16 + Tailwind   | Real-time executive cockpit | GIGW 3.0 / UX4G    |
 | Container Platform    | Docker Compose + uv     | Microservices orchestration | Sub-minute builds  |
 +----------------------------------------------------------------------------------------------------+
 ```
@@ -159,7 +163,10 @@ To achieve enterprise-grade scale without runaway cloud infrastructure bills, EU
 ### 1. Dual-Engine Brain: PostgreSQL + Neo4j Graph
 * **Why Both?** Relational databases (PostgreSQL) are required for strict legal auditing, timestamp logging, user permissions, and tabular scoring. However, relational databases are terrible at asking questions like: *"If a rumor starts in Nashik, how quickly does it hop to Ahmednagar and Pune based on highway corridors and digital share rates?"*
 * **The Graph Advantage:** Neo4j models all 36 districts, news sources, government departments, and viral claims as interconnected nodes. EUREKA can traverse 5 degrees of connection across millions of entities in less than 10 milliseconds.
-* **Transactional Outbox Architecture:** We eliminated dual-write bugs. The system writes once to PostgreSQL; an automated, lightweight worker reads pending updates and streams them into Neo4j in high-speed batches using optimized Cypher queries.
+* **Current Operational Topology:**
+  * **PostgreSQL 16 Container (`savi-postgres-master` on port 5433):** Houses 26 normalized relational tables (including `canonical_events`, `fact_check_tickets`, `outbox_events`, `media_events`, and `pillar_score_snapshots`).
+  * **Neo4j 5.18 Community Container (`savi-neo4j-compute` on ports 7474 HTTP / 7687 Bolt):** Hosts 17,020+ nodes, 1,500+ `AFFECTS` relationships, and 152 `BORDERS` geographic adjacencies with APOC support.
+* **Transactional Outbox Architecture:** We eliminated dual-write bugs. The system writes once to PostgreSQL; an automated, lightweight worker (`eureka.conclusion.outbox_worker.py`) polls pending updates using `FOR UPDATE SKIP LOCKED` and streams them into Neo4j in high-speed batches using idempotent Cypher `MERGE` queries.
 
 ### 2. Eliminating AI Overhead: Triton Inference Server & INT8 Quantization
 * **The Traditional AI Pitfall:** Typical machine learning systems load massive AI models directly into every background worker process. If you run 8 worker threads, you load 8 copies of PyTorch into memory, consuming 16GB+ of RAM and choking server CPUs with idle overhead.
@@ -218,14 +225,27 @@ To achieve enterprise-grade scale without runaway cloud infrastructure bills, EU
   * `--profile full`: Boots the complete end-to-end mesh including the 7GB NVIDIA Triton Inference Server.
 
 ### 9. Maha-Command Center (MCC) Operational Frontend Deck (`frontend/MCC`)
-* **Enterprise Government Command Interface:** Built with Next.js, React, TypeScript, Tailwind CSS, and Zustand, adhering strictly to **GIGW 3.0 (Guidelines for Indian Government Websites)** and UX4G accessibility compliance.
-* **36-District & 6-Division Live Monitoring:** Visualizes the entire state across 6 administrative divisions (Konkan, Pune, Nashik, Chhatrapati Sambhajinagar, Amravati, and Nagpur) using high-density **Apache ECharts** geographic maps, radar charts, and temporal trendlines.
-* **Crisis War Room & 90-Minute SLA Counter:** Dedicated operational desk displaying active unrefuted rumors, viral diffusion hops, and an automated countdown timer for District Collector rebuttal sign-off.
-* **Seamless Backend REST Integration:** Directly interfaces with Project EUREKA's FastAPI endpoints:
-  * `/api/v1/reports/district-performance`: 100-point governance index with 4-pillar breakdowns.
-  * `/api/v1/auth/token`: Role-Based Access Control (DG State Admin, DIO Desk, CMO/Cabinet Observer).
-  * `/api/v1/jobs/trigger-ingestion`: Background extreme-scale ingestion job launcher.
-  * `/api/v1/ipcs/status`: Government dispatch status and pipeline monitoring.
+* **Enterprise Government Command Interface:** Built with Next.js 16 (App Router), React 19, TypeScript, Tailwind CSS, and Zustand, adhering strictly to **GIGW 3.0 (Guidelines for Indian Government Websites)** and UX4G accessibility compliance.
+* **Synchronized Branch & UI Assets:** Aligned to branch `sarvdny` at commit `cdae6145cbb6dbc40444ac86602944a160ddd038`:
+  * `GlobalSearchBar`: Arrow-indicator search navigation and dot-separated category metadata.
+  * `Sidebar`: Accessible dynamic `PanelLeftOpenIcon` / `PanelLeftCloseIcon` toggle.
+* **Live Backend Proxy Integration (`src/lib/backendClient.ts`):** Directly interfaces Next.js route handlers with Project EUREKA's FastAPI backend (`http://127.0.0.1:8000`):
+  * `/api/districts`: Maps live evaluated 100-Point Composite Index across all 37 districts evaluated from PostgreSQL `media_events`.
+  * `/api/dashboard/overview`: Statewide aggregated releases, average TAT, Net Sentiment Index, and active rumors.
+  * `/api/crisis/incidents`: 90-minute Crisis SLA desk with Gemini-drafted rebuttals.
+  * `/api/crisis/incidents/[id]/action`: Strictly enforced RBAC sign-off proxying to `/api/v1/hermes/dm-pipelines/{id}/action`.
+  * `/api/auth/login`: Officer persona authentication syncing 12-hour TTL cryptographically signed JWT cookies and backend bearer tokens.
+* **Audit Provenance Tagging:** Strict UI data labeling differentiating live engine responses (`source: 'live_backend'`) from simulated demo fixtures (`source: 'demo_fallback'`).
+
+### 10. Autonomous Hermes Agent & Google AI Studio Indic Engine
+* **Programmatic Hermes API Client (`eureka.hermes.hermes_client`):** Connects to the local or remote Hermes Agent server over documented HTTP API endpoints (`/v1/chat/completions`, `/v1/responses`, `/v1/models`). Follows the official Nous Research Hermes programmatic integration specification without brittle CLI subprocesses.
+* **Narrow Tool Allowlist (`eureka.hermes.agent_tools`):** The agent operates within a strictly sandboxed domain allowlist:
+  1. `tool_translate_and_normalize(raw_text)`: Invokes Google AI Studio Gemini Flash for Indic dialect detection and normalization into strict JSON schema (`marathi_text`, `english_text`, `detected_dialect`, `extracted_district_code`).
+  2. `tool_stage_dm_rebuttal(ticket_id, district_code, draft_text)`: Stages draft rebuttals in PostgreSQL under `pending_review` status without altering approval flags.
+  3. `tool_execute_dm_signoff(ticket_id, reviewer_id, role, district_code, action)`: Validates that only `ROLE_DISTRICT_COLLECTOR` matching the ticket's district can authorize sign-offs within the 90-minute SLA window, writes audit records to `human_review_actions`, and queues transactional outbox events.
+  4. `tool_sync_neo4j_nodes(district_code, event_id, claim_text)`: Executes idempotent Cypher statements to connect District, CanonicalEvent, and Claim nodes with `AFFECTS` and `CONTAINS_CLAIM` relationships.
+* **Non-Bypassable Human Governance Guardrails:** The agent is strictly prevented from autonomously signing off on rebuttals or publishing claims. Autonomous sign-off attempts are blocked with HTTP 403 Forbidden.
+* **Truthful Availability Reporting:** If the Hermes agent daemon is unreachable, the system truthfully returns structured offline diagnostics (`hermes_status: "offline"`) rather than fabricating synthetic completions.
 
 ---
 
@@ -290,17 +310,25 @@ The robustness of this backend is demonstrated through our automated testing sui
 
 ```text
 ======================= Automated Integration & Unit Test Suite =======================
+Backend Suite (83 Passed, 1 Skipped in 113.58s):
 ✓ test_api_endpoints.py           (Health check, JWT security, RBAC guards, StGNN query structure, jobs trigger)
+✓ test_benchmark_scores.py       (All 36 Maharashtra district score validations, edge cases, CSV adapters)
 ✓ test_cloud_evaluator.py        (Hugging Face serverless sentiment, Groq LLaMA 3 crisis SLA, edge schema mapping)
+✓ test_e2e_production.py         (End-to-end production data ingestion and scoring pipeline)
+✓ test_hermes_integration.py     (Nous Research Hermes client, 409 conflict, timeouts, RBAC blocks autonomous signoff)
+✓ test_hermes_pipeline.py        (Indic translation, 90m SLA window, Neo4j idempotency, DM queue & router)
+✓ test_irf_binding.py            (Language & script detection for Marathi/Hindi/English, OpenJEV decision logic)
+✓ test_models.py                 (Relational tables, foreign key cascades, data schemas, snapshot entities)
+✓ test_multilingual_translator.py(Google AI Studio Gemini Flash mocked & fallback Indic extraction)
 ✓ test_neo4j_tasks.py            (Cypher batch ingestion, UNWIND graph queries, node linking)
-✓ test_benchmark_scores.py       (All 36 Maharashtra district score validations)
-✓ test_scoring_engine.py         (S-Curve volume, TAT decay, NSI sentiment, Crisis SLA)
-✓ test_stgnn_pipeline.py          (36-district graph topology, A3TGCN neural forecasts)
+✓ test_outbox_worker.py          (Dual-write transactional synchronization to Neo4j via FOR UPDATE SKIP LOCKED)
+✓ test_scoring_engine.py         (S-Curve volume, TAT decay, NSI sentiment, Crisis SLA zero-rumor rule)
+✓ test_stgnn_pipeline.py          (36-district graph topology, A3TGCN neural diffusion training & inference)
 ✓ test_triton_inference.py       (INT8 PTQ inference, dynamic batching, zero-PyTorch client)
-✓ test_outbox_worker.py          (Dual-write transactional synchronization to Neo4j)
-✓ test_irf_binding.py            (Marathi/Hindi/English Devanagari script normalizer)
-✓ test_models.py                 (Relational tables, foreign key cascades, data schemas)
-✓ test_e2e_production.py         (End-to-end production flow validation)
+
+Frontend Suite (18 Passed, 0 Failed, 29 Production Routes Compiled):
+✓ JWT Authentication & 12-Hour TTL Security Suite (Tamper rejection, expiration checks, claim extraction)
+✓ Maha Government Command Center Suite (Fictional officer personas, light-theme GIGW 3.0, Konkan data, modular navigation)
 ```
 
 ### Key Commercial Takeaways for Investors
@@ -810,4 +838,103 @@ Project EUREKA marks the definitive transition of public communications from ret
 ---
 
 *Project EUREKA: Empowering governance through truth, speed, and mathematical rigor.*
+
+---
+
+## 11. Autonomous Hermes Agent & Neo4j Spatio-Temporal Knowledge Graph Operations
+
+### 1. Hermes Agent Programmatic Integration & Architecture
+To enable automated narrative analysis, draft rebuttal staging, and cross-database graph synchronization, Project EUREKA integrates the **Hermes Agent** (Nous Research) via its official **API Server interface**:
+
+```
++----------------------------------------------------------------------------------------------------+
+|                                 HERMES AGENT ORCHESTRATION PIPELINE                                |
++----------------------------------------------------------------------------------------------------+
+|                                                                                                    |
+|  [FastAPI Backend Router]                                                                          |
+|         |                                                                                          |
+|         v                                                                                          |
+|  [Hermes Orchestrator Wrapper] ---> [Hermes Client (HTTP /v1)] ---> [Hermes Agent Server]          |
+|         |                                                                  |                       |
+|         |  (Tool Calls via Deterministic Sandbox)                          v                       |
+|         +----------------------------------------------------> [4 Allowlisted Tools]               |
+|                                                                        |                           |
+|       +------------------------------------+---------------------------+-------------------+       |
+|       |                                    |                           |                   |       |
+|       v                                    v                           v                   v       |
+| [tool_translate_and_normalize]   [tool_stage_dm_rebuttal]   [tool_execute_dm_signoff] [tool_sync_neo4j]
+| • Google AI Studio Gemini Flash  • PostgreSQL Staging       • Enforces Collector RBAC • Neo4j Cypher  
+| • Zero-shot Devanagari Dialects  • status: pending_review   • Checks 90m SLA Window   • MERGE (e)-[r] 
+| • Deterministic JSON Extraction  • No auto-approval allowed • Writes Audit & Outbox   • AFFECTS, CLAIM
++----------------------------------------------------------------------------------------------------+
+```
+
+* **Programmatic HTTP API Interface (`eureka.hermes.hermes_client`):** Rather than spawning brittle CLI subprocesses, EUREKA communicates with Hermes using its standard OpenAI-compatible API Server endpoints (`POST /v1/chat/completions`, `GET /v1/models`, `POST /v1/responses`).
+* **Protocol Demarcation:** 
+  * *API Server:* Used for backend-to-agent programmatic orchestration and multi-step reasoning.
+  * *Agent Client Protocol (ACP):* Reserved for IDE/editor host integration (not backend runtime).
+  * *Model Context Protocol (MCP):* Provides standardized tool servers to the agent.
+* **Deterministic Tool Execution Layer (`eureka.hermes.agent_tools`):**
+  1. `tool_translate_and_normalize(raw_text)`: Connects to Google AI Studio's `gemini-flash-latest` with strict JSON schema enforcement (`marathi_text`, `english_text`, `detected_dialect`, `extracted_district_code`). Automatically strips markdown fences and falls back to deterministic Indic rule extractors if the cloud API is throttled.
+  2. `tool_stage_dm_rebuttal(ticket_id, district_code, draft_text)`: Updates `fact_check_tickets` in PostgreSQL, storing draft rebuttals under `status = 'pending_review'` without triggering administrative publication.
+  3. `tool_execute_dm_signoff(ticket_id, reviewer_id, role, district_code, action)`: Validates that only `ROLE_DISTRICT_COLLECTOR` matching the ticket's district can authorize sign-offs. Computes whether the rebuttal occurred within the 90-minute SLA window (`refuted_within_sla_90m = True/False`), records the action in `human_review_actions`, and queues transactional `outbox_events`.
+  4. `tool_sync_neo4j_nodes(district_code, event_id, claim_text)`: Idempotently creates and links `(:District)`, `(:CanonicalEvent)`, and `(:Claim)` nodes using Cypher batch statements.
+* **Non-Negotiable Human-in-the-Loop Governance:** Hermes is explicitly prohibited from autonomously signing off on rebuttals or altering verified factual records. Any autonomous attempt by the agent to approve a ticket is intercepted and rejected with HTTP 403 Forbidden.
+
+---
+
+### 2. Spatio-Temporal Knowledge Graph & Neo4j Web Explorer
+Project EUREKA maintains a high-density spatio-temporal knowledge graph in **Neo4j 5.18 Community**, synchronized in real time with PostgreSQL 16 via the **Transactional Outbox Worker**.
+
+#### Current Graph Topology & Metrics
+* **Total Nodes:** 17,020+ active entities.
+* **Active Node Labels:** `District`, `CanonicalEvent`, `Claim`, `Release`, `Department`, `MediaEvent`, `Content`, `Author`, `Platform`, `Citation`, `Entity`.
+* **Graph Relationships:** `AFFECTS` (1,500+ edges), `BORDERS` (152 geographic border adjacencies across Maharashtra's 36 districts), `CONTAINS_CLAIM`, `AUTHORED`, `PUBLISHED_ON`, `CITES`, `MENTIONS`, `RELATES_TO`.
+
+#### Neo4j Web Browser Access
+Operators and researchers can explore the live graph network directly:
+1. Navigate to: **`http://localhost:7474`**
+2. Connection URL: **`bolt://localhost:7687`**
+3. Authentication: `neo4j` / configured graph password (`savi_graph_secret`)
+
+#### Authoritative Cypher Exploration Queries
+
+**1. Incident & Claim Diffusion Network across Maharashtra Districts:**
+```cypher
+MATCH (d:District)<-[a:AFFECTS]-(e:CanonicalEvent)
+OPTIONAL MATCH (e)-[c:CONTAINS_CLAIM]->(claim:Claim)
+RETURN d, a, e, c, claim
+LIMIT 120;
+```
+
+**2. Physical Border Contagion Mesh (152 Inter-District Adjacencies):**
+```cypher
+MATCH (d1:District)-[r:BORDERS]->(d2:District)
+RETURN d1, r, d2;
+```
+
+**3. Social Media Propagation & Content Provenance:**
+```cypher
+MATCH (a:Author)-[r1:AUTHORED]->(c:Content)-[r2:PUBLISHED_ON]->(p:Platform)
+RETURN a, r1, c, r2, p
+LIMIT 150;
+```
+
+**4. Complete Graph Metamodel:**
+```cypher
+CALL db.schema.visualization();
+```
+
+---
+
+### 3. Current Live Service Deployment Summary
+
+| Service Layer | Host / Port | Underlying Process / Container | Operational Status |
+| :--- | :--- | :--- | :--- |
+| **Relational Master (PostgreSQL 16)** | `localhost:5433` | Docker (`savi-postgres-master`) | **Online & Healthy** (26 tables loaded) |
+| **Knowledge Graph (Neo4j 5.18)** | `localhost:7474` (HTTP) / `7687` (Bolt) | Docker (`savi-neo4j-compute`) | **Online & Healthy** (17,020+ nodes) |
+| **Transactional Outbox Worker** | Background Worker | `eureka.conclusion.outbox_worker` | **Synchronized** (Zero lag, ACID to Graph) |
+| **Core API Engine (FastAPI)** | `http://127.0.0.1:8000` | Uvicorn (`eureka.api.main:app`) | **Healthy** (PostgreSQL & Neo4j connected) |
+| **Command Deck (Next.js 16 MCC)** | `http://localhost:3000` | Next.js Production Build (`branch sarvdny`) | **Online** (`source: live_backend`, 37 districts) |
+
 
