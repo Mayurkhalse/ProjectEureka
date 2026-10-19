@@ -484,3 +484,53 @@ class ScoringConfigVersion(Base):
     is_active: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
+
+
+class AgentRun(Base, UUIDPrimaryKeyMixin):
+    """Immutable audit record for Open UI Copilot execution sessions."""
+
+    __tablename__ = "agent_runs"
+
+    principal_id: Mapped[str] = mapped_column(String(100), nullable=False, index=True)
+    principal_role: Mapped[str] = mapped_column(String(50), nullable=False)
+    model_id: Mapped[str] = mapped_column(String(100), nullable=False)
+    prompt_version_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    user_query: Mapped[str] = mapped_column(Text, nullable=False)
+    language: Mapped[str] = mapped_column(String(10), default="en", nullable=False)
+    tools_called: Mapped[List[Dict[str, Any]]] = mapped_column(JSONB, default=list, nullable=False)
+    validation_result: Mapped[str] = mapped_column(String(50), default="valid", nullable=False)
+    fallback_used: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    latency_ms: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False, index=True
+    )
+
+
+class AgentToolCall(Base, UUIDPrimaryKeyMixin):
+    """Granular tool call audit record within an agent run."""
+
+    __tablename__ = "agent_tool_calls"
+
+    run_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("agent_runs.id", ondelete="CASCADE"), nullable=False, index=True)
+    tool_name: Mapped[str] = mapped_column(String(100), nullable=False, index=True)
+    tool_args: Mapped[Dict[str, Any]] = mapped_column(JSONB, nullable=False)
+    tool_status: Mapped[str] = mapped_column(String(50), default="success", nullable=False)
+    duration_ms: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False
+    )
+
+
+class CopilotFeedback(Base, UUIDPrimaryKeyMixin):
+    """Officer feedback for copilot answers."""
+
+    __tablename__ = "copilot_feedback"
+
+    run_id: Mapped[Optional[uuid.UUID]] = mapped_column(UUID(as_uuid=True), nullable=True, index=True)
+    principal_id: Mapped[str] = mapped_column(String(100), nullable=False, index=True)
+    rating: Mapped[str] = mapped_column(String(20), nullable=False)
+    reason: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False
+    )
+

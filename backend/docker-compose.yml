@@ -205,12 +205,34 @@ services:
       - worker
       - full
 
+  qdrant:
+    image: qdrant/qdrant:v1.13.2
+    container_name: eureka_qdrant
+    restart: unless-stopped
+    environment:
+      - QDRANT__SERVICE__API_KEY=${QDRANT_API_KEY:-eureka_qdrant_secret_2026}
+    volumes:
+      - eureka_qdrant_data:/qdrant/storage
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c '</dev/tcp/127.0.0.1/6333' || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - eureka_net
+    profiles:
+      - db
+      - full
+      - copilot
+
 volumes:
   eureka_pgdata:
   eureka_neo4j_data:
   eureka_neo4j_logs:
   eureka_redis_data:
+  eureka_qdrant_data:
 
 networks:
   eureka_net:
     driver: bridge
+

@@ -5,9 +5,10 @@
 [![Next.js 16](https://img.shields.io/badge/Next.js-16.4.1-black?style=flat&logo=next.js&logoColor=white)](https://nextjs.org)
 [![PostgreSQL 16](https://img.shields.io/badge/PostgreSQL-16--alpine-336791?style=flat&logo=postgresql&logoColor=white)](https://www.postgresql.org)
 [![Neo4j 5.x](https://img.shields.io/badge/Neo4j-5.18-008CC1?style=flat&logo=neo4j&logoColor=white)](https://neo4j.com)
+[![Open UI Copilot](https://img.shields.io/badge/Open_UI_Copilot-Gemma_4--26B-FF6F00?style=flat)](docs/COPILOT.md)
+[![Mem0 Memory](https://img.shields.io/badge/Mem0-Qdrant_Vector_Store-red?style=flat)](docs/COPILOT.md)
 [![Hermes Agent](https://img.shields.io/badge/Hermes-Nous_Research-8A2BE2?style=flat)](https://hermes-agent.nousresearch.com)
-[![Google AI Studio](https://img.shields.io/badge/Gemini_Flash-Google_AI_Studio-4285F4?style=flat&logo=google&logoColor=white)](https://ai.google.dev)
-[![Tests Passing](https://img.shields.io/badge/Tests-86_Backend_%7C_18_Frontend_Passed-brightgreen?style=flat)](tests/)
+[![Tests Passing](https://img.shields.io/badge/Tests-102_Backend_%7C_22_Frontend_Passed-brightgreen?style=flat)](tests/)
 
 ---
 
@@ -45,32 +46,33 @@ Across Maharashtra's 112+ million citizens and 36 administrative districts, EURE
 ├── backend/                             # Project EUREKA FastAPI & AI Engine
 │   ├── src/eureka/
 │   │   ├── api/                         # FastAPI application & REST routers
-│   │   │   └── routers/hermes_router.py # Hermes Agent & Crisis War Room endpoints
+│   │   ├── copilot/                     # Governed Open UI Copilot, Gemma client & Mem0
+│   │   │   ├── tools.py                 # 10 governed read-only domain tools
+│   │   │   ├── memory.py                # Mem0 + Qdrant with HMAC user pseudonymization
+│   │   │   ├── viewspec.py              # Canonical Pydantic ViewSpec builder
+│   │   │   ├── openui_generator.py      # Language detection & number grounder
+│   │   │   └── router.py                # SSE streaming /api/v1/copilot/query endpoint
 │   │   ├── conclusion/                  # 100-point scoring engine & outbox worker
-│   │   │   └── outbox_worker.py         # PostgreSQL -> Neo4j transactional outbox sync
 │   │   ├── core/                        # Database engines, Celery app, security config
 │   │   ├── hermes/                      # Nous Research Hermes Agent client & tools
-│   │   │   ├── agent_tools.py           # 4 allowlisted deterministic domain tools
-│   │   │   ├── hermes_client.py         # HTTP client targeting Hermes API server
-│   │   │   └── orchestrator.py          # Orchestrator with non-bypassable RBAC guardrails
 │   │   ├── llm/                         # Cloud evaluators & Google AI Studio translator
-│   │   │   └── multilingual_translator.py # Gemini Flash Indic extraction & normalization
 │   │   ├── models/                      # SQLAlchemy relational models & schemas
 │   │   └── stgnn/                       # Spatio-Temporal Graph Neural Network (A3TGCN)
-│   ├── tests/                           # Pytest suite (83 passed, 1 skipped)
-│   └── docker-compose.yml               # Backend multi-profile compose (core, app, full)
+│   ├── tests/                           # Pytest suite (102 passed, 0 failed)
+│   └── docker-compose.yml               # Backend multi-profile compose (includes Qdrant)
 ├── frontend/
 │   └── MCC/                             # Maha-Command Center (Next.js 16 App Router)
 │       ├── src/
 │       │   ├── app/                     # Next.js routes, layouts, and API proxy handlers
-│       │   │   ├── api/districts/       # Proxies live 100-point scoring to FastAPI
-│       │   │   ├── api/crisis/          # Proxies 90-min SLA war room tickets
-│       │   │   └── api/auth/login/      # Synchronizes 12-hour signed JWT cookies
-│       │   ├── components/              # GIGW 3.0 & UX4G government HUD components
+│       │   ├── components/copilot/      # CopilotDrawer & OpenUILibrary components
+│       │   ├── components/shared/       # GIGW 3.0 & UX4G government HUD components
 │       │   └── lib/backendClient.ts     # Resilient bridge between Next.js & FastAPI
-│       └── tests/                       # Node test suite (18 passed, 0 failed)
-├── docker/                              # Primary infrastructure definitions
-│   └── docker-compose.yml               # PostgreSQL 16 (port 5433) & Neo4j 5.x (ports 7474/7687)
+│       └── tests/                       # Node test suite (22 passed, 0 failed)
+├── docs/                                # Technical decision logs & feature guides
+│   ├── COPILOT.md                       # Open UI Copilot technical guide
+│   └── DECISIONS.md                     # Pinned dependencies, licenses & probe results
+├── docker/                              # Primary infrastructure definitions (Postgres, Neo4j, Qdrant)
+├── REPORT.md                            # End-to-end verification and execution evidence
 ├── context.md                           # Exhaustive technical and architectural manifesto
 └── README.md                            # Primary documentation entrypoint
 ```

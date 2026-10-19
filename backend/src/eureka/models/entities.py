@@ -12,6 +12,9 @@ from eureka.models.orm import (
     PillarScoreSnapshot,
     RawEvent,
     SourceRegistry,
+    AgentRun,
+    AgentToolCall,
+    CopilotFeedback,
 )
 
 __all__ = [
@@ -26,4 +29,7 @@ __all__ = [
     "PillarScoreSnapshot",
     "HumanReviewAction",
     "OutboxEvent",
+    "AgentRun",
+    "AgentToolCall",
+    "CopilotFeedback",
 ]

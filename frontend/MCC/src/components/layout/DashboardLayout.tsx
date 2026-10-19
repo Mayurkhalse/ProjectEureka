@@ -8,6 +8,8 @@ import { DashboardToolbar } from './DashboardToolbar';
 import { useDashboardStore } from '@/stores/dashboardStore';
 import { GovEmblem } from '@/components/shared/GovEmblem';
 import { MaterialIcon } from '@/components/shared/MaterialIcon';
+import { CopilotDrawer } from '@/components/copilot/CopilotDrawer';
+
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -100,7 +102,10 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) =>
             </button>
           </div>
         )}
+        {/* Open UI Copilot Drawer (Additive, strictly gated behind NEXT_PUBLIC_COPILOT_ENABLED) */}
+        {process.env.NEXT_PUBLIC_COPILOT_ENABLED === 'true' && <CopilotDrawer />}
       </div>
     </div>
   );
 };
+

@@ -248,6 +248,117 @@ def tool_sync_neo4j_nodes(district_code: str, event_id: str, claim_text: str) ->
         }
 
 
+def _query_36_districts_from_csv(
+    division: Optional[str] = None,
+    sort_by: str = "composite_index",
+) -> Dict[str, Any]:
+    """Fallback: Computes authoritative 100-point composite metrics for all 36 districts from seed CSV datasets."""
+    from eureka.scoring.scoring_engine import CompositeScoringEngine
+    import csv
+
+    resolved_dir = CompositeScoringEngine.resolve_seed_dir()
+    districts_csv = resolved_dir / "districts.csv"
+
+    dist_meta = {}
+    if districts_csv.exists():
+        with open(districts_csv, mode="r", encoding="utf-8-sig") as f:
+            for row in csv.DictReader(f):
+                try:
+                    dist_meta[int(row["district_id"])] = row
+                except (ValueError, KeyError):
+                    pass
+
+    scored_list = CompositeScoringEngine.compute_district_scores_from_csv()
+
+    div_filter = (division or "").strip().lower()
+    div_map = {
+        "konkan": ["div-mum", "div-kok", "konkan", "mumbai"],
+        "pune": ["div-pun", "pune"],
+        "nashik": ["div-nas", "nashik"],
+        "sambhajinagar": ["div-aur", "div-sam", "sambhajinagar", "aurangabad", "chhatrapati sambhajinagar"],
+        "amravati": ["div-amr", "amravati"],
+        "nagpur": ["div-nag", "nagpur"],
+    }
+    matched_aliases = [div_filter] if div_filter else []
+    for d_name, d_codes in div_map.items():
+        if div_filter and (div_filter in d_name or any(div_filter in c for c in d_codes)):
+            matched_aliases.extend(d_codes)
+
+    results = []
+    for s in scored_list:
+        did = int(s["district_id"])
+        meta = dist_meta.get(did, {})
+        d_div = s.get("division", meta.get("division", ""))
+        d_name_en = s.get("district", meta.get("name_en", f"District {did}"))
+        d_name_mr = meta.get("name_mr", d_name_en)
+        try:
+            lat = float(meta.get("approx_hq_lat", 19.0))
+            lon = float(meta.get("approx_hq_lon", 74.0))
+        except (ValueError, TypeError):
+            lat, lon = 19.0, 74.0
+
+        if div_filter:
+            matches = any(alias in d_div.lower() for alias in matched_aliases) or any(alias in d_name_en.lower() for alias in matched_aliases)
+            if not matches:
+                continue
+
+        results.append({
+            "district_code": f"MH-{did:02d}",
+            "division_code": f"DIV-{d_div[:3].upper()}",
+            "name_en": d_name_en,
+            "name_mr": d_name_mr,
+            "display_order": did,
+            "centroid": {"lat": lat, "lon": lon},
+            "composite_index": s["total_score"],
+            "pillars": {
+                "volume": s["volume_pts"],
+                "speed_tat": s["speed_pts"],
+                "sentiment": s["sentiment_pts"],
+                "crisis_sla": s["crisis_pts"],
+            },
+            "raw_metrics": {
+                "total_releases": s["releases"],
+                "average_tat_minutes": s["avg_tat_min"],
+                "net_sentiment": s["net_sentiment"],
+                "active_crisis_tickets": max(0, s["crisis_total"] - s["crisis_ok"]),
+            },
+        })
+
+    if sort_by == "composite_index":
+        results.sort(key=lambda x: x["composite_index"], reverse=True)
+    elif sort_by == "display_order":
+        results.sort(key=lambda x: x["display_order"])
+    elif sort_by == "name_en":
+        results.sort(key=lambda x: x["name_en"])
+    elif sort_by == "volume":
+        results.sort(key=lambda x: x["pillars"]["volume"], reverse=True)
+    elif sort_by == "speed_tat":
+        results.sort(key=lambda x: x["pillars"]["speed_tat"], reverse=True)
+    elif sort_by == "sentiment":
+        results.sort(key=lambda x: x["pillars"]["sentiment"], reverse=True)
+    elif sort_by == "crisis_sla":
+        results.sort(key=lambda x: x["pillars"]["crisis_sla"], reverse=True)
+
+    for idx, item in enumerate(results, start=1):
+        item["rank"] = idx
+
+    state_releases = sum(r["raw_metrics"]["total_releases"] for r in results)
+    state_avg_comp = round(sum(r["composite_index"] for r in results) / len(results), 2) if results else 0.0
+
+    return {
+        "status": "success",
+        "datastore": "CSV Seed Datasets (Verified Offline Fallback)",
+        "total_districts": len(results),
+        "statewide_overview": {
+            "total_releases_logged": state_releases,
+            "statewide_avg_composite_index": state_avg_comp,
+            "top_performing_district": results[0]["name_en"] if results else None,
+            "lowest_performing_district": results[-1]["name_en"] if results else None,
+        },
+        "districts": results,
+    }
+
+
 def tool_query_all_36_districts(
     division: Optional[str] = None,
     include_metrics: bool = True,
@@ -263,164 +374,170 @@ def tool_query_all_36_districts(
     Returns:
         dict: Strict JSON structure with metadata, statewide totals, and the list of district objects.
     """
-    logger.info("Querying 36 districts from PostgreSQL (division=%s, include_metrics=%s)", division, include_metrics)
-    with sync_db_context() as session:
-        query = session.query(District).filter(District.is_active == True).order_by(District.display_order)
-        districts = query.all()
+    logger.info("Querying 36 districts (division=%s, include_metrics=%s)", division, include_metrics)
+    try:
+        with sync_db_context() as session:
+            query = session.query(District).filter(District.is_active == True).order_by(District.display_order)
+            districts = query.all()
+            if not districts:
+                raise ValueError("No districts found in PostgreSQL")
 
-        # If division filter specified, match case-insensitively
-        div_filter = (division or "").strip().lower()
-        if div_filter:
-            div_map = {
-                "konkan": ["div-mum", "div-kok", "konkan", "mumbai"],
-                "pune": ["div-pun", "pune"],
-                "nashik": ["div-nas", "nashik"],
-                "sambhajinagar": ["div-aur", "div-sam", "sambhajinagar", "aurangabad", "chhatrapati sambhajinagar"],
-                "amravati": ["div-amr", "amravati"],
-                "nagpur": ["div-nag", "nagpur"],
-            }
-            matched_aliases = [div_filter]
-            for d_name, d_codes in div_map.items():
-                if div_filter in d_name or any(div_filter in c for c in d_codes):
-                    matched_aliases.extend(d_codes)
+            # If division filter specified, match case-insensitively
+            div_filter = (division or "").strip().lower()
+            if div_filter:
+                div_map = {
+                    "konkan": ["div-mum", "div-kok", "konkan", "mumbai"],
+                    "pune": ["div-pun", "pune"],
+                    "nashik": ["div-nas", "nashik"],
+                    "sambhajinagar": ["div-aur", "div-sam", "sambhajinagar", "aurangabad", "chhatrapati sambhajinagar"],
+                    "amravati": ["div-amr", "amravati"],
+                    "nagpur": ["div-nag", "nagpur"],
+                }
+                matched_aliases = [div_filter]
+                for d_name, d_codes in div_map.items():
+                    if div_filter in d_name or any(div_filter in c for c in d_codes):
+                        matched_aliases.extend(d_codes)
 
-            districts = [
-                d for d in districts
-                if any(alias in (d.division_code or "").lower() for alias in matched_aliases)
-                or any(alias in (d.name_en or "").lower() for alias in matched_aliases)
-            ]
+                districts = [
+                    d for d in districts
+                    if any(alias in (d.division_code or "").lower() for alias in matched_aliases)
+                    or any(alias in (d.name_en or "").lower() for alias in matched_aliases)
+                ]
 
-        # Metric aggregation across media_events
-        metrics_by_name = {}
-        if include_metrics:
-            from sqlalchemy import text
+            # Metric aggregation across media_events
+            metrics_by_name = {}
+            if include_metrics:
+                from sqlalchemy import text
+                try:
+                    agg_query = text("""
+                        SELECT 
+                            LOWER(district) AS dist_name,
+                            COUNT(*) FILTER (WHERE event_type = 'Press Release') AS releases,
+                            COALESCE(AVG(turnaround_time_mins), 45.0) AS avg_tat,
+                            COALESCE(AVG(sentiment_score), 0.0) AS avg_sentiment,
+                            COUNT(*) FILTER (WHERE event_type = 'Fact-Check Ticket') AS total_crisis,
+                            COUNT(*) FILTER (WHERE event_type = 'Fact-Check Ticket' AND crisis_resolved = true) AS resolved_crisis
+                        FROM media_events
+                        GROUP BY LOWER(district)
+                    """)
+                    rows = session.execute(agg_query).fetchall()
+                    for r in rows:
+                        metrics_by_name[r[0]] = {
+                            "releases": int(r[1] or 0),
+                            "avg_tat": float(r[2] or 45.0),
+                            "avg_sentiment": float(r[3] or 0.0),
+                            "total_crisis": int(r[4] or 0),
+                            "resolved_crisis": int(r[5] or 0),
+                        }
+                except Exception as e:
+                    logger.warning("Could not aggregate media_events: %s", e)
+
+            # Count active fact check tickets per district
+            active_tickets_by_code = {}
             try:
-                agg_query = text("""
-                    SELECT 
-                        LOWER(district) AS dist_name,
-                        COUNT(*) FILTER (WHERE event_type = 'Press Release') AS releases,
-                        COALESCE(AVG(turnaround_time_mins), 45.0) AS avg_tat,
-                        COALESCE(AVG(sentiment_score), 0.0) AS avg_sentiment,
-                        COUNT(*) FILTER (WHERE event_type = 'Fact-Check Ticket') AS total_crisis,
-                        COUNT(*) FILTER (WHERE event_type = 'Fact-Check Ticket' AND crisis_resolved = true) AS resolved_crisis
-                    FROM media_events
-                    GROUP BY LOWER(district)
-                """)
-                rows = session.execute(agg_query).fetchall()
-                for r in rows:
-                    metrics_by_name[r[0]] = {
-                        "releases": int(r[1] or 0),
-                        "avg_tat": float(r[2] or 45.0),
-                        "avg_sentiment": float(r[3] or 0.0),
-                        "total_crisis": int(r[4] or 0),
-                        "resolved_crisis": int(r[5] or 0),
-                    }
-            except Exception as e:
-                logger.warning("Could not aggregate media_events: %s", e)
+                from eureka.models.entities import FactCheckTicket, CanonicalEvent
+                tkt_rows = (
+                    session.query(CanonicalEvent.district_code, FactCheckTicket.id)
+                    .join(CanonicalEvent, FactCheckTicket.canonical_event_id == CanonicalEvent.id)
+                    .filter(FactCheckTicket.status.in_(["open", "pending_review"]))
+                    .all()
+                )
+                for d_code, _ in tkt_rows:
+                    if d_code:
+                        active_tickets_by_code[d_code.upper()] = active_tickets_by_code.get(d_code.upper(), 0) + 1
+            except Exception:
+                pass
 
-        # Count active fact check tickets per district
-        active_tickets_by_code = {}
-        try:
-            from eureka.models.entities import FactCheckTicket, CanonicalEvent
-            tkt_rows = (
-                session.query(CanonicalEvent.district_code, FactCheckTicket.id)
-                .join(CanonicalEvent, FactCheckTicket.canonical_event_id == CanonicalEvent.id)
-                .filter(FactCheckTicket.status.in_(["open", "pending_review"]))
-                .all()
-            )
-            for d_code, _ in tkt_rows:
-                if d_code:
-                    active_tickets_by_code[d_code.upper()] = active_tickets_by_code.get(d_code.upper(), 0) + 1
-        except Exception:
-            pass
+            results = []
+            for d in districts:
+                name_key = d.name_en.lower()
+                m = metrics_by_name.get(name_key)
+                if not m:
+                    for k, v in metrics_by_name.items():
+                        if k in name_key or name_key in k:
+                            m = v
+                            break
 
-        results = []
-        for d in districts:
-            name_key = d.name_en.lower()
-            m = metrics_by_name.get(name_key)
-            if not m:
-                for k, v in metrics_by_name.items():
-                    if k in name_key or name_key in k:
-                        m = v
-                        break
+                releases = m["releases"] if m else 0
+                avg_tat = m["avg_tat"] if m else 45.0
+                sentiment = m["avg_sentiment"] if m else 0.0
+                total_crisis = m["total_crisis"] if m else 0
+                resolved_crisis = m["resolved_crisis"] if m else 0
 
-            releases = m["releases"] if m else 0
-            avg_tat = m["avg_tat"] if m else 45.0
-            sentiment = m["avg_sentiment"] if m else 0.0
-            total_crisis = m["total_crisis"] if m else 0
-            resolved_crisis = m["resolved_crisis"] if m else 0
+                # 4 Governance Pillars
+                vol_score = round(min(25.0, (releases / 300.0) * 25.0), 2)
+                if avg_tat <= 45.0:
+                    tat_score = 30.0
+                elif avg_tat >= 120.0:
+                    tat_score = 0.0
+                else:
+                    tat_score = 30.0 * (1.0 - ((avg_tat - 45.0) / 75.0))
+                tat_score = round(tat_score, 2)
+                sent_score = round(((sentiment + 1.0) / 2.0) * 25.0, 2)
+                crisis_score = round((resolved_crisis / total_crisis * 20.0) if total_crisis > 0 else 20.0, 2)
 
-            # 4 Governance Pillars
-            vol_score = round(min(25.0, (releases / 300.0) * 25.0), 2)
-            if avg_tat <= 45.0:
-                tat_score = 30.0
-            elif avg_tat >= 120.0:
-                tat_score = 0.0
-            else:
-                tat_score = 30.0 * (1.0 - ((avg_tat - 45.0) / 75.0))
-            tat_score = round(tat_score, 2)
-            sent_score = round(((sentiment + 1.0) / 2.0) * 25.0, 2)
-            crisis_score = round((resolved_crisis / total_crisis * 20.0) if total_crisis > 0 else 20.0, 2)
+                comp_score = round(vol_score + tat_score + sent_score + crisis_score, 2)
+                active_tkts = active_tickets_by_code.get(d.district_code.upper(), 0)
 
-            comp_score = round(vol_score + tat_score + sent_score + crisis_score, 2)
-            active_tkts = active_tickets_by_code.get(d.district_code.upper(), 0)
+                results.append({
+                    "district_code": d.district_code,
+                    "division_code": d.division_code,
+                    "name_en": d.name_en,
+                    "name_mr": d.name_mr,
+                    "display_order": d.display_order,
+                    "centroid": {"lat": d.centroid_lat, "lon": d.centroid_lon},
+                    "composite_index": comp_score,
+                    "pillars": {
+                        "volume": vol_score,
+                        "speed_tat": tat_score,
+                        "sentiment": sent_score,
+                        "crisis_sla": crisis_score,
+                    },
+                    "raw_metrics": {
+                        "total_releases": releases,
+                        "average_tat_minutes": round(avg_tat, 1),
+                        "net_sentiment": round(sentiment, 3),
+                        "active_crisis_tickets": active_tkts,
+                    },
+                })
 
-            results.append({
-                "district_code": d.district_code,
-                "division_code": d.division_code,
-                "name_en": d.name_en,
-                "name_mr": d.name_mr,
-                "display_order": d.display_order,
-                "centroid": {"lat": d.centroid_lat, "lon": d.centroid_lon},
-                "composite_index": comp_score,
-                "pillars": {
-                    "volume": vol_score,
-                    "speed_tat": tat_score,
-                    "sentiment": sent_score,
-                    "crisis_sla": crisis_score,
+            # Sorting
+            if sort_by == "composite_index":
+                results.sort(key=lambda x: x["composite_index"], reverse=True)
+            elif sort_by == "display_order":
+                results.sort(key=lambda x: x["display_order"])
+            elif sort_by == "name_en":
+                results.sort(key=lambda x: x["name_en"])
+            elif sort_by == "volume":
+                results.sort(key=lambda x: x["pillars"]["volume"], reverse=True)
+            elif sort_by == "speed_tat":
+                results.sort(key=lambda x: x["pillars"]["speed_tat"], reverse=True)
+            elif sort_by == "sentiment":
+                results.sort(key=lambda x: x["pillars"]["sentiment"], reverse=True)
+            elif sort_by == "crisis_sla":
+                results.sort(key=lambda x: x["pillars"]["crisis_sla"], reverse=True)
+
+            for idx, item in enumerate(results, start=1):
+                item["rank"] = idx
+
+            state_releases = sum(r["raw_metrics"]["total_releases"] for r in results)
+            state_avg_comp = round(sum(r["composite_index"] for r in results) / len(results), 2) if results else 0.0
+
+            return {
+                "status": "success",
+                "datastore": "PostgreSQL 16 (savi_master)",
+                "total_districts": len(results),
+                "statewide_overview": {
+                    "total_releases_logged": state_releases,
+                    "statewide_avg_composite_index": state_avg_comp,
+                    "top_performing_district": results[0]["name_en"] if results else None,
+                    "lowest_performing_district": results[-1]["name_en"] if results else None,
                 },
-                "raw_metrics": {
-                    "total_releases": releases,
-                    "average_tat_minutes": round(avg_tat, 1),
-                    "net_sentiment": round(sentiment, 3),
-                    "active_crisis_tickets": active_tkts,
-                },
-            })
-
-        # Sorting
-        if sort_by == "composite_index":
-            results.sort(key=lambda x: x["composite_index"], reverse=True)
-        elif sort_by == "display_order":
-            results.sort(key=lambda x: x["display_order"])
-        elif sort_by == "name_en":
-            results.sort(key=lambda x: x["name_en"])
-        elif sort_by == "volume":
-            results.sort(key=lambda x: x["pillars"]["volume"], reverse=True)
-        elif sort_by == "speed_tat":
-            results.sort(key=lambda x: x["pillars"]["speed_tat"], reverse=True)
-        elif sort_by == "sentiment":
-            results.sort(key=lambda x: x["pillars"]["sentiment"], reverse=True)
-        elif sort_by == "crisis_sla":
-            results.sort(key=lambda x: x["pillars"]["crisis_sla"], reverse=True)
-
-        for idx, item in enumerate(results, start=1):
-            item["rank"] = idx
-
-        state_releases = sum(r["raw_metrics"]["total_releases"] for r in results)
-        state_avg_comp = round(sum(r["composite_index"] for r in results) / len(results), 2) if results else 0.0
-
-        return {
-            "status": "success",
-            "datastore": "PostgreSQL 16 (savi_master)",
-            "total_districts": len(results),
-            "statewide_overview": {
-                "total_releases_logged": state_releases,
-                "statewide_avg_composite_index": state_avg_comp,
-                "top_performing_district": results[0]["name_en"] if results else None,
-                "lowest_performing_district": results[-1]["name_en"] if results else None,
-            },
-            "districts": results,
-        }
+                "districts": results,
+            }
+    except Exception as db_err:
+        logger.warning("Database unavailable (%s). Falling back to CSV seed datasets.", db_err)
+        return _query_36_districts_from_csv(division=division, sort_by=sort_by)
 
 
 # Narrow Agent Allowlist: Only Drafting, Querying & Read/Sync Tools

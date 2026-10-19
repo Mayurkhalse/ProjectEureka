@@ -60,3 +60,7 @@ sym_shape_infer_temp.onnx
 Thumbs.db
 .vscode/
 .idea/
+
+# External cloned repositories
+mem0/
+openui/

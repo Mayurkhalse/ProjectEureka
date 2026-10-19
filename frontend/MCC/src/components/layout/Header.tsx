@@ -17,6 +17,7 @@ import {
   ArrowRightOnRectangleIcon,
   CheckIcon,
 } from '@heroicons/react/20/solid';
+import { MaterialIcon } from '@/components/shared/MaterialIcon';
 
 export const Header: React.FC = () => {
   const router = useRouter();
@@ -31,6 +32,8 @@ export const Header: React.FC = () => {
     setMobileMenuOpen,
     sidebarCollapsed,
     setSidebarCollapsed,
+    copilotOpen,
+    setCopilotOpen,
   } = useDashboardStore();
   const t = useTranslation(language);
 
@@ -347,6 +350,25 @@ export const Header: React.FC = () => {
           <BellIcon className="w-4 h-4" />
           <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-rose-500 animate-pulse" />
         </Link>
+
+        {/* DGIPR OpenUI Copilot Header Trigger */}
+        {process.env.NEXT_PUBLIC_COPILOT_ENABLED === 'true' && (
+          <button
+            type="button"
+            onClick={() => setCopilotOpen(!copilotOpen)}
+            className="hover:bg-amber-500/15 border border-amber-500/40 hover:border-amber-500/60 bg-amber-500/10 px-2.5 py-1.5 rounded-lg transition-all cursor-pointer flex items-center gap-2 text-amber-300 font-semibold text-xs shadow-2xs select-none group"
+            title={language === 'mr' ? 'ओपन यूआय कोपायलट उघडा' : 'Open DGIPR OpenUI Copilot'}
+            aria-label="DGIPR OpenUI Copilot"
+          >
+            <div className="w-5 h-5 rounded bg-amber-500/20 border border-amber-500/30 flex items-center justify-center text-amber-400 group-hover:scale-105 transition-transform">
+              <MaterialIcon name="auto_awesome" size="xs" />
+            </div>
+            <span className="font-bold tracking-wide">OpenUI</span>
+            <span className="text-[10px] font-mono px-1 py-0.2 rounded bg-amber-500/20 text-amber-200 border border-amber-500/30 hidden md:inline">
+              Copilot
+            </span>
+          </button>
+        )}
 
         {/* Vertical Divider */}
         <div className="h-5 w-px bg-slate-800 mx-1 hidden sm:block" />

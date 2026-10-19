@@ -345,7 +345,7 @@ export const LoginScreen: React.FC = () => {
       const data = await res.json();
 
       if (res.ok && data.success && data.user) {
-        login(data.user, data.token);
+        login(data.user, data.backendToken || data.token);
         router.push('/');
       } else {
         setErrorMessage(

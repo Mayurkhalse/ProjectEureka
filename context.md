@@ -1002,5 +1002,21 @@ CALL db.schema.visualization();
 | **Transactional Outbox Worker** | Background Worker | `eureka.conclusion.outbox_worker` | **Synchronized** (Zero lag, ACID to Graph) |
 | **Core API Engine (FastAPI)** | `http://127.0.0.1:8000` | Uvicorn (`eureka.api.main:app`) | **Healthy** (PostgreSQL & Neo4j connected) |
 | **Command Deck (Next.js 16 MCC)** | `http://localhost:3000` | Next.js Production Build (`branch sarvdny`) | **Online** (`source: live_backend`, 37 districts) |
+| **Vector Memory Store (Qdrant)** | `qdrant:6333` | Docker (`qdrant/qdrant:v1.9.0`) | **Operational** (Mem0 officer preferences) |
+| **Open UI Copilot Engine** | `FastAPI /api/v1/copilot` | Gemma-4-26B + Thesys Embeddings | **Online** (Governed Read-Only, OpenUI Lang) |
+
+---
+
+### 4. DGIPR Open UI Copilot (Generative UI & Per-User Memory)
+
+The **Open UI Copilot** is a governed, read-only data copilot and generative UI interface built into MCC. It allows officers to ask governance questions in **Marathi, Hindi, or English** and receive role-scoped governance metrics rendered as accessible OpenUI Lang components (KPI cards, data tables, bar charts, trend lines, and border adjacency graphs).
+
+#### Key Capabilities & Architecture:
+- **Gemma-4-26B-A4B-IT Model**: Powers function calling and zero-hallucination OpenUI Lang generation.
+- **10 Governed Read-Only Tools**: Scoped server-side by authenticated JWT principal (`TokenData`).
+- **Mem0 + Qdrant Preference Memory**: Remembers user presentation preferences with `HMAC-SHA256` pseudonymization, 800ms fail-open timeout, and allowlisted preference filtering.
+- **Strict Number Grounding & GIGW 3.0 Compliance**: Every numerical literal is verified against tool data; all visual elements provide screen-reader text summaries and table alternatives.
+- **Total Key Isolation**: `OPENUI_COPILOT_GEMINI_API_KEY` and `THESYS_API_KEY` are isolated strictly to `eureka/copilot/`.
+
 
 

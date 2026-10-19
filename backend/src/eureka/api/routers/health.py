@@ -11,8 +11,11 @@ router = APIRouter(tags=["Health & Telemetry"])
 @router.get("/api/v1/health")
 async def health_check():
     """Verify operational status of all backend subsystems."""
+    from eureka.copilot.config import get_copilot_health_status
+
     pg_ok = await check_async_db_health()
     neo_ok = Neo4jGraphService.check_health()
+    copilot_status = get_copilot_health_status()
 
     status = "healthy" if (pg_ok and neo_ok) else "degraded"
     return {
@@ -21,5 +24,7 @@ async def health_check():
         "subsystems": {
             "postgresql_16": "online" if pg_ok else "unreachable",
             "neo4j_graph": "online" if neo_ok else "unreachable",
+            "open_ui_copilot": copilot_status,
         },
     }
+
