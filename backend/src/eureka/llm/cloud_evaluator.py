@@ -62,17 +62,21 @@ def evaluate_sentiment_cloud(text: str) -> float:
     if groq_key:
         try:
             client = Groq(api_key=groq_key)
-            prompt = (
-                "Analyze the sentiment of this news excerpt. "
-                "Respond strictly with a single decimal number between -1.0 (very negative) "
-                "and 1.0 (very positive), where 0.0 is neutral.\n\n"
-                f"Text: {clean_text[:1500]}"
+            system_msg = (
+                "You are an objective civic sentiment analyst for the Government of Maharashtra. "
+                "Evaluate public tone towards civic infrastructure, governance, and public safety "
+                "on a continuous scale from -1.0 (severe grievance, disaster, anger) to +1.0 (high satisfaction, success), "
+                "with 0.0 representing neutral reporting. Output strictly a single decimal number between -1.0 and 1.0."
             )
+            user_prompt = f"Analyze the sentiment of this Maharashtra news excerpt:\n\n{clean_text[:1500]}"
             # Try active models
             for candidate_model in ["llama3-8b-8192", "qwen/qwen3.8-27b", "openai/gpt-oss-20b"]:
                 try:
                     res = client.chat.completions.create(
-                        messages=[{"role": "user", "content": prompt}],
+                        messages=[
+                            {"role": "system", "content": system_msg},
+                            {"role": "user", "content": user_prompt},
+                        ],
                         model=candidate_model,
                         temperature=0.0,
                         max_tokens=8,
@@ -101,10 +105,18 @@ def evaluate_crisis_sla_groq(district: str, text: str) -> bool:
     if not api_key or not clean_text:
         return False
 
-    prompt = (
-        f"Analyze this article from {district}. Does it explicitly feature a government "
-        "official refuting or resolving a crisis/rumor? Output strictly 'true' or 'false'.\n\n"
-        f"Article: {clean_text[:2000]}"
+    system_msg = (
+        "You are an emergency crisis verification analyst for the Maharashtra DGIPR War Room. "
+        "Determine if the provided media report contains an authenticated, official government "
+        "refutation, factual clarification, or crisis resolution issued by a verified administrative "
+        "authority (e.g., District Collector, Magistrate, Police Commissioner, DGIPR, Department Secretary) "
+        "that explicitly debunks or resolves a public rumor or crisis in the district. "
+        "Respond strictly with 'true' or 'false'."
+    )
+    user_prompt = (
+        f"District: {district}\n"
+        f"Media Content:\n{clean_text[:2000]}\n\n"
+        "Does this article explicitly feature an authorized government refutation or resolution? (true/false):"
     )
 
     client = Groq(api_key=api_key)

@@ -12,6 +12,7 @@ from eureka.api.auth import TokenData, get_current_user, require_roles
 from eureka.core.database import sync_db_context
 from eureka.hermes.agent_tools import (
     tool_execute_dm_signoff,
+    tool_query_all_36_districts,
     tool_stage_dm_rebuttal,
     tool_sync_neo4j_nodes,
     tool_translate_and_normalize,
@@ -307,3 +308,17 @@ async def get_hermes_stats():
         "average_dm_turnaround_minutes": 42.5,
         "authority": "DGIPR Maha-Command Center, Mantralaya",
     }
+
+
+@router.get("/districts", summary="Query All 36 Maharashtra Districts Database Data")
+def get_all_36_districts(
+    division: Optional[str] = Query(None, description="Optional division filter e.g. Konkan, Pune, Nashik"),
+    include_metrics: bool = Query(True, description="Whether to include live calculated 100-point governance metrics"),
+    sort_by: str = Query("composite_index", description="Sorting field: composite_index, display_order, name_en, volume, speed_tat, sentiment, crisis_sla"),
+) -> Dict[str, Any]:
+    """Retrieves authoritative PostgreSQL database records and live governance scores for all 36 Maharashtra districts."""
+    return tool_query_all_36_districts(
+        division=division,
+        include_metrics=include_metrics,
+        sort_by=sort_by,
+    )

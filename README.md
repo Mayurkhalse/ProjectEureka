@@ -7,7 +7,7 @@
 [![Neo4j 5.x](https://img.shields.io/badge/Neo4j-5.18-008CC1?style=flat&logo=neo4j&logoColor=white)](https://neo4j.com)
 [![Hermes Agent](https://img.shields.io/badge/Hermes-Nous_Research-8A2BE2?style=flat)](https://hermes-agent.nousresearch.com)
 [![Google AI Studio](https://img.shields.io/badge/Gemini_Flash-Google_AI_Studio-4285F4?style=flat&logo=google&logoColor=white)](https://ai.google.dev)
-[![Tests Passing](https://img.shields.io/badge/Tests-83_Backend_%7C_18_Frontend_Passed-brightgreen?style=flat)](tests/)
+[![Tests Passing](https://img.shields.io/badge/Tests-86_Backend_%7C_18_Frontend_Passed-brightgreen?style=flat)](tests/)
 
 ---
 
@@ -213,10 +213,16 @@ CALL db.schema.visualization();
 Project EUREKA integrates the **Hermes Agent** (Nous Research) via its official **API Server protocol** (`/v1/chat/completions`) paired with Google AI Studio's **Gemini Flash** for native Indic dialect processing.
 
 ### Sandboxed Deterministic Tools (`agent_tools.py`)
-1. `tool_translate_and_normalize(raw_text)`: Calls Gemini Flash to detect regional Indic dialects (e.g., Ahirani, Varhadi, Malvani) and returns deterministic JSON schemas (`marathi_text`, `english_text`, `detected_dialect`, `extracted_district_code`).
-2. `tool_stage_dm_rebuttal(ticket_id, district_code, draft_text)`: Stages draft rebuttals in PostgreSQL under `pending_review` status.
-3. `tool_execute_dm_signoff(ticket_id, reviewer_id, role, district_code, action)`: Validates that only authenticated District Collectors (`ROLE_DISTRICT_COLLECTOR`) matching the ticket's district can execute sign-offs within the 90-minute SLA window.
-4. `tool_sync_neo4j_nodes(district_code, event_id, claim_text)`: Merges District, CanonicalEvent, and Claim nodes into Neo4j via idempotent Cypher transactions.
+1. `tool_query_all_36_districts(division, include_metrics, sort_by)`: Queries PostgreSQL for all 36 Maharashtra districts (`MH-01` to `MH-36`) with bilingual English/Marathi metadata and computes live 100-Point Composite Governance Scores.
+2. `tool_translate_and_normalize(raw_text)`: Calls Gemini Flash to detect regional Indic dialects (Ahirani, Varhadi, Malvani, Dangi, Deshi) and returns deterministic JSON schemas (`marathi_text`, `english_text`, `detected_dialect`, `extracted_district_code`).
+3. `tool_stage_dm_rebuttal(ticket_id, district_code, draft_text)`: Stages draft rebuttals in PostgreSQL under `pending_review` status.
+4. `tool_execute_dm_signoff(ticket_id, reviewer_id, role, district_code, action)`: Validates that only authenticated District Collectors (`ROLE_DISTRICT_COLLECTOR`) matching the ticket's district can execute sign-offs within the 90-minute SLA window.
+5. `tool_sync_neo4j_nodes(district_code, event_id, claim_text)`: Merges District, CanonicalEvent, and Claim nodes into Neo4j via idempotent Cypher transactions.
+
+### System Prompts, RAG & Embeddings Status
+- **System Prompts:** Standardized across Hermes Orchestrator (DGIPR executive mandate across 36 districts and 4 pillars), Gemini Flash (Indic dialect taxonomy and GIGW 3.0 formatting), and Groq (sentiment and crisis refutation verification).
+- **Graph-RAG:** Implemented via Neo4j 5.18 (17,020+ nodes, 1,500+ edges) traversing spatial district boundaries, events, and claims. Dense vector RAG (e.g., pgvector) is currently inactive.
+- **Embeddings:** Multi-representation pipeline comprising MuRIL 768-dim INT8 Indic embeddings, FANG 816-dim multimodal context embeddings, STGNN graph node Laplacian embeddings, and continuous sentiment $[-1.0, 1.0]$ mappings.
 
 ### Non-Bypassable Human-in-the-Loop Governance
 The autonomous agent is **architecturally prohibited** from autonomously approving or signing off on rebuttals. Autonomous sign-off attempts are intercepted and rejected with HTTP 403 Forbidden.
@@ -232,9 +238,9 @@ The system is validated through automated test suites spanning backend neural pi
 cd backend
 uv run pytest tests/ -v
 ```
-**Results:** **83 passed, 1 skipped** in 113.58s across 14 test modules:
+**Results:** **86 passed, 1 skipped** across 14 test modules (100% passing):
 - `test_hermes_integration.py`: API Server contracts, 409 conflict handling, timeouts, RBAC blocks autonomous signoff.
-- `test_hermes_pipeline.py`: Gemini Flash Indic translation, 90m SLA window, Neo4j idempotency, DM queue & router.
+- `test_hermes_pipeline.py`: 36 districts database querying, Gemini Flash Indic translation, 90m SLA window, Neo4j idempotency, DM queue & router.
 - `test_multilingual_translator.py`: Google AI Studio mocked and fallback Indic extraction.
 - `test_outbox_worker.py`: PostgreSQL `FOR UPDATE SKIP LOCKED` transactional projection to Neo4j.
 - `test_scoring_engine.py`: 100-point composite scoring across Volume, TAT, Sentiment, and Crisis SLA.

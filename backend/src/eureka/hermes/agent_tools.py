@@ -24,6 +24,7 @@ from eureka.models.entities import (
     HumanReviewAction,
     OutboxEvent,
 )
+from eureka.models.orm import District
 from eureka.models.enums import (
     AggregateType,
     FactCheckTicketStatus,
@@ -247,11 +248,187 @@ def tool_sync_neo4j_nodes(district_code: str, event_id: str, claim_text: str) ->
         }
 
 
-# Narrow Agent Allowlist: Only Drafting & Read/Sync Tools
+def tool_query_all_36_districts(
+    division: Optional[str] = None,
+    include_metrics: bool = True,
+    sort_by: str = "composite_index",
+) -> Dict[str, Any]:
+    """Queries PostgreSQL for all 36 Maharashtra districts and their live 100-Point governance metrics.
+
+    Args:
+        division: Optional division filter (e.g. 'Konkan', 'Pune', 'Nashik', 'Chhatrapati Sambhajinagar', 'Amravati', 'Nagpur', or division code like 'DIV-MUM').
+        include_metrics: Whether to include live computed governance metrics (Volume, TAT, Sentiment, Crisis SLA, Composite Index).
+        sort_by: Field to sort by ('composite_index', 'display_order', 'district_code', 'name_en', 'volume', 'speed_tat', 'sentiment', 'crisis_sla').
+
+    Returns:
+        dict: Strict JSON structure with metadata, statewide totals, and the list of district objects.
+    """
+    logger.info("Querying 36 districts from PostgreSQL (division=%s, include_metrics=%s)", division, include_metrics)
+    with sync_db_context() as session:
+        query = session.query(District).filter(District.is_active == True).order_by(District.display_order)
+        districts = query.all()
+
+        # If division filter specified, match case-insensitively
+        div_filter = (division or "").strip().lower()
+        if div_filter:
+            div_map = {
+                "konkan": ["div-mum", "div-kok", "konkan", "mumbai"],
+                "pune": ["div-pun", "pune"],
+                "nashik": ["div-nas", "nashik"],
+                "sambhajinagar": ["div-aur", "div-sam", "sambhajinagar", "aurangabad", "chhatrapati sambhajinagar"],
+                "amravati": ["div-amr", "amravati"],
+                "nagpur": ["div-nag", "nagpur"],
+            }
+            matched_aliases = [div_filter]
+            for d_name, d_codes in div_map.items():
+                if div_filter in d_name or any(div_filter in c for c in d_codes):
+                    matched_aliases.extend(d_codes)
+
+            districts = [
+                d for d in districts
+                if any(alias in (d.division_code or "").lower() for alias in matched_aliases)
+                or any(alias in (d.name_en or "").lower() for alias in matched_aliases)
+            ]
+
+        # Metric aggregation across media_events
+        metrics_by_name = {}
+        if include_metrics:
+            from sqlalchemy import text
+            try:
+                agg_query = text("""
+                    SELECT 
+                        LOWER(district) AS dist_name,
+                        COUNT(*) FILTER (WHERE event_type = 'Press Release') AS releases,
+                        COALESCE(AVG(turnaround_time_mins), 45.0) AS avg_tat,
+                        COALESCE(AVG(sentiment_score), 0.0) AS avg_sentiment,
+                        COUNT(*) FILTER (WHERE event_type = 'Fact-Check Ticket') AS total_crisis,
+                        COUNT(*) FILTER (WHERE event_type = 'Fact-Check Ticket' AND crisis_resolved = true) AS resolved_crisis
+                    FROM media_events
+                    GROUP BY LOWER(district)
+                """)
+                rows = session.execute(agg_query).fetchall()
+                for r in rows:
+                    metrics_by_name[r[0]] = {
+                        "releases": int(r[1] or 0),
+                        "avg_tat": float(r[2] or 45.0),
+                        "avg_sentiment": float(r[3] or 0.0),
+                        "total_crisis": int(r[4] or 0),
+                        "resolved_crisis": int(r[5] or 0),
+                    }
+            except Exception as e:
+                logger.warning("Could not aggregate media_events: %s", e)
+
+        # Count active fact check tickets per district
+        active_tickets_by_code = {}
+        try:
+            from eureka.models.entities import FactCheckTicket, CanonicalEvent
+            tkt_rows = (
+                session.query(CanonicalEvent.district_code, FactCheckTicket.id)
+                .join(CanonicalEvent, FactCheckTicket.canonical_event_id == CanonicalEvent.id)
+                .filter(FactCheckTicket.status.in_(["open", "pending_review"]))
+                .all()
+            )
+            for d_code, _ in tkt_rows:
+                if d_code:
+                    active_tickets_by_code[d_code.upper()] = active_tickets_by_code.get(d_code.upper(), 0) + 1
+        except Exception:
+            pass
+
+        results = []
+        for d in districts:
+            name_key = d.name_en.lower()
+            m = metrics_by_name.get(name_key)
+            if not m:
+                for k, v in metrics_by_name.items():
+                    if k in name_key or name_key in k:
+                        m = v
+                        break
+
+            releases = m["releases"] if m else 0
+            avg_tat = m["avg_tat"] if m else 45.0
+            sentiment = m["avg_sentiment"] if m else 0.0
+            total_crisis = m["total_crisis"] if m else 0
+            resolved_crisis = m["resolved_crisis"] if m else 0
+
+            # 4 Governance Pillars
+            vol_score = round(min(25.0, (releases / 300.0) * 25.0), 2)
+            if avg_tat <= 45.0:
+                tat_score = 30.0
+            elif avg_tat >= 120.0:
+                tat_score = 0.0
+            else:
+                tat_score = 30.0 * (1.0 - ((avg_tat - 45.0) / 75.0))
+            tat_score = round(tat_score, 2)
+            sent_score = round(((sentiment + 1.0) / 2.0) * 25.0, 2)
+            crisis_score = round((resolved_crisis / total_crisis * 20.0) if total_crisis > 0 else 20.0, 2)
+
+            comp_score = round(vol_score + tat_score + sent_score + crisis_score, 2)
+            active_tkts = active_tickets_by_code.get(d.district_code.upper(), 0)
+
+            results.append({
+                "district_code": d.district_code,
+                "division_code": d.division_code,
+                "name_en": d.name_en,
+                "name_mr": d.name_mr,
+                "display_order": d.display_order,
+                "centroid": {"lat": d.centroid_lat, "lon": d.centroid_lon},
+                "composite_index": comp_score,
+                "pillars": {
+                    "volume": vol_score,
+                    "speed_tat": tat_score,
+                    "sentiment": sent_score,
+                    "crisis_sla": crisis_score,
+                },
+                "raw_metrics": {
+                    "total_releases": releases,
+                    "average_tat_minutes": round(avg_tat, 1),
+                    "net_sentiment": round(sentiment, 3),
+                    "active_crisis_tickets": active_tkts,
+                },
+            })
+
+        # Sorting
+        if sort_by == "composite_index":
+            results.sort(key=lambda x: x["composite_index"], reverse=True)
+        elif sort_by == "display_order":
+            results.sort(key=lambda x: x["display_order"])
+        elif sort_by == "name_en":
+            results.sort(key=lambda x: x["name_en"])
+        elif sort_by == "volume":
+            results.sort(key=lambda x: x["pillars"]["volume"], reverse=True)
+        elif sort_by == "speed_tat":
+            results.sort(key=lambda x: x["pillars"]["speed_tat"], reverse=True)
+        elif sort_by == "sentiment":
+            results.sort(key=lambda x: x["pillars"]["sentiment"], reverse=True)
+        elif sort_by == "crisis_sla":
+            results.sort(key=lambda x: x["pillars"]["crisis_sla"], reverse=True)
+
+        for idx, item in enumerate(results, start=1):
+            item["rank"] = idx
+
+        state_releases = sum(r["raw_metrics"]["total_releases"] for r in results)
+        state_avg_comp = round(sum(r["composite_index"] for r in results) / len(results), 2) if results else 0.0
+
+        return {
+            "status": "success",
+            "datastore": "PostgreSQL 16 (savi_master)",
+            "total_districts": len(results),
+            "statewide_overview": {
+                "total_releases_logged": state_releases,
+                "statewide_avg_composite_index": state_avg_comp,
+                "top_performing_district": results[0]["name_en"] if results else None,
+                "lowest_performing_district": results[-1]["name_en"] if results else None,
+            },
+            "districts": results,
+        }
+
+
+# Narrow Agent Allowlist: Only Drafting, Querying & Read/Sync Tools
 AGENT_ALLOWLISTED_TOOLS = [
     "tool_translate_and_normalize",
     "tool_stage_dm_rebuttal",
     "tool_sync_neo4j_nodes",
+    "tool_query_all_36_districts",
 ]
 
 AGENT_TOOL_DEFINITIONS = [
@@ -301,10 +478,36 @@ AGENT_TOOL_DEFINITIONS = [
             },
         },
     },
+    {
+        "type": "function",
+        "function": {
+            "name": "tool_query_all_36_districts",
+            "description": "Queries the authoritative PostgreSQL database for all 36 Maharashtra districts, retrieving bilingual metadata, division codes, and live computed 100-point governance metrics.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "division": {
+                        "type": "string",
+                        "description": "Optional division filter (e.g. 'Konkan', 'Pune', 'Nashik', 'Chhatrapati Sambhajinagar', 'Amravati', 'Nagpur').",
+                    },
+                    "include_metrics": {
+                        "type": "boolean",
+                        "description": "Whether to calculate and attach live 100-point composite governance metrics.",
+                    },
+                    "sort_by": {
+                        "type": "string",
+                        "enum": ["composite_index", "display_order", "name_en", "volume", "speed_tat", "sentiment", "crisis_sla"],
+                        "description": "Sorting metric for district ranking.",
+                    },
+                },
+            },
+        },
+    },
 ]
 
 AGENT_TOOL_MAP = {
     "tool_translate_and_normalize": tool_translate_and_normalize,
     "tool_stage_dm_rebuttal": tool_stage_dm_rebuttal,
     "tool_sync_neo4j_nodes": tool_sync_neo4j_nodes,
+    "tool_query_all_36_districts": tool_query_all_36_districts,
 }

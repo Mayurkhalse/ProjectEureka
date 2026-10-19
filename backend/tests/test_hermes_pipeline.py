@@ -313,3 +313,52 @@ def test_hermes_dossier_endpoint(client):
     res_stats = client.get("/api/v1/hermes/stats")
     assert res_stats.status_code == 200
     assert "statewide_sla_compliance_rate" in res_stats.json()
+
+
+def test_tool_query_all_36_districts_direct():
+    """Test tool_query_all_36_districts directly against PostgreSQL."""
+    from eureka.hermes.agent_tools import tool_query_all_36_districts
+
+    res = tool_query_all_36_districts(include_metrics=True)
+    assert res["status"] == "success"
+    assert res["total_districts"] == 36
+    assert "statewide_overview" in res
+    assert len(res["districts"]) == 36
+
+    sample = res["districts"][0]
+    assert "district_code" in sample
+    assert "name_en" in sample
+    assert "name_mr" in sample
+    assert "composite_index" in sample
+    assert "pillars" in sample
+    assert "volume" in sample["pillars"]
+    assert "speed_tat" in sample["pillars"]
+    assert "sentiment" in sample["pillars"]
+    assert "crisis_sla" in sample["pillars"]
+
+    # Test division filter
+    res_konkan = tool_query_all_36_districts(division="Konkan")
+    assert res_konkan["status"] == "success"
+    assert len(res_konkan["districts"]) > 0
+    assert all("DIV-MUM" in d["division_code"] or "DIV-KON" in d["division_code"] for d in res_konkan["districts"])
+
+
+def test_hermes_router_districts_endpoint(client):
+    """Test GET /api/v1/hermes/districts endpoint."""
+    res = client.get("/api/v1/hermes/districts")
+    assert res.status_code == 200
+    data = res.json()
+    assert data["status"] == "success"
+    assert data["total_districts"] == 36
+    assert "districts" in data
+    assert len(data["districts"]) == 36
+
+
+def test_hermes_orchestrator_query_districts_task():
+    """Test orchestrator routing when task asks for 36 districts database data."""
+    orch = get_hermes_orchestrator()
+    res = orch.run_task("Query all 36 districts database data and leaderboard scores.")
+    assert res["status"] == "success"
+    assert res["tool_called"] == "tool_query_all_36_districts"
+    assert res["tool_result"]["total_districts"] == 36
+

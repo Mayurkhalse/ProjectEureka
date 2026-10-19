@@ -875,11 +875,77 @@ To enable automated narrative analysis, draft rebuttal staging, and cross-databa
   * *Agent Client Protocol (ACP):* Reserved for IDE/editor host integration (not backend runtime).
   * *Model Context Protocol (MCP):* Provides standardized tool servers to the agent.
 * **Deterministic Tool Execution Layer (`eureka.hermes.agent_tools`):**
-  1. `tool_translate_and_normalize(raw_text)`: Connects to Google AI Studio's `gemini-flash-latest` with strict JSON schema enforcement (`marathi_text`, `english_text`, `detected_dialect`, `extracted_district_code`). Automatically strips markdown fences and falls back to deterministic Indic rule extractors if the cloud API is throttled.
-  2. `tool_stage_dm_rebuttal(ticket_id, district_code, draft_text)`: Updates `fact_check_tickets` in PostgreSQL, storing draft rebuttals under `status = 'pending_review'` without triggering administrative publication.
-  3. `tool_execute_dm_signoff(ticket_id, reviewer_id, role, district_code, action)`: Validates that only `ROLE_DISTRICT_COLLECTOR` matching the ticket's district can authorize sign-offs. Computes whether the rebuttal occurred within the 90-minute SLA window (`refuted_within_sla_90m = True/False`), records the action in `human_review_actions`, and queues transactional `outbox_events`.
-  4. `tool_sync_neo4j_nodes(district_code, event_id, claim_text)`: Idempotently creates and links `(:District)`, `(:CanonicalEvent)`, and `(:Claim)` nodes using Cypher batch statements.
+  1. `tool_query_all_36_districts(division, include_metrics, sort_by)`: Queries PostgreSQL 16 for all 36 Maharashtra administrative districts (`MH-01` to `MH-36`), including English and Marathi bilingual names, division codes, and computes live 100-Point Composite Governance Index across all 4 pillars (Volume, TAT, Sentiment, Crisis SLA). Supports division filtering and multi-metric sorting.
+  2. `tool_translate_and_normalize(raw_text)`: Connects to Google AI Studio's `gemini-flash-latest` with strict JSON schema enforcement (`marathi_text`, `english_text`, `detected_dialect`, `extracted_district_code`). Automatically strips markdown fences and falls back to deterministic Indic rule extractors if the cloud API is throttled.
+  3. `tool_stage_dm_rebuttal(ticket_id, district_code, draft_text)`: Updates `fact_check_tickets` in PostgreSQL, storing draft rebuttals under `status = 'pending_review'` without triggering administrative publication.
+  4. `tool_execute_dm_signoff(ticket_id, reviewer_id, role, district_code, action)`: Validates that only `ROLE_DISTRICT_COLLECTOR` matching the ticket's district can authorize sign-offs. Computes whether the rebuttal occurred within the 90-minute SLA window (`refuted_within_sla_90m = True/False`), records the action in `human_review_actions`, and queues transactional `outbox_events`.
+  5. `tool_sync_neo4j_nodes(district_code, event_id, claim_text)`: Idempotently creates and links `(:District)`, `(:CanonicalEvent)`, and `(:Claim)` nodes using Cypher batch statements.
 * **Non-Negotiable Human-in-the-Loop Governance:** Hermes is explicitly prohibited from autonomously signing off on rebuttals or altering verified factual records. Any autonomous attempt by the agent to approve a ticket is intercepted and rejected with HTTP 403 Forbidden.
+
+---
+
+### 1.1 System Prompts Status & Taxonomy
+All system prompts across Project EUREKA have been standardized, hardened, and strictly aligned with DGIPR governance:
+
+1. **Hermes Executive Orchestrator Prompt (`backend/src/eureka/hermes/orchestrator.py`):**
+   * **Role:** Lead AI Media Governance & Incident Analyst for DGIPR Maharashtra.
+   * **Scope:** 36 administrative districts (`MH-01` to `MH-36`) across 6 revenue divisions (Konkan, Pune, Nashik, Chhatrapati Sambhajinagar, Amravati, Nagpur).
+   * **4 Governance Pillars:** Information Volume (25 pts), Turnaround Time (30 pts), Net Sentiment Index (25 pts), and 90-Minute Crisis SLA (20 pts).
+   * **Tool Access:** Strictly restricted to 4 allowlisted tools (`tool_query_all_36_districts`, `tool_translate_and_normalize`, `tool_stage_dm_rebuttal`, `tool_sync_neo4j_nodes`).
+   * **Guardrail:** Non-negotiable prohibition on autonomous ticket sign-off or publishing.
+
+2. **Multilingual Indic Translation Prompt (`backend/src/eureka/llm/multilingual_translator.py`):**
+   * **Target:** Google AI Studio Gemini Flash (`gemini-flash-latest`).
+   * **Dialect Coverage:** Standard Marathi, Varhadi (Vidarbha), Ahirani (Khandesh), Malvani/Konkani (Konkan), Dangi (Northern border), Deshi / Marathwada colloquial.
+   * **Output Schema:** Zero-slop JSON format: `{"marathi_text": "...", "english_text": "...", "detected_dialect": "...", "extracted_district_code": "MH-XX"}`.
+   * **Standards:** GIGW 3.0 and UX4G bilingual accessibility guidelines.
+
+3. **Cloud Evaluator Prompts (`backend/src/eureka/llm/cloud_evaluator.py`):**
+   * **Civic Sentiment Prompt (Groq LLaMA 3):** Strict scalar mapping $[-1.0, 1.0]$ with 4 category tags (critical_grievance, neutral_inquiry, positive_governance, general_discussion).
+   * **Crisis SLA Verification Prompt (Groq LLaMA 3):** Deterministic verification evaluating whether an official rebuttal factually refutes the core claim within the 90-minute SLA window.
+
+---
+
+### 1.2 RAG Status (Retrieval-Augmented Generation)
+* **Graph-RAG (Active & Implemented):**
+  * Powered by Neo4j 5.18 Spatio-Temporal Knowledge Graph containing 17,020+ nodes and 1,500+ edges.
+  * Connects `(:District)`, `(:CanonicalEvent)`, `(:Claim)`, `(:Release)`, `(:Author)`, and `(:Platform)` with `[:AFFECTS]`, `[:CONTAINS_CLAIM]`, `[:BORDERS]`, `[:REPORTS_ON]`, and `[:RELATES_TO]`.
+  * Traversal queries retrieve real-time narrative diffusion context, 152 geographic border adjacencies, and historical event precedent to enrich agent dossiers and rebuttal staging.
+* **Dense Vector RAG (Not Implemented / Inactive):**
+  * PostgreSQL `pgvector` extension is not enabled (`SELECT * FROM pg_extension WHERE extname = 'vector'` returns 0 rows).
+  * No standalone vector database (e.g., ChromaDB, Qdrant, FAISS) is currently deployed in the runtime.
+  * Context retrieval relies on deterministic **Graph-RAG + relational entity lookups** in PostgreSQL 16.
+
+---
+
+### 1.3 Embeddings Status
+Project EUREKA employs four distinct embedding representations across the machine learning and analytics stack:
+
+1. **MuRIL Multilingual Indic Text Embeddings (768-dim):**
+   * `MuRILEncoder` (`backend/src/eureka/processor/export_models.py`, `backend/src/eureka/model_repository/muril_encoder/`).
+   * Generates 768-dimensional dense representations for Marathi, Hindi, and English text.
+   * Exported to ONNX with Dynamic INT8 Post-Training Quantization (PTQ) for high-throughput Triton / CPU inference.
+2. **FANG Context Embeddings (816-dim total):**
+   * `FANGJointObjective` fuses 768-dim claim text embeddings + 16-dim source credibility features + 32-dim graph context features into unified rumor logits and authenticity confidence scores.
+3. **STGNN Spatio-Temporal Graph Node Embeddings:**
+   * Normalized degree Laplacian ($36 \times 36$) + temporal node feature tensors ($B \times 36 \times 3 \times 12$) passing through spatial graph recurrence and temporal attention to forecast 6-hour rumor diffusion across Maharashtra districts.
+4. **Continuous Sentiment Embeddings:**
+   * Continuous scalar mapping $[-1.0, 1.0]$ generated via fine-tuned RoBERTa / MuRIL classifiers with zero-shot Groq fallbacks.
+
+---
+
+### 1.4 Agent & Subagent Architecture
+Project EUREKA employs a multi-tiered agentic hierarchy ensuring determinism, safety, and operational speed:
+
+1. **Primary Agent — Hermes Autonomous Orchestrator:**
+   * Programmatic integration via Nous Research HTTP API Server (`/v1/chat/completions`) with one-shot CLI and deterministic staging fallbacks.
+   * Narrow allowlist of 4 domain tools.
+   * Enforces strict RBAC scoping and prevents autonomous action sign-off.
+2. **Specialized Micro-Agents (Subagents):**
+   * **Linguistic Translation Subagent (`multilingual_translator.py`):** Powered by Google AI Studio Gemini Flash for dialect extraction, JSON structuring, and bilingual normalization.
+   * **Crisis Verification Subagent (`cloud_evaluator.py`):** Powered by Groq LLaMA 3 for deterministic ($T=0.0$) refutation verification.
+   * **Graph Outbox Subagent (`outbox_worker.py`):** Background worker using `FOR UPDATE SKIP LOCKED` to idempotently stream PostgreSQL changes to Neo4j.
+   * **Edge Ingestion Subagents (`quad_ingestion` / `NEWS_API.py`):** Headless Crawl4AI + NewsAPI scrapers feeding Celery task queues.
 
 ---
 
