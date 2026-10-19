@@ -1007,16 +1007,436 @@ CALL db.schema.visualization();
 
 ---
 
-### 4. DGIPR Open UI Copilot (Generative UI & Per-User Memory)
+### 4. DGIPR Open UI Copilot: Architectural Specification, Mathematical Derivations & Code Implementation
 
-The **Open UI Copilot** is a governed, read-only data copilot and generative UI interface built into MCC. It allows officers to ask governance questions in **Marathi, Hindi, or English** and receive role-scoped governance metrics rendered as accessible OpenUI Lang components (KPI cards, data tables, bar charts, trend lines, and border adjacency graphs).
+The **DGIPR Open UI Copilot** is an enterprise-grade, read-only analytical copilot and generative UI interface natively integrated into the Maha-Command Center (MCC). Designed for the Government of Maharashtra, the copilot enables state ministers, district collectors, and information officers to interrogate complex governance intelligence in **Marathi, Hindi, or English** and receive dynamically streamed, role-governed, accessible visual artifacts (OpenUI Lang components) rather than passive text blobs.
 
-#### Key Capabilities & Architecture:
-- **Gemma-4-26B-A4B-IT Model**: Powers function calling and zero-hallucination OpenUI Lang generation.
-- **10 Governed Read-Only Tools**: Scoped server-side by authenticated JWT principal (`TokenData`).
-- **Mem0 + Qdrant Preference Memory**: Remembers user presentation preferences with `HMAC-SHA256` pseudonymization, 800ms fail-open timeout, and allowlisted preference filtering.
-- **Strict Number Grounding & GIGW 3.0 Compliance**: Every numerical literal is verified against tool data; all visual elements provide screen-reader text summaries and table alternatives.
-- **Total Key Isolation**: `OPENUI_COPILOT_GEMINI_API_KEY` and `THESYS_API_KEY` are isolated strictly to `eureka/copilot/`.
+---
+
+#### 4.1 End-to-End System Architecture & Execution Lifecycle
+
+The copilot enforces a strict multi-stage deterministic pipeline where generative AI is constrained to UI presentation, while all facts, numbers, and scopes originate from governed backend tools:
+
+```
++-----------------------------------------------------------------------------------------------------------------------+
+|                                          DGIPR OPEN UI COPILOT LIFECYCLE                                              |
++-----------------------------------------------------------------------------------------------------------------------+
+|                                                                                                                       |
+|  [Officer User Input] (Marathi / Hindi / English)                                                                     |
+|         |                                                                                                             |
+|         v                                                                                                             |
+|  [Next.js 16 Front-End Drawer] (src/components/copilot/CopilotDrawer.tsx)                                             |
+|         |                                                                                                             |
+|         |  POST /api/v1/copilot/query (with Bearer JWT)                                                               |
+|         v                                                                                                             |
+|  [Next.js API Route Proxy] (src/app/api/v1/copilot/[...path]/route.ts)                                                |
+|         |                                                                                                             |
+|         |  Rewrites to http://127.0.0.1:8000/api/v1/copilot/query                                                     |
+|         v                                                                                                             |
+|  [FastAPI Streaming Router] (eureka/copilot/router.py)                                                                |
+|         |                                                                                                             |
+|         +---> [1. JWT Auth & RBAC Extraction] (Principal: username, role, district_code, division)                    |
+|         |                                                                                                             |
+|         +---> [2. Mem0 Preference Retrieval] (Qdrant Vector Store, HMAC-SHA256, 800ms fail-open)                     |
+|         |                                                                                                             |
+|         +---> [3. System Prompt Construction] (GIGW 3.0 / UX4G rules + language instructions + allowed components)    |
+|         |                                                                                                             |
+|         +---> [4. GemmaClient (Google AI Studio)] (gemma-4-26b-a4b-it / gemini-flash-lite-latest, T=0.0)              |
+|         |            |                                                                                                |
+|         |            |-- Turn 1: Model inspects prompt + tools declarations -> Returns functionCall                  |
+|         |            v                                                                                                |
+|         +---> [5. Governed Tool Execution] (1 of 10 read-only tools executed server-side with RBAC verification)      |
+|         |            |                                                                                                |
+|         |            |-- Tool output returned with role: "user" (functionResponse)                                   |
+|         |            v                                                                                                |
+|         +---> [6. Turn 2: Generative UI Synthesis] -> Model outputs pure OpenUI Lang (<Stack>, <KpiCard>, etc.)      |
+|         |            |                                                                                                |
+|         |            v                                                                                                |
+|         +---> [7. Grounding Validator & Repair] (eureka/copilot/openui_generator.py)                                  |
+|         |            |-- Anti-Hallucination: Validates 100% of numerical literals exist in tool data                   |
+|         |            |-- Whitelist Check: Rejects raw HTML, <iframe>, <script>, or unregistered components           |
+|         |            |-- If invalid: 1 repair attempt; if still invalid: Fallback ViewSpec engaged                   |
+|         |            v                                                                                                |
+|         +---> [8. Intelligent Fallback Resolver] (If model fails, circuit breaker OPEN, or API timeout)               |
+|         |            |-- Scans query: extract_district_from_query() -> Thane (MH-03), Palghar (MH-04), etc.           |
+|         |            |-- Resolves intent: rumor/crisis vs. district profile vs. statewide leaderboard                 |
+|         |            v                                                                                                |
+|         +---> [9. SSE Chunk Streaming] -> Sends progressive text chunks (64 bytes, 15ms) to client                     |
+|         |            v                                                                                                |
+|         +---> [10. Done Event & Frontend Render] -> Client renders live OpenUI Lang or ViewSpec fallback             |
+|                                                                                                                       |
++-----------------------------------------------------------------------------------------------------------------------+
+```
+
+---
+
+#### 4.2 Mathematical Derivations & Analytical Formulas
+
+Every number rendered in the Open UI Copilot is mathematically derived from raw transactional signals across Maharashtra's 36 administrative districts.
+
+##### 1. Information Volume Pillar (Max: 25 Points)
+The volume pillar measures whether a district administration proactively communicates authenticated news and public circulars, preventing an information vacuum. Rather than rewarding unbounded volume spam, EUREKA applies a **logistic saturation function (S-curve)**:
+
+$$\text{VolumeScore} = 25 \times \min\left(1.0, \; \frac{1}{1 + e^{-k \cdot (V - V_{\text{mid}})}}\right)$$
+
+Where:
+* $V = \text{Total official press releases and notices published by the district administration in the observation window}$.
+* $V_{\text{mid}} = 15.0$ (The inflection midpoint threshold representing operational viability).
+* $k = 0.15$ (The logistical steepness factor).
+* **Boundary Conditions:**
+  * For $V = 0$: $\text{VolumeScore} \approx 25 \times \frac{1}{1 + e^{2.25}} = 2.37$ (Administrative silence penalty).
+  * For $V = 15$: $\text{VolumeScore} = 25 \times 0.5 = 12.50$ (Midpoint baseline).
+  * For $V \ge 35$: $\text{VolumeScore} \to 25.0$ (Full saturation; additional releases yield diminishing returns).
+
+##### 2. Turnaround Time (TAT) / Speed Pillar (Max: 30 Points)
+The TAT pillar evaluates how rapidly an administration responds to emergent events or public inquiries. Let $T_{\text{event}}$ be the recorded timestamp of the event or citizen grievance in the public domain, and $T_{\text{published}}$ be the official publication timestamp of the clarification or press release:
+
+$$\Delta t = \text{TAT}_{\text{minutes}} = \frac{T_{\text{published}} - T_{\text{event}}}{60}$$
+
+An **exponential decay penalty** evaluates operational agility:
+
+$$\text{TATScore} = 30 \times \exp\left(-\frac{\max(0, \; \Delta t - \Delta t_{\text{optimal}})}{\tau}\right)$$
+
+Where:
+* $\Delta t_{\text{optimal}} = 45\text{ minutes}$ (The target crisis response window).
+* $\tau = 180\text{ minutes}$ (The decay rate parameter).
+* **Anti-Cheating Chronological Validation Rule:**
+  $$\text{If } T_{\text{published}} < T_{\text{event}} \implies \text{TATScore} = 0 \quad (\text{Falsified Record Flagged in Audit})$$
+* **Performance Brackets:**
+  * $\Delta t \le 45\text{ min} \implies \text{TATScore} = 30.0$ (Gold standard).
+  * $\Delta t = 135\text{ min (2.25 hrs)} \implies \text{TATScore} = 30 \times e^{-0.5} \approx 18.20$.
+  * $\Delta t = 405\text{ min (6.75 hrs)} \implies \text{TATScore} = 30 \times e^{-2.0} \approx 4.06$.
+
+##### 3. Net Sentiment Index (NSI) Pillar (Max: 25 Points)
+The sentiment pillar maps public tone across regional news, citizen feedback, and media commentary using the MuRIL multilingual neural model. Each analyzed unit $i \in \{1, \dots, N\}$ receives a polarity classification:
+
+$$P_i \in \{-1\text{ (Negative)}, \; 0\text{ (Neutral)}, \; +1\text{ (Positive)}\}$$
+
+The **Net Sentiment Index (NSI)** is computed as:
+
+$$\text{NSI} = \frac{N_{\text{pos}} - N_{\text{neg}}}{N_{\text{total}}} \quad \in [-1.0, \; +1.0]$$
+
+The NSI scalar is mapped linearly into the 25-point governance pillar:
+
+$$\text{SentimentScore} = 25 \times \left(\frac{\text{NSI} + 1.0}{2.0}\right)$$
+
+* For $\text{NSI} = +1.0$ (Unanimously positive coverage): $\text{SentimentScore} = 25.0$.
+* For $\text{NSI} = 0.0$ (Balanced/neutral civic tone): $\text{SentimentScore} = 12.5$.
+* For $\text{NSI} = -1.0$ (Severe civic dissatisfaction): $\text{SentimentScore} = 0.0$.
+
+##### 4. Crisis SLA & Rumor Containment Pillar (Max: 20 Points)
+The crisis pillar assesses whether active rumors or unrefuted viral misinformation tickets are lingering unaddressed. EUREKA applies a **zero-tolerance binary step function**:
+
+$$\text{CrisisScore} = \begin{cases} 20.0, & \text{if } U_{\text{active}} = 0 \text{ and } \text{SLAViolations} = 0 \\ 0.0, & \text{if } U_{\text{active}} > 0 \text{ or } \text{SLAViolations} > 0 \end{cases}$$
+
+Where $U_{\text{active}}$ is the count of open, unrefuted fact-check tickets assigned to the district exceeding the 90-minute containment SLA.
+
+##### 5. 100-Point Composite Governance Index ($CI$)
+The overall district governance index is the exact sum of the four orthogonal pillars:
+
+$$\text{CompositeIndex} = \text{VolumeScore} + \text{TATScore} + \text{SentimentScore} + \text{CrisisScore} \quad \in [0, \; 100]$$
+
+##### 6. Spatio-Temporal Contagion Risk (StGNN / A3TGCN)
+For the predictive radar (`forecast` tool), EUREKA models Maharashtra as a graph $\mathcal{G} = (\mathcal{V}, \mathcal{E})$, where $|\mathcal{V}| = 36$ districts, and $\mathcal{E}$ represents the 152 physical border adjacencies. The normalized graph Laplacian $\tilde{L}$ is computed as:
+
+$$\tilde{L} = I_N - D^{-1/2} A D^{-1/2}$$
+
+Given historical node feature tensors $X \in \mathbb{R}^{B \times 36 \times F \times T}$ ($F=3$ features: Volume, NSI, Rumor Count; $T=12$ time intervals of 30 minutes each), the A3TGCN layer evaluates spatial graph convolution coupled with temporal attention:
+
+$$H^{(l)} = \text{Softmax}\left(\frac{Q K^T}{\sqrt{d_k}}\right) V \cdot \left(\tilde{L} X W\right)$$
+
+The output yields the **6-Hour Escalation Probability**:
+
+$$P(\text{Crisis}_{t+6\text{h}} \mid \text{District}_d) = \sigma\left(W_o H^{(L)} + b_o\right) \quad \in [0.0, \; 1.0]$$
+
+---
+
+#### 4.3 The 10 Governed Read-Only Tools
+
+To guarantee total defense against SQL injection, data exfiltration, and model hallucination, the Copilot has **zero access to raw SQL, Cypher, or shell execution**. It communicates exclusively through 10 strictly typed Pydantic tools (`extra="forbid"`):
+
+| Tool Name | Input Arguments | Scoping / RBAC Enforcement | Description & Return Artifact |
+| :--- | :--- | :--- | :--- |
+| **`league_table`** | `division?: str`, `sort_by?: str` | Statewide clearance for Admin; Division Head scoped to division. | Returns ranked 36-district leaderboard with 4-pillar scores and composite indices. |
+| **`district_profile`** | `district_code: str` | Collector/DIO restricted to assigned district; Admin statewide. | Returns comprehensive 4-pillar breakdown, raw metric counts, and volume totals. |
+| **`pillar_breakdown`** | `district_code: str`, `pillar_name: str` | Scoped by district clearance. | Deep-dive metrics for Volume, TAT Speed, Sentiment, or Crisis SLA. |
+| **`trend`** | `district_code: str`, `metric: str`, `days?: int` | Scoped by district clearance. | 30-day historical time-series vector for the specified performance metric. |
+| **`compare_districts`** | `district_codes: List[str]` (2 to 5) | Verifies clearance for each requested district. | Side-by-side comparative matrix across 4 pillars. |
+| **`active_rumors`** | `district_code?: str` | District Collector scoped strictly to assigned district. | Active unrefuted fact-check tickets, 90-minute SLA countdowns, and claims. |
+| **`forecast`** | `district_code: str` | Scoped by district clearance. | 6-hour spatio-temporal AI rumor diffusion forecast with neighbor contagion risks. |
+| **`neighbors`** | `district_code: str`, `max_hops?: int` (1 or 2) | Scoped by district clearance. | Physical border adjacency sub-graph and inter-district risk transfer links. |
+| **`division_rollup`** | `division: str` | Scoped by revenue division clearance. | Aggregated governance metrics rolled up across an entire division. |
+| **`dossier_summary`** | `district_code: str` | Scoped by district clearance. | Executive intelligence briefing combining profile, active rumors, and diffusion forecast. |
+
+---
+
+#### 4.4 Technical Implementation: Core Python & TypeScript Code Blocks
+
+##### 1. Governed HTTP Client & Circuit Breaker (`backend/src/eureka/copilot/gemma_client.py`)
+This client manages authenticated communication with Google AI Studio, enforcing rate caps, temperature zero, automatic multi-model fallback, and circuit breaker resilience:
+
+```python
+class GemmaClient:
+    """Production client for Google AI Studio with sliding-window rate caps and circuit breaker."""
+
+    def __init__(self):
+        self.settings = get_copilot_settings()
+        self._consecutive_failures = 0
+        self._circuit_open_until = 0.0
+        self._circuit_threshold = 5          # 5 consecutive logical failures trip breaker
+        self._circuit_reset_timeout = 15.0   # 15s cooldown
+
+        self._user_requests: Dict[str, List[float]] = defaultdict(list)
+        self._global_requests: List[float] = []
+
+    def _check_circuit_breaker(self) -> None:
+        now = time.time()
+        if now < self._circuit_open_until:
+            wait_time = int(self._circuit_open_until - now)
+            raise CopilotCircuitBreakerOpen(
+                f"Gemma model circuit breaker is OPEN due to repeated errors. Cooling down ({wait_time}s remaining)."
+            )
+
+    async def generate(
+        self,
+        contents: List[Dict[str, Any]],
+        system_instruction: Optional[str] = None,
+        tools: Optional[List[Dict[str, Any]]] = None,
+        user_id: str = "anonymous",
+    ) -> Dict[str, Any]:
+        self._check_rate_limits(user_id)
+        self._check_circuit_breaker()
+
+        api_key = self.settings.get_effective_gemini_key()
+        primary_model = self.settings.COPILOT_MODEL
+        if not primary_model.startswith("models/"):
+            primary_model = f"models/{primary_model}"
+
+        # Candidate model chain for zero-downtime fallback
+        candidate_models = [primary_model]
+        if "flash" not in primary_model:
+            candidate_models.append("models/gemini-flash-lite-latest")
+
+        payload = {
+            "contents": contents,
+            "generationConfig": {"temperature": 0.0, "maxOutputTokens": 2048},
+        }
+        if system_instruction:
+            payload["systemInstruction"] = {"parts": [{"text": system_instruction}]}
+        if tools:
+            payload["tools"] = tools
+
+        headers = {
+            "X-goog-api-key": api_key,
+            "Content-Type": "application/json",
+            "Connection": "keep-alive",
+        }
+        client_timeout = httpx.Timeout(connect=15.0, read=60.0, write=15.0, pool=15.0)
+
+        for cur_model in candidate_models:
+            url = f"https://generativelanguage.googleapis.com/v1beta/{cur_model}:generateContent"
+            for attempt in range(3):
+                try:
+                    async with httpx.AsyncClient(timeout=client_timeout) as client:
+                        resp = await client.post(url, json=payload, headers=headers)
+                        if resp.status_code == 200:
+                            self._record_success()
+                            return resp.json()
+                        if resp.status_code in (429, 500, 502, 503, 504) and attempt < 2:
+                            await asyncio.sleep((2 ** attempt) * 0.5)
+                            continue
+                        if resp.status_code in (404, 500, 502, 503) and cur_model != candidate_models[-1]:
+                            break  # Fall back to next model
+                        raise RuntimeError(f"Gemma API returned HTTP {resp.status_code}: {resp.text[:200]}")
+                except Exception as exc:
+                    if attempt < 2:
+                        await asyncio.sleep(1.0)
+                        continue
+                    if cur_model != candidate_models[-1]:
+                        break
+                    self._record_failure()
+                    raise RuntimeError(f"GemmaClient error: {exc}") from None
+```
+
+##### 2. Intelligent Query Fallback & District Extraction (`backend/src/eureka/copilot/tools.py`)
+Enables bilingual regex extraction across all 36 Maharashtra districts and maps query intent to the correct analytical tool even during total cloud disconnects:
+
+```python
+def extract_district_from_query(query: str) -> Optional[str]:
+    """Extract official district code from conversational query in Marathi, English, or MH-XX code."""
+    if not query:
+        return None
+    import re
+    q_lower = query.lower()
+
+    # 1. Direct regex match for MH-XX or MHXX
+    mh_match = re.search(r'\b(MH-?\d{1,2})\b', query, re.IGNORECASE)
+    if mh_match:
+        code = mh_match.group(1).upper()
+        if not code.startswith("MH-"):
+            code = f"MH-{code[2:]}"
+        parts = code.split("-")
+        if len(parts) == 2 and len(parts[1]) == 1:
+            code = f"MH-0{parts[1]}"
+        return code
+
+    # 2. Check 36 districts by English and Marathi names
+    try:
+        res = tool_query_all_36_districts(include_metrics=False)
+        for d in res.get("districts", []):
+            name_en = d.get("name_en", "").lower()
+            name_mr = d.get("name_mr", "")
+            code = d.get("district_code", "")
+            if name_en and re.search(r'\b' + re.escape(name_en) + r'\b', q_lower):
+                return code
+            if name_mr and name_mr in query:
+                return code
+    except Exception:
+        pass
+    return None
+```
+
+##### 3. Multi-Turn Function Calling & SSE Streaming Engine (`backend/src/eureka/copilot/router.py`)
+Handles the critical protocol requirement for Google AI Studio (`role: "user"` for function responses) and streams chunks to the client:
+
+```python
+@router.post("/query", summary="Execute Open UI Copilot Query with SSE Streaming")
+async def copilot_query(
+    payload: CopilotQueryRequest,
+    current_user: TokenData = Depends(get_current_user),
+):
+    principal = CopilotPrincipal(
+        username=current_user.username,
+        role=current_user.role.value if hasattr(current_user.role, "value") else str(current_user.role),
+        district_code=current_user.district_code,
+    )
+
+    async def event_generator() -> AsyncGenerator[str, None]:
+        user_query = payload.query.strip()
+        lang = payload.language if payload.language in ("mr", "hi", "en") else detect_language(user_query)
+
+        yield f"event: status\ndata: {json.dumps({'step': 'init', 'message': 'Processing query...', 'language': lang})}\n\n"
+
+        # Multi-Turn Function Calling Loop
+        contents = [{"role": "user", "parts": [{"text": user_query}]}]
+        while turn_count < 4:
+            turn_count += 1
+            response = await _gemma_client.generate(contents=contents, system_instruction=sys_prompt, tools=tool_declarations)
+            parts = response.get("candidates", [{}])[0].get("content", {}).get("parts", [])
+            fn_part = next((p for p in parts if "functionCall" in p), None)
+
+            if fn_part:
+                fn_name = fn_part["functionCall"]["name"]
+                fn_args = fn_part["functionCall"].get("args", {})
+                arg_model, fn_impl = COPILOT_TOOLS_MAP[fn_name]
+                tool_out = fn_impl(principal, arg_model(**fn_args))
+
+                contents.append({"role": "model", "parts": parts})
+                # CRITICAL: Google AI Studio v1beta requires role "user" for function responses
+                contents.append({
+                    "role": "user",
+                    "parts": [{"functionResponse": {"name": fn_name, "response": tool_out}}],
+                })
+                continue
+
+            text_parts = [p["text"] for p in parts if "text" in p and not p.get("thought", False)]
+            if text_parts:
+                final_markup = "\n".join(text_parts).strip()
+                break
+
+        # Validate Numerical Grounding
+        is_valid, errors = validate_openui_output(final_markup, executed_tools_data)
+        if not is_valid:
+            # Trigger 1-shot repair or fallback ViewSpec
+            ...
+
+        # Stream progressive OpenUI Lang chunks (64 bytes, 15ms delay)
+        for i in range(0, len(final_markup), 64):
+            yield f"event: chunk\ndata: {json.dumps({'text': final_markup[i:i+64]})}\n\n"
+            await asyncio.sleep(0.015)
+
+        # Done event
+        yield f"event: done\ndata: {json.dumps(done_payload)}\n\n"
+
+    return StreamingResponse(event_generator(), media_type="text/event-stream")
+```
+
+##### 4. Number Grounding & GIGW 3.0 Accessibility Validator (`backend/src/eureka/copilot/openui_generator.py`)
+Extracts every number in the generated OpenUI Lang and verifies it against the tool execution outputs:
+
+```python
+ALLOWED_COMPONENTS = {
+    "Stack", "KpiCard", "DataTable", "BarChart", "LineChart", "GraphView", "Callout", "Heading", "Text"
+}
+
+def validate_openui_output(markup: str, tool_results: List[Dict[str, Any]]) -> Tuple[bool, List[str]]:
+    """Strictly validate OpenUI Lang against component allowlist and ground numbers against tool data."""
+    errors = []
+    if not markup or not markup.strip():
+        return False, ["Output is completely empty."]
+
+    # 1. Check for disallowed HTML tags
+    if re.search(r'<\s*(?:script|iframe|object|embed|style|a\s+href|img\s+src)', markup, re.IGNORECASE):
+        return False, ["Output contains forbidden HTML tags."]
+
+    # 2. Check component tags against allowlist
+    tag_matches = re.findall(r'<\s*([A-Z][a-zA-Z0-9]+)', markup)
+    for tag in tag_matches:
+        if tag not in ALLOWED_COMPONENTS:
+            errors.append(f"UNKNOWN_COMPONENT: Tag '<{tag}>' is not permitted.")
+
+    # 3. Ground every numerical literal against tool data
+    allowed_numbers = set()
+    for res in tool_results:
+        allowed_numbers.update(extract_all_numbers(res.get("data", {})))
+    # Include standard pillar scaling limits
+    allowed_numbers.update({0.0, 1.0, 20.0, 25.0, 30.0, 45.0, 90.0, 100.0})
+
+    markup_numbers = extract_numbers_from_openui(markup)
+    for num in markup_numbers:
+        if not any(abs(num - allowed) < 0.05 for allowed in allowed_numbers):
+            errors.append(f"FABRICATED_NUMBER: Literal '{num}' was not found in tool data.")
+
+    return len(errors) == 0, errors
+```
+
+##### 5. Front-End Live OpenUI Renderer & Accessibility Dispatcher (`frontend/MCC/src/components/copilot/CopilotDrawer.tsx`)
+Parses the streaming OpenUI Lang and hydrates rich React components in real time:
+
+```tsx
+// Frontend ViewSpec vs. Live OpenUI Lang switch
+{msg.fallback && msg.viewSpec && msg.viewSpec.components ? (
+  <div className="space-y-3">
+    {msg.viewSpec.components.map((c: any, idx: number) => {
+      if (c.component === 'Heading') return <Heading key={idx} level={c.level} text={c.text} />;
+      if (c.component === 'Callout') return <Callout key={idx} type={c.type} message={c.message} />;
+      if (c.component === 'KpiCard') return <KpiCard key={idx} title={c.title} value={c.value} unit={c.unit} status={c.status} />;
+      if (c.component === 'DataTable') return <DataTable key={idx} columns={c.columns} rows={c.rows} caption={c.caption} />;
+      if (c.component === 'BarChart') return (
+        <BarChart key={idx} title={c.title} xKey={c.x_key} yKey={c.y_key} data={c.data}>
+          <Text content={c.text_summary} />
+        </BarChart>
+      );
+      return null;
+    })}
+  </div>
+) : (
+  renderFallbackMarkupOrText(msg.content)
+)}
+```
+
+---
+
+#### 4.5 Security, Privacy & Compliance Matrix
+
+| Security Parameter | Architecture Standard | Technical Enforcement Mechanism |
+| :--- | :--- | :--- |
+| **API Key Isolation** | Zero Secret Leakage | Enforced via `test_key_isolation_grep_codebase()`. `OPENUI_COPILOT_GEMINI_API_KEY` and `THESYS_API_KEY` can only exist in `eureka/copilot/`. |
+| **User Privacy & Memory** | HMAC-SHA256 Pseudonymization | User IDs are hashed before storage in Qdrant (`hmac.new(secret, user_id, sha256).hexdigest()`). No plain-text identities stored. |
+| **Right to be Forgotten** | Statutory Compliance | `DELETE /api/v1/copilot/memory` permanently purges all vector preferences for the authenticated officer. |
+| **Prompt Injection Defense** | Passive Data Encapsulation | Tool outputs are serialized under `{"data": ...}` objects. Prompts explicitly instruct the LLM to treat tool text as raw data, never instructions. |
+| **Accessibility Standard** | GIGW 3.0 & UX4G Compliance | Every chart (`BarChart`, `LineChart`, `GraphView`) must include a nested screen-reader summary `<Text>` and tabular alternative `<DataTable>`. |
+
 
 
 
