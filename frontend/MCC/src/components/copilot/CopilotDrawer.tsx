@@ -438,8 +438,8 @@ export const CopilotDrawer: React.FC = () => {
           )}
         </div>
 
-        {/* ViewSpec Render if Available, else Fallback markup/markdown parser */}
-        {msg.viewSpec && msg.viewSpec.components ? (
+        {/* ViewSpec Render if Fallback, else Live OpenUI Lang markup parser */}
+        {msg.fallback && msg.viewSpec && msg.viewSpec.components ? (
           <div className="space-y-3">
             {msg.viewSpec.components.map((c: any, idx: number) => {
               if (c.component === 'Heading') return <Heading key={idx} level={c.level} text={c.text} />;

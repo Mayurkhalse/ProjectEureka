@@ -55,6 +55,40 @@ def normalize_district_code(code_or_name: str) -> Optional[str]:
     return None
 
 
+def extract_district_from_query(query: str) -> Optional[str]:
+    """Extract district code from a conversational query in Marathi, English, or MH-XX code format."""
+    if not query:
+        return None
+    import re
+    q_lower = query.lower()
+
+    # 1. Direct regex for MH-XX or MHXX
+    mh_match = re.search(r'\b(MH-?\d{1,2})\b', query, re.IGNORECASE)
+    if mh_match:
+        code = mh_match.group(1).upper()
+        if not code.startswith("MH-"):
+            code = f"MH-{code[2:]}"
+        parts = code.split("-")
+        if len(parts) == 2 and len(parts[1]) == 1:
+            code = f"MH-0{parts[1]}"
+        return code
+
+    # 2. Check 36 districts by English and Marathi names
+    try:
+        res = tool_query_all_36_districts(include_metrics=False)
+        for d in res.get("districts", []):
+            name_en = d.get("name_en", "").lower()
+            name_mr = d.get("name_mr", "")
+            code = d.get("district_code", "")
+            if name_en and re.search(r'\b' + re.escape(name_en) + r'\b', q_lower):
+                return code
+            if name_mr and name_mr in query:
+                return code
+    except Exception:
+        pass
+    return None
+
+
 def verify_district_authorization(principal: CopilotPrincipal, district_code: str) -> Optional[str]:
     """Verify if the authenticated principal is authorized to view data for the requested district.
     
@@ -62,8 +96,8 @@ def verify_district_authorization(principal: CopilotPrincipal, district_code: st
     """
     role = principal.role.lower()
 
-    # State Admin & Cabinet Observer have statewide access
-    if any(k in role for k in ["admin", "observer", "dg_admin", "director general"]):
+    # State Admin, State Director, & Cabinet Observer have statewide access
+    if any(k in role for k in ["admin", "observer", "dg_admin", "director general", "state_director", "state director"]):
         return None
 
     # District Collector & DIO Desk are strictly bound to their assigned district

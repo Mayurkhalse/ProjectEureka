@@ -12,9 +12,10 @@ import asyncio
 from datetime import datetime, timezone
 import json
 import logging
+import re
 import time
 import uuid
-from typing import Any, AsyncGenerator, Dict, List, Optional
+from typing import Any, AsyncGenerator, Dict, List, Optional, Tuple
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import StreamingResponse
@@ -36,6 +37,11 @@ from eureka.copilot.tools import (
     get_copilot_function_declarations,
     tool_league_table,
     LeagueTableArgs,
+    tool_district_profile,
+    DistrictProfileArgs,
+    tool_active_rumors,
+    ActiveRumorsArgs,
+    extract_district_from_query,
 )
 from eureka.copilot.viewspec import ViewSpec, ViewSpecBuilder
 
@@ -56,6 +62,36 @@ class CopilotFeedbackRequest(BaseModel):
     run_id: Optional[uuid.UUID] = Field(default=None, description="Agent run ID being evaluated")
     rating: str = Field(description="thumbs_up or thumbs_down")
     reason: Optional[str] = Field(default=None, description="Optional text feedback")
+
+
+def _resolve_fallback_tool_and_data(user_query: str, principal: CopilotPrincipal) -> Tuple[str, Dict[str, Any]]:
+    """Intelligently determine the most relevant tool to invoke for the user query during fallback."""
+    district_code = extract_district_from_query(user_query)
+    q_lower = user_query.lower()
+    is_rumor_query = any(w in q_lower for w in ["rumor", "rumour", "fake", "claim", "crisis", "sla", "ticket", "fact-check", "अफवा"])
+
+    if district_code:
+        if is_rumor_query:
+            try:
+                data = tool_active_rumors(principal, ActiveRumorsArgs(district_code=district_code))
+                return "active_rumors", data
+            except Exception as e:
+                logger.warning("Fallback active_rumors failed: %s", e)
+        try:
+            data = tool_district_profile(principal, DistrictProfileArgs(district_code=district_code))
+            return "district_profile", data
+        except Exception as e:
+            logger.warning("Fallback district_profile failed: %s", e)
+    elif is_rumor_query:
+        try:
+            data = tool_active_rumors(principal, ActiveRumorsArgs())
+            return "active_rumors", data
+        except Exception as e:
+            logger.warning("Fallback statewide active_rumors failed: %s", e)
+
+    # Default fallback: statewide league table
+    data = tool_league_table(principal, LeagueTableArgs())
+    return "league_table", data
 
 
 @router.post("/query", summary="Execute Open UI Copilot Query with SSE Streaming")
@@ -172,7 +208,7 @@ async def copilot_query(
                         "parts": parts,
                     })
                     contents.append({
-                        "role": "function",
+                        "role": "user",
                         "parts": [{
                             "functionResponse": {
                                 "name": fn_name,
@@ -188,20 +224,25 @@ async def copilot_query(
                     text_parts = [p["text"] for p in parts if "text" in p]
 
                 if text_parts:
-                    final_markup = "\n".join(text_parts).strip()
+                    raw_text = "\n".join(text_parts).strip()
+                    component_match = re.search(r'<(?:Stack|Heading|KpiCard|Callout|DataTable|BarChart|LineChart|GraphView|Card|Text)\b', raw_text)
+                    if component_match and component_match.start() > 0:
+                        final_markup = raw_text[component_match.start():].strip()
+                    else:
+                        final_markup = raw_text
                     break
 
-            # If no tools were called, default to league_table query scoped to caller
+            # If no tools were called, resolve fallback tool scoped to caller query
             if not executed_tools_data:
-                default_res = tool_league_table(principal, LeagueTableArgs())
+                fallback_tool_name, default_res = _resolve_fallback_tool_and_data(user_query, principal)
                 executed_tools_data.append(default_res)
                 executed_tool_calls_audit.append({
-                    "tool_name": "league_table",
-                    "tool_args": {},
+                    "tool_name": fallback_tool_name,
+                    "tool_args": {"query_resolved": True},
                     "tool_status": "success",
                     "duration_ms": 10,
                 })
-                tools_called_names.append("league_table")
+                tools_called_names.append(fallback_tool_name)
 
             # 4. Validate Generated OpenUI Lang
             is_valid, val_errors = validate_openui_output(final_markup, executed_tools_data)
@@ -228,7 +269,12 @@ async def copilot_query(
                     repair_text_parts = [p["text"] for p in repair_parts if "text" in p and not p.get("thought", False)]
                     if not repair_text_parts:
                         repair_text_parts = [p["text"] for p in repair_parts if "text" in p]
-                    repair_text = "\n".join(repair_text_parts).strip()
+                    raw_rep = "\n".join(repair_text_parts).strip()
+                    comp_rep = re.search(r'<(?:Stack|Heading|KpiCard|Callout|DataTable|BarChart|LineChart|GraphView|Card|Text)\b', raw_rep)
+                    if comp_rep and comp_rep.start() > 0:
+                        repair_text = raw_rep[comp_rep.start():].strip()
+                    else:
+                        repair_text = raw_rep
                     rep_valid, rep_errors = validate_openui_output(repair_text, executed_tools_data)
                     if rep_valid:
                         final_markup = repair_text
@@ -248,8 +294,9 @@ async def copilot_query(
             validation_result = "fallback"
             if not executed_tools_data:
                 try:
-                    executed_tools_data.append(tool_league_table(principal, LeagueTableArgs()))
-                    tools_called_names.append("league_table")
+                    fallback_tool_name, default_res = _resolve_fallback_tool_and_data(user_query, principal)
+                    executed_tools_data.append(default_res)
+                    tools_called_names.append(fallback_tool_name)
                 except Exception as t_err:
                     logger.error("Fallback tool execution error: %s", t_err)
 
@@ -314,7 +361,7 @@ async def copilot_query(
                 "machine_generated": True,
                 "source_status": primary_data.get("source_status", "live") if isinstance(primary_data, dict) else "live",
                 "latency_ms": total_latency,
-                "view_spec": final_view_spec.model_dump() if hasattr(final_view_spec, "model_dump") else {},
+                "view_spec": final_view_spec.model_dump() if (fallback_used and hasattr(final_view_spec, "model_dump")) else None,
             }
             yield f"event: done\ndata: {json.dumps(done_payload)}\n\n"
         except Exception as done_err:

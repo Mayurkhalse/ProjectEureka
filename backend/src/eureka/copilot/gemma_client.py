@@ -56,8 +56,8 @@ class GemmaClient:
         # Circuit breaker state
         self._consecutive_failures = 0
         self._circuit_open_until = 0.0
-        self._circuit_threshold = 3
-        self._circuit_reset_timeout = 30.0  # seconds
+        self._circuit_threshold = 5
+        self._circuit_reset_timeout = 15.0  # seconds
 
         # Sliding window rate limiters (timestamps)
         self._user_requests: Dict[str, List[float]] = defaultdict(list)
@@ -122,11 +122,9 @@ class GemmaClient:
         if not api_key:
             raise CopilotSecurityException("OPENUI_COPILOT_GEMINI_API_KEY is not configured.")
 
-        model_name = self.settings.COPILOT_MODEL
-        if not model_name.startswith("models/"):
-            model_name = f"models/{model_name}"
-
-        url = f"https://generativelanguage.googleapis.com/v1beta/{model_name}:generateContent"
+        primary_model = self.settings.COPILOT_MODEL
+        if not primary_model.startswith("models/"):
+            primary_model = f"models/{primary_model}"
 
         # Build request body
         payload: Dict[str, Any] = {
@@ -158,44 +156,56 @@ class GemmaClient:
             pool=15.0,
         )
 
+        candidate_models = [primary_model]
+        if "flash" not in primary_model:
+            candidate_models.append("models/gemini-flash-lite-latest")
+
         max_retries = 2
         last_error = None
 
-        for attempt in range(max_retries + 1):
-            try:
-                async with httpx.AsyncClient(timeout=client_timeout) as client:
-                    resp = await client.post(url, json=payload, headers=headers)
-                    
-                    if resp.status_code == 200:
-                        self._record_success()
-                        return resp.json()
-                    
-                    # Handle rate limit (429) or transient server error (500/503)
-                    if resp.status_code in (429, 500, 502, 503, 504) and attempt < max_retries:
-                        backoff = (2 ** attempt) * 0.5
-                        logger.warning("Gemma API returned status %d. Retrying in %.1fs...", resp.status_code, backoff)
-                        await asyncio.sleep(backoff)
+        for cur_model in candidate_models:
+            url = f"https://generativelanguage.googleapis.com/v1beta/{cur_model}:generateContent"
+            for attempt in range(max_retries + 1):
+                try:
+                    async with httpx.AsyncClient(timeout=client_timeout) as client:
+                        resp = await client.post(url, json=payload, headers=headers)
+                        
+                        if resp.status_code == 200:
+                            self._record_success()
+                            return resp.json()
+                        
+                        # Handle rate limit (429) or transient server error (500/503)
+                        if resp.status_code in (429, 500, 502, 503, 504) and attempt < max_retries:
+                            backoff = (2 ** attempt) * 0.5
+                            logger.warning("%s returned HTTP %d. Retrying in %.1fs...", cur_model, resp.status_code, backoff)
+                            await asyncio.sleep(backoff)
+                            continue
+
+                        # If status is 500 or 404 and there's a fallback candidate, try fallback
+                        if resp.status_code in (404, 500, 502, 503) and cur_model != candidate_models[-1]:
+                            logger.warning("%s returned HTTP %d. Trying fallback model %s...", cur_model, resp.status_code, candidate_models[-1])
+                            break
+
+                        err_msg = redact_secrets(resp.text)
+                        raise RuntimeError(f"Gemma API returned HTTP {resp.status_code}: {err_msg[:200]}")
+
+                except httpx.TimeoutException as exc:
+                    last_error = exc
+                    if attempt < max_retries:
+                        await asyncio.sleep(1.0)
                         continue
+                    if cur_model != candidate_models[-1]:
+                        break
+                    raise TimeoutError("Gemma API timed out after retry bounds.") from None
+                except Exception as exc:
+                    last_error = exc
+                    if attempt < max_retries and not isinstance(exc, (CopilotSecurityException, CopilotCircuitBreakerOpen)):
+                        await asyncio.sleep(1.0)
+                        continue
+                    if cur_model != candidate_models[-1]:
+                        break
+                    clean_msg = redact_secrets(str(exc))
+                    raise RuntimeError(f"GemmaClient error: {clean_msg}") from None
 
-                    # Non-retryable error
-                    err_msg = redact_secrets(resp.text)
-                    self._record_failure()
-                    raise RuntimeError(f"Gemma API returned HTTP {resp.status_code}: {err_msg[:200]}")
-
-            except httpx.TimeoutException as exc:
-                last_error = exc
-                if attempt < max_retries:
-                    await asyncio.sleep(1.0)
-                    continue
-                self._record_failure()
-                raise TimeoutError("Gemma API timed out after retry bounds.") from None
-            except Exception as exc:
-                last_error = exc
-                if attempt < max_retries and not isinstance(exc, (CopilotSecurityException, CopilotCircuitBreakerOpen)):
-                    await asyncio.sleep(1.0)
-                    continue
-                self._record_failure()
-                clean_msg = redact_secrets(str(exc))
-                raise RuntimeError(f"GemmaClient error: {clean_msg}") from None
-
-        raise RuntimeError(f"GemmaClient failed after {max_retries} retries: {redact_secrets(str(last_error))}")
+        self._record_failure()
+        raise RuntimeError(f"GemmaClient failed after retry attempts: {redact_secrets(str(last_error))}")
