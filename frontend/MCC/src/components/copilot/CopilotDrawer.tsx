@@ -24,6 +24,7 @@ interface Message {
   sourceStatus?: 'live' | 'demo' | 'unavailable';
   asOf?: string;
   fallback?: boolean;
+  engine?: string;
   runId?: string;
   modelId?: string;
   toolCalls?: Array<{ tool: string; args: any }>;
@@ -228,6 +229,7 @@ export const CopilotDrawer: React.FC = () => {
                           sourceStatus: payload.source_status || 'live',
                           asOf: payload.as_of,
                           fallback: payload.fallback,
+                          engine: payload.engine,
                           modelId: payload.model_id,
                           viewSpec: payload.view_spec,
                         }
@@ -430,6 +432,11 @@ export const CopilotDrawer: React.FC = () => {
                 Deterministic ViewSpec Fallback
               </span>
             )}
+            {msg.engine === 'c1' && (
+              <span className="bg-purple-100 text-purple-800 border border-purple-200 px-1.5 py-0.5 rounded text-[10px] font-semibold">
+                Thesys C1 UI
+              </span>
+            )}
           </div>
           {msg.asOf && (
             <span className="text-[10px] text-slate-400 font-mono">
@@ -571,7 +578,7 @@ export const CopilotDrawer: React.FC = () => {
                   <h3 className="text-xs font-bold tracking-tight text-white flex items-center gap-2">
                     <span>DGIPR OpenUI Copilot</span>
                     <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30">
-                      Gemma-4-26B
+                      {messages.slice().reverse().find((m) => m.modelId)?.modelId?.replace('models/', '') || 'gemma-4-26b'}
                     </span>
                   </h3>
                   <p className="text-[11px] text-slate-400">

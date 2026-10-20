@@ -20,10 +20,22 @@ class CopilotSettings(BaseSettings):
     )
 
     COPILOT_ENABLED: bool = Field(default=False, description="Master feature toggle for Open UI Copilot")
+    COPILOT_UI_ENGINE: str = Field(
+        default="deterministic",
+        description="Generative UI engine: 'deterministic' (ViewSpec) or 'c1' (Thesys C1)",
+    )
     COPILOT_MODEL: str = Field(
         default="models/gemma-4-26b-a4b-it",
         validation_alias=AliasChoices("COPILOT_MODEL", "GEMMA_MODEL_ID"),
         description="Google Gemma model identifier"
+    )
+    C1_MODEL_ID: str = Field(
+        default="c1-20250416",
+        description="Thesys C1 model ID (verified stable)",
+    )
+    C1_BASE_URL: str = Field(
+        default="https://api.thesys.dev/v1/embed",
+        description="Thesys C1 OpenAI-compatible endpoint",
     )
     COPILOT_EMBED_MODEL: str = Field(default="thesys-embed", description="Thesys embedding model identifier")
     COPILOT_MEMORY_ENABLED: bool = Field(default=False, description="Enable Mem0 long-term user memory")
@@ -54,11 +66,10 @@ class CopilotSettings(BaseSettings):
     )
 
     def get_effective_gemini_key(self) -> Optional[str]:
-        """Return the copilot Gemini key, falling back to GOOGLE_STUDIO_API_KEY if unset in dev."""
+        """Return the copilot Gemini key, isolated strictly to copilot and dev studio keys."""
         if self.OPENUI_COPILOT_GEMINI_API_KEY:
             return self.OPENUI_COPILOT_GEMINI_API_KEY
-        # Fallback to general studio key if set in environment (for seamless dev/test runs)
-        return os.getenv("GOOGLE_STUDIO_API_KEY") or os.getenv("GEMINI_API_KEY")
+        return os.getenv("GOOGLE_STUDIO_API_KEY")
 
 
 @lru_cache(maxsize=1)

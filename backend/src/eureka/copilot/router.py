@@ -24,6 +24,7 @@ from pydantic import BaseModel, Field
 from eureka.api.auth import TokenData, get_current_user
 from eureka.copilot.audit import compute_prompt_version_hash, record_agent_run, record_copilot_feedback
 from eureka.copilot.config import get_copilot_settings
+from eureka.copilot.c1_client import C1Client
 from eureka.copilot.gemma_client import GemmaClient
 from eureka.copilot.memory import get_memory_manager
 from eureka.copilot.openui_generator import (
@@ -260,10 +261,31 @@ async def copilot_query(
                 })
                 tools_called_names.append(fallback_tool_name)
 
+            # 3.5 Thesys C1 Engine Option
+            if settings.COPILOT_UI_ENGINE == "c1":
+                yield f"event: status\ndata: {json.dumps({'step': 'c1', 'message': 'Generating presentation via Thesys C1 engine...'})}\n\n"
+                t_c1_start = time.time()
+                primary_t = tools_called_names[0] if tools_called_names else "league_table"
+                primary_d = executed_tools_data[0] if executed_tools_data else {}
+                try:
+                    c1_client = C1Client()
+                    c1_out = await c1_client.generate_ui(primary_t, primary_d, user_query, language=lang)
+                    c1_time_ms = round((time.time() - t_c1_start) * 1000, 2)
+                    final_markup = c1_out
+                except Exception as c1_err:
+                    c1_time_ms = round((time.time() - t_c1_start) * 1000, 2)
+                    logger.warning("Thesys C1 failed: %s. Falling back to deterministic ViewSpec.", c1_err)
+                    fallback_used = True
+                    validation_result = "fallback"
+
             # 4. Validate Generated OpenUI Lang
-            t_val_start = time.time()
-            is_valid, val_errors = validate_openui_output(final_markup, executed_tools_data)
-            validation_time_ms += (time.time() - t_val_start) * 1000
+            if not fallback_used:
+                t_val_start = time.time()
+                is_valid, val_errors = validate_openui_output(final_markup, executed_tools_data)
+                validation_time_ms += (time.time() - t_val_start) * 1000
+            else:
+                is_valid = False
+                val_errors = ["C1 fallback active"]
 
             if not is_valid:
                 logger.info("OpenUI markup failed initial validation: %s. Attempting 1 repair...", val_errors)
@@ -405,7 +427,8 @@ async def copilot_query(
                 "validation_status": validation_result,
                 "fallback": fallback_used,
                 "as_of": primary_data.get("as_of", datetime.now(timezone.utc).isoformat()) if isinstance(primary_data, dict) else datetime.now(timezone.utc).isoformat(),
-                "model_id": settings.COPILOT_MODEL,
+                "engine": "c1" if (settings.COPILOT_UI_ENGINE == "c1" and not fallback_used) else ("deterministic" if fallback_used else "markup"),
+                "model_id": settings.C1_MODEL_ID if (settings.COPILOT_UI_ENGINE == "c1" and not fallback_used) else settings.COPILOT_MODEL,
                 "machine_generated": True,
                 "source_status": primary_data.get("source_status", "live") if isinstance(primary_data, dict) else "live",
                 "latency_ms": total_latency,
