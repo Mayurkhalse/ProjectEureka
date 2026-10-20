@@ -43,8 +43,10 @@ from eureka.copilot.tools import (
     tool_active_rumors,
     ActiveRumorsArgs,
     extract_district_from_query,
+    get_source_status,
 )
 from eureka.copilot.viewspec import ViewSpec, ViewSpecBuilder
+from eureka.copilot.intent_router import match_fast_path
 
 logger = logging.getLogger("eureka.copilot.router")
 
@@ -136,7 +138,10 @@ async def copilot_query(
         # 2. Retrieve Mem0 Preferences (Bounded 800ms fail-open)
         mem_mgr = get_memory_manager()
         t_mem_start = time.time()
-        preferences = await mem_mgr.search_preferences(principal.username, user_query)
+        try:
+            preferences = await asyncio.wait_for(mem_mgr.search_preferences(principal.username, user_query), timeout=0.300)
+        except Exception:
+            preferences = []
         memory_time_ms = max(0.1, round((time.time() - t_mem_start) * 1000, 2))
         if preferences:
             yield f"event: status\ndata: {json.dumps({'step': 'memory', 'message': f'Retrieved {len(preferences)} presentation preference(s).'})}\n\n"
@@ -153,16 +158,86 @@ async def copilot_query(
         tools_called_names: List[str] = []
 
         validation_result = "valid"
+        fast_path_used = False
         fallback_used = False
         final_markup = ""
         final_view_spec = None
 
+        t_intent_start = time.time()
+        fast_match = match_fast_path(user_query, principal)
+        intent_routing_time_ms = max(0.1, round((time.time() - t_intent_start) * 1000, 2))
+
+        if fast_match:
+            f_tool, f_args, f_data = fast_match
+            fast_path_used = True
+            fallback_used = True
+            tools_called_names.append(f_tool)
+            executed_tools_data.append(f_data)
+            executed_tool_calls_audit.append({
+                "tool_name": f_tool,
+                "tool_args": f_args,
+                "tool_status": "success" if "error" not in f_data else "error",
+                "duration_ms": 1,
+            })
+            yield f"event: status\ndata: {json.dumps({'step': 'tool_call', 'tool': f_tool, 'args': f_args, 'provenance': 'fast_path'})}\n\n"
+
+            final_view_spec = ViewSpecBuilder.build_from_tool_result(f_tool, f_data, fallback=True)
+            final_markup = final_view_spec.to_openui_lang()
+            if first_byte_ms is None:
+                first_byte_ms = max(0.1, round((time.time() - start_time) * 1000, 2))
+            yield f"event: chunk\ndata: {json.dumps({'text': final_markup, 'provenance': 'fast_path'})}\n\n"
+
+            # 2d Background upgrade with 6s deadline
+            if settings.COPILOT_UI_ENGINE == "c1":
+                try:
+                    t_c1_start = time.time()
+                    c1_client = C1Client()
+                    c1_res = await asyncio.wait_for(
+                        c1_client.generate_ui(f_tool, f_data, user_query, language=lang),
+                        timeout=6.0,
+                    )
+                    c1_time_ms = round((time.time() - t_c1_start) * 1000, 2)
+                    if c1_res:
+                        final_markup = c1_res
+                        fallback_used = False
+                        yield f"event: chunk\ndata: {json.dumps({'text': final_markup, 'provenance': 'c1_upgrade', 'replace': True})}\n\n"
+                except Exception as c1_err:
+                    logger.info("C1 upgrade skipped or timed out: %s", c1_err)
+            else:
+                try:
+                    t_narrative_start = time.time()
+                    brief_data = json.dumps(f_data.get("data", {}))[:600]
+                    narrative_prompt = f"Provide a brief 2-sentence executive summary in {lang.upper()} for DGIPR officers regarding these governance findings: {brief_data}"
+                    upgrade_contents = [{"role": "user", "parts": [{"text": narrative_prompt}]}]
+                    upgrade_resp = await asyncio.wait_for(
+                        _gemma_client.generate(
+                            contents=upgrade_contents,
+                            system_instruction=sys_prompt,
+                            user_id=principal.username,
+                        ),
+                        timeout=6.0,
+                    )
+                    model_calls_ms += (time.time() - t_narrative_start) * 1000
+                    candidates = upgrade_resp.get("candidates", [])
+                    if candidates:
+                        parts = candidates[0].get("content", {}).get("parts", [])
+                        narrative_text = "".join(p.get("text", "") for p in parts if "text" in p).strip()
+                        if narrative_text:
+                            upgraded_markup = f"{final_markup}\n\n<Callout type=\"info\" message={json.dumps(narrative_text)} />"
+                            clean_upgraded, val_status = validate_openui_output(upgraded_markup, executed_tools_data)
+                            if val_status == "valid":
+                                final_markup = clean_upgraded
+                                yield f"event: chunk\ndata: {json.dumps({'text': final_markup, 'provenance': 'model_upgrade', 'replace': True})}\n\n"
+                except Exception as up_err:
+                    logger.info("Narrative upgrade skipped or timed out: %s", up_err)
+
         try:
             # First turn: Ask model for tool calls
-            yield f"event: status\ndata: {json.dumps({'step': 'analyzing', 'message': 'Consulting DGIPR analytical data services...'})}\n\n"
+            if not fast_path_used:
+                yield f"event: status\ndata: {json.dumps({'step': 'analyzing', 'message': 'Consulting DGIPR analytical data services...'})}\n\n"
 
             turn_count = 0
-            max_turns = 4
+            max_turns = 0 if fast_path_used else 4
 
             while turn_count < max_turns:
                 turn_count += 1
@@ -366,11 +441,12 @@ async def copilot_query(
 
         # 6. Stream OpenUI Lang Chunk by Chunk
         try:
-            chunk_size = 64
+            chunk_size = 65536
             for i in range(0, len(final_markup), chunk_size):
                 chunk = final_markup[i:i+chunk_size]
-                yield f"event: chunk\ndata: {json.dumps({'text': chunk})}\n\n"
-                await asyncio.sleep(0.015)
+                if not fast_path_used:
+                    yield f"event: chunk\ndata: {json.dumps({'text': chunk})}\n\n"
+                pass
         except Exception as chunk_err:
             logger.error("Error streaming chunk: %s", chunk_err)
 

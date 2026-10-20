@@ -13,8 +13,8 @@ export interface DistrictMeta {
 export const MAHARASHTRA_DISTRICT_META: Record<string, DistrictMeta> = {
   'mumbai city': { code: 'MH-01', nameMr: 'मुंबई शहर', division: 'Konkan', id: 'mumbai-city' },
   'mumbai suburban': { code: 'MH-02', nameMr: 'मुंबई उपनगर', division: 'Konkan', id: 'mumbai-suburban' },
-  'thane': { code: 'MH-03', nameMr: 'ठाणे', division: 'Konkan', id: 'thane' },
-  'palghar': { code: 'MH-04', nameMr: 'पालघर', division: 'Konkan', id: 'palghar' },
+  'thane': { code: 'MH-04', nameMr: 'ठाणे', division: 'Konkan', id: 'thane' },
+  'palghar': { code: 'MH-03', nameMr: 'पालघर', division: 'Konkan', id: 'palghar' },
   'raigad': { code: 'MH-05', nameMr: 'रायगड', division: 'Konkan', id: 'raigad' },
   'ratnagiri': { code: 'MH-06', nameMr: 'रत्नागिरी', division: 'Konkan', id: 'ratnagiri' },
   'sindhudurg': { code: 'MH-07', nameMr: 'सिंधुदुर्ग', division: 'Konkan', id: 'sindhudurg' },

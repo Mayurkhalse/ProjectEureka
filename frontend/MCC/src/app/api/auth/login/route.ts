@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
     let backendToken: string | null = null;
     try {
       const backendRole = BACKEND_ROLE_MAP[matched.user.role] || 'DIO Desk';
-      const districtCode = matched.user.district === 'Palghar' ? 'MH-04' : (matched.user.district === 'Thane' ? 'MH-03' : 'MH-01');
+      const districtCode = matched.user.district === 'Thane' ? 'MH-04' : (matched.user.district === 'Palghar' ? 'MH-03' : 'MH-01');
       const backendRes = await fetch(`${FASTAPI_BACKEND_URL}/api/v1/auth/token`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

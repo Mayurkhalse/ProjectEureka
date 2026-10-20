@@ -4,6 +4,9 @@ import { verifyAuthToken } from '@/lib/jwt';
 import { MOCK_USERS } from '@/lib/serverData';
 import { SignJWT, jwtVerify } from 'jose';
 
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+
 const FASTAPI_JWT_SECRET = process.env.FASTAPI_JWT_SECRET || 'dgipr_maha_command_center_secret_2026_key';
 const encodedFastApiSecret = new TextEncoder().encode(FASTAPI_JWT_SECRET);
 
@@ -60,9 +63,9 @@ async function resolveBackendToken(request: NextRequest): Promise<string | null>
       const u = verified.payload.user;
       const role = BACKEND_ROLE_MAP[u.role] || 'DG State Admin';
       const districtCode =
-        u.district === 'Palghar'
+        u.district === 'Thane'
           ? 'MH-04'
-          : u.district === 'Thane'
+          : u.district === 'Palghar'
           ? 'MH-03'
           : 'MH-01';
 
@@ -81,7 +84,7 @@ async function resolveBackendToken(request: NextRequest): Promise<string | null>
         const role = BACKEND_ROLE_MAP[u.role] || 'DG State Admin';
         const districtCode =
           u.district === 'Palghar'
-            ? 'MH-04'
+            ? 'MH-03'
             : u.district === 'Thane'
             ? 'MH-03'
             : 'MH-01';
@@ -198,6 +201,7 @@ async function proxyToFastApi(
       responseHeaders.set('Content-Type', 'text/event-stream; charset=utf-8');
       responseHeaders.set('Cache-Control', 'no-cache, no-transform');
       responseHeaders.set('Connection', 'keep-alive');
+      responseHeaders.set('X-Accel-Buffering', 'no');
     }
 
     // Refresh browser cookie with valid backend token so expired cookies are replaced

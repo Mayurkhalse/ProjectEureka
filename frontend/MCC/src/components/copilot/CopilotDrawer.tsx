@@ -216,7 +216,7 @@ export const CopilotDrawer: React.FC = () => {
               } else if (eventType === 'chunk') {
                 setMessages((prev) =>
                   prev.map((m) =>
-                    m.id === assistantMsgId ? { ...m, content: m.content + payload.text } : m
+                    m.id === assistantMsgId ? { ...m, content: payload.replace ? payload.text : m.content + payload.text } : m
                   )
                 );
               } else if (eventType === 'done') {

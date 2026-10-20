@@ -176,12 +176,24 @@ def verify_district_authorization(principal: CopilotPrincipal, district_code: st
     return "Access Denied: Unrecognized role clearance."
 
 
-def build_tool_response(data: Any, status: str = "live") -> Dict[str, Any]:
+def get_source_status() -> str:
+    """Returns 'live' if PostgreSQL is reachable, else 'demo' for CSV/SQLite offline fallback."""
+    try:
+        from eureka.core.database import sync_db_context
+        from sqlalchemy import text
+        with sync_db_context() as session:
+            session.execute(text("SELECT 1"))
+            return "live"
+    except Exception:
+        return "demo"
+
+
+def build_tool_response(data: Any, status: Optional[str] = None) -> Dict[str, Any]:
     """Format standard tool response with timestamp and source status."""
     return {
         "data": data,
         "as_of": datetime.now(timezone.utc).isoformat(),
-        "source_status": status,
+        "source_status": status if status else get_source_status(),
     }
 
 

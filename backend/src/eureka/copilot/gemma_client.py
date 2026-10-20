@@ -170,7 +170,7 @@ class GemmaClient:
         if "flash" not in primary_model:
             candidate_models.append("models/gemini-flash-lite-latest")
 
-        max_retries = 2
+        max_retries = 1
         last_error = None
 
         for cur_model in candidate_models:

@@ -7,7 +7,11 @@ import { Sidebar } from './Sidebar';
 import { DashboardToolbar } from './DashboardToolbar';
 import { useDashboardStore } from '@/stores/dashboardStore';
 import { MaterialIcon } from '@/components/shared/MaterialIcon';
-import { CopilotDrawer } from '@/components/copilot/CopilotDrawer';
+import dynamic from 'next/dynamic';
+const CopilotDrawer = dynamic(
+  () => import('@/components/copilot/CopilotDrawer').then((mod) => mod.CopilotDrawer),
+  { ssr: false }
+);
 
 // Precision Skeletons for Route-Aware Initial Load
 import { DashboardPageSkeleton } from '@/components/skeletons/DashboardPageSkeleton';

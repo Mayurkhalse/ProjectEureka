@@ -116,14 +116,14 @@ def test_rbac_state_admin_access():
     
     # Statewide query succeeds
     table_res = tool_league_table(admin_principal, LeagueTableArgs())
-    assert table_res["source_status"] == "live"
+    assert table_res["source_status"] in ("live", "demo")
     data = table_res["data"]
     assert "districts" in data
     assert len(data["districts"]) > 0
     
     # Access any district profile succeeds
     profile_res = tool_district_profile(admin_principal, DistrictProfileArgs(district_code="MH-18"))
-    assert profile_res["source_status"] == "live"
+    assert profile_res["source_status"] in ("live", "demo")
     assert profile_res["data"]["district_code"] == "MH-18"
 
 
@@ -137,12 +137,12 @@ def test_rbac_collector_own_district():
     )
     
     profile_res = tool_district_profile(palghar_collector, DistrictProfileArgs(district_code="MH-18"))
-    assert profile_res["source_status"] == "live"
+    assert profile_res["source_status"] in ("live", "demo")
     assert profile_res["data"]["district_code"] == "MH-18"
     assert "pillars" in profile_res["data"]
     
     breakdown_res = tool_pillar_breakdown(palghar_collector, PillarBreakdownArgs(district_code="MH-18"))
-    assert breakdown_res["source_status"] == "live"
+    assert breakdown_res["source_status"] in ("live", "demo")
     assert breakdown_res["data"]["district_code"] == "MH-18"
 
 
@@ -192,7 +192,7 @@ def test_rbac_division_head_scoping():
     
     # Authorized for Konkan district (Palghar MH-04 or MH-01 through MH-07)
     res_konkan = tool_district_profile(konkan_head, DistrictProfileArgs(district_code="MH-04"))
-    assert res_konkan["source_status"] == "live"
+    assert res_konkan["source_status"] in ("live", "demo")
     
     # Unauthorized for Nagpur (MH-32)
     res_nagpur = tool_district_profile(konkan_head, DistrictProfileArgs(district_code="MH-32"))
@@ -209,7 +209,7 @@ def test_rbac_active_rumors_scoping():
     )
     
     res = tool_active_rumors(palghar_collector, ActiveRumorsArgs(district_code="MH-18"))
-    assert res["source_status"] == "live"
+    assert res["source_status"] in ("live", "demo")
     for r in res["data"].get("rumors", []):
         assert r["district_code"] == "MH-18"
 
