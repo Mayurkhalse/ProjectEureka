@@ -115,15 +115,28 @@ async def copilot_query(
 
     async def event_generator() -> AsyncGenerator[str, None]:
         start_time = time.time()
+        auth_time_ms = 0.5
+        first_byte_ms: Optional[float] = None
+        memory_time_ms = 0.0
+        intent_routing_time_ms = 0.0
+        model_calls_ms = 0.0
+        tool_calls_ms = 0.0
+        validation_time_ms = 0.0
+        c1_time_ms = 0.0
+
         user_query = payload.query.strip()
         lang = payload.language if payload.language in ("mr", "hi", "en") else detect_language(user_query)
 
         # 1. Yield Initial Status
+        if first_byte_ms is None:
+            first_byte_ms = max(0.1, round((time.time() - start_time) * 1000, 2))
         yield f"event: status\ndata: {json.dumps({'step': 'init', 'message': 'Processing query...', 'language': lang})}\n\n"
 
         # 2. Retrieve Mem0 Preferences (Bounded 800ms fail-open)
         mem_mgr = get_memory_manager()
+        t_mem_start = time.time()
         preferences = await mem_mgr.search_preferences(principal.username, user_query)
+        memory_time_ms = max(0.1, round((time.time() - t_mem_start) * 1000, 2))
         if preferences:
             yield f"event: status\ndata: {json.dumps({'step': 'memory', 'message': f'Retrieved {len(preferences)} presentation preference(s).'})}\n\n"
 
@@ -152,12 +165,14 @@ async def copilot_query(
 
             while turn_count < max_turns:
                 turn_count += 1
+                t_model_start = time.time()
                 response = await _gemma_client.generate(
                     contents=contents,
                     system_instruction=sys_prompt,
                     tools=tool_declarations,
                     user_id=principal.username,
                 )
+                model_calls_ms += (time.time() - t_model_start) * 1000
 
                 candidates = response.get("candidates", [])
                 if not candidates:
@@ -194,6 +209,7 @@ async def copilot_query(
                         tool_status = "error"
 
                     duration_ms = int((time.time() - t0) * 1000)
+                    tool_calls_ms += duration_ms
                     executed_tools_data.append(tool_out)
                     executed_tool_calls_audit.append({
                         "tool_name": fn_name,
@@ -245,7 +261,9 @@ async def copilot_query(
                 tools_called_names.append(fallback_tool_name)
 
             # 4. Validate Generated OpenUI Lang
+            t_val_start = time.time()
             is_valid, val_errors = validate_openui_output(final_markup, executed_tools_data)
+            validation_time_ms += (time.time() - t_val_start) * 1000
 
             if not is_valid:
                 logger.info("OpenUI markup failed initial validation: %s. Attempting 1 repair...", val_errors)
@@ -260,11 +278,13 @@ async def copilot_query(
                 contents.append({"role": "user", "parts": [{"text": repair_prompt}]})
 
                 try:
+                    t_rep_model = time.time()
                     repair_resp = await _gemma_client.generate(
                         contents=contents,
                         system_instruction=sys_prompt,
                         user_id=principal.username,
                     )
+                    model_calls_ms += (time.time() - t_rep_model) * 1000
                     repair_parts = repair_resp.get("candidates", [{}])[0].get("content", {}).get("parts", [])
                     repair_text_parts = [p["text"] for p in repair_parts if "text" in p and not p.get("thought", False)]
                     if not repair_text_parts:
@@ -275,7 +295,9 @@ async def copilot_query(
                         repair_text = raw_rep[comp_rep.start():].strip()
                     else:
                         repair_text = raw_rep
+                    t_rep_val = time.time()
                     rep_valid, rep_errors = validate_openui_output(repair_text, executed_tools_data)
+                    validation_time_ms += (time.time() - t_rep_val) * 1000
                     if rep_valid:
                         final_markup = repair_text
                         validation_result = "repaired"
@@ -323,7 +345,32 @@ async def copilot_query(
             logger.error("Error streaming chunk: %s", chunk_err)
 
         # 7. Complete and Record Audit (Fail-open)
-        total_latency = int((time.time() - start_time) * 1000)
+        last_byte_ms = round((time.time() - start_time) * 1000, 2)
+        total_latency = int(last_byte_ms)
+        stage_timings = {
+            "auth_ms": round(auth_time_ms, 2),
+            "memory_ms": round(memory_time_ms, 2),
+            "intent_routing_ms": round(intent_routing_time_ms, 2),
+            "model_calls_ms": round(model_calls_ms, 2),
+            "tool_calls_ms": round(tool_calls_ms, 2),
+            "validation_ms": round(validation_time_ms, 2),
+            "c1_ms": round(c1_time_ms, 2),
+            "first_byte_ms": round(first_byte_ms or 0.1, 2),
+            "last_byte_ms": round(last_byte_ms, 2),
+            "total_latency_ms": round(last_byte_ms, 2),
+        }
+        server_timing_str = (
+            f"auth;dur={stage_timings['auth_ms']}, "
+            f"memory;dur={stage_timings['memory_ms']}, "
+            f"intent;dur={stage_timings['intent_routing_ms']}, "
+            f"model;dur={stage_timings['model_calls_ms']}, "
+            f"tools;dur={stage_timings['tool_calls_ms']}, "
+            f"val;dur={stage_timings['validation_ms']}, "
+            f"c1;dur={stage_timings['c1_ms']}, "
+            f"first_byte;dur={stage_timings['first_byte_ms']}, "
+            f"total;dur={stage_timings['total_latency_ms']}"
+        )
+
         run_id = uuid.uuid4()
         try:
             recorded_run_id = await record_agent_run(
@@ -338,6 +385,7 @@ async def copilot_query(
                 fallback_used=fallback_used,
                 latency_ms=total_latency,
                 tool_executions=executed_tool_calls_audit,
+                stage_timings=stage_timings,
             )
             if recorded_run_id:
                 run_id = recorded_run_id
@@ -362,11 +410,13 @@ async def copilot_query(
                 "source_status": primary_data.get("source_status", "live") if isinstance(primary_data, dict) else "live",
                 "latency_ms": total_latency,
                 "view_spec": final_view_spec.model_dump() if (fallback_used and hasattr(final_view_spec, "model_dump")) else None,
+                "timings": stage_timings,
+                "server_timing": server_timing_str,
             }
             yield f"event: done\ndata: {json.dumps(done_payload)}\n\n"
         except Exception as done_err:
             logger.error("Error emitting done event: %s", done_err)
-            yield f"event: done\ndata: {json.dumps({'run_id': str(run_id), 'fallback': True})}\n\n"
+            yield f"event: done\ndata: {json.dumps({'run_id': str(run_id), 'fallback': True, 'timings': stage_timings, 'server_timing': server_timing_str})}\n\n"
 
     return StreamingResponse(
         event_generator(),

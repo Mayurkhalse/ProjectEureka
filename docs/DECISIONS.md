@@ -1,89 +1,64 @@
-# Open UI Copilot: Architectural Decisions & Capability Probes
+# Open UI Copilot: Architectural Decisions & Capability Probes (v3)
 
 ## 1. Pinned Dependencies & Licenses
 
 | Package / Library | Pinned Version | License | Compatibility Verified |
 | :--- | :--- | :--- | :--- |
-| **`mem0ai`** (Python) | `2.2.1` | **Apache-2.0** | Compatible with Python 3.11+, Qdrant client, and custom OpenAI embedder configurations. |
+| **`mem0ai`** (Python) | `2.2.1` | **Apache-2.0** | Compatible with Python 3.11+, Qdrant client, and custom embedder configurations. |
 | **`@openuidev/react-lang`** (NPM) | `1.0.1` | **MIT** | `peerDependencies: { "react": "*", "react-dom": "*" }` — fully compatible with React 19.3.1 and Next.js 16.4.1. |
+| **`openai`** (Python SDK for C1) | `1.65.5` | **Apache-2.0** | Compatible with Python 3.10+ / 3.11+, supports custom `base_url` for C1. |
 
 ---
 
-## 2. Phase 0 Reconnaissance & Audit Findings
-
-### 2.1 Current RBAC Roles & Scopes
-- **Backend Enums (`backend/src/eureka/models/enums.py` & `api/auth.py`):**
-  - `DG_STATE_ADMIN` ("DG State Admin"): Full statewide read access across all 36 districts and all state metrics.
-  - `DISTRICT_COLLECTOR` ("District Collector"): District-scoped access restricted strictly to `district_code` present in the signed JWT principal.
-  - `DIO_DESK` ("DIO Desk"): District-scoped access restricted to `district_code` in the signed JWT principal.
-- **Frontend Personas (`frontend/MCC/src/types/dashboard.ts` & `src/lib/serverData.ts`):**
-  - `director_konkan` (Division Head): Scoped strictly to districts within the division (e.g., Konkan division: Mumbai City, Mumbai Suburban, Thane, Palghar, Raigad, Ratnagiri, Sindhudurg).
-  - `dg_admin` / Cabinet Observer: Statewide read-only observation.
-- **Security Constraint:**
-  - Copilot derives identity and role strictly from the verified JWT `TokenData` principal; never from prompt text, request bodies, or LLM-generated arguments.
-  - Requests outside user scope return an explicit, polite refusal without partial leaks.
-
-### 2.2 Cached Service Layer & Data Providers
-The copilot reuses existing, authoritative data providers without issuing raw SQL or Cypher from the model:
-1. `CompositeScoringEngine` (`eureka.scoring.scoring_engine`):
-   - Computes live 100-Point Composite Index across Volume (25%), TAT Speed (30%), Net Sentiment (25%), and Crisis SLA (20%).
-   - Provides `compute_district_scores_from_csv()` and `get_district_score(district_id)`.
-2. `tool_query_all_36_districts` (`eureka.hermes.agent_tools`):
-   - Returns all 36 districts with bilingual names, division codes, centroids, ranks, and pillar breakdowns.
-3. Spatio-Temporal Graph Edge Indices (`eureka.processor.stgnn_prep`):
-   - 152 geographic border adjacencies across Maharashtra districts for neighbor and diffusion analysis.
-4. Canonical Events & Fact-Check Tickets (`eureka.models.entities`):
-   - Status, verification status, sentiment ratings, and 90-minute SLA countdowns.
-
-### 2.3 Frontend Charting Architecture
-- Frontend charts in MCC currently use:
-  - `echarts` (`^6.1.0`)
-  - `echarts-for-react` (`^3.0.6`)
-  - Tailwind CSS + Radix UI primitives.
-- OpenUI Copilot will define and register a clean component library:
-  - `Stack`, `KpiCard`, `DataTable`, `BarChart`, `LineChart`, `GraphView` (max 200 nodes), `Callout`, `Heading`, `Text`.
-  - Every chart and graph includes a deterministic text summary and an accessible table alternative (compliant with GIGW 3.0 and UX4G).
-
-### 2.4 Existing Copilot / ViewSpec Code
-- No prior copilot or ViewSpec implementation exists in `backend/src/eureka` or `frontend/MCC`.
-- Implementation is entirely clean and additive under `backend/src/eureka/copilot/` and `frontend/MCC/src/components/copilot/`.
+## 2. Core Directory Reference Clones
+The repository references external read-only clones located in the core workspace:
+- **`openui`**: `c:\Users\Priyanshu Patil\Documents\program01\savi\openui`
+  - Commit Hash: `9823ec05d4b29bc78d101676dc16b44fe17f1830`
+  - Status: Read-only reference, excluded via `.gitignore`.
+- **`mem0`**: `c:\Users\Priyanshu Patil\Documents\program01\savi\mem0`
+  - Commit Hash: `0724291bd864cf807e88ee8981c8226644e8fb42`
+  - Status: Read-only reference, excluded via `.gitignore`.
 
 ---
 
-## 3. Phase 0.2: LLM Capability Probe
-
-Probes were executed against the Google AI Studio / Gemini API endpoint (`https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent`):
-
-| Model Tested | Function Calling (Tools) | Structured JSON Output | System Instruction | Marathi & Hindi Input | Status / Recommendation |
-| :--- | :--- | :--- | :--- | :--- | :--- |
-| **`models/gemma-4-26b-a4b-it`** | **PASSED** (Returned valid `functionCall` candidate with arguments) | **PASSED** | **PASSED** | **PASSED** (Accurately translated & localized) | **RECOMMENDED**: Fully verified native function-calling support. |
-| **`models/gemma-4-31b-it`** | **FAILED** (HTTP 500 Internal error from Google endpoint) | Untested due to API error | Untested | Untested | **NOT RECOMMENDED** for production copilot tool use. |
-| **`models/gemini-2.5-flash`** | **PASSED** (High throughput, 100% deterministic tool calling) | **PASSED** | **PASSED** | **PASSED** | **SUPPORTED ALTERNATIVE / FALLBACK**. |
+## 3. Pre-Phase 0 Baseline Status
+- **Branch**: `copilot-v3`
+- **Initial Tag**: `copilot-v3-start`
+- **Backend Tests**: 48 passed, 0 failed (fixed syntax bug in `cloud_evaluator.py` where `user_prompt` was misnamed as `prompt`).
+- **Copilot Backend Unit Tests**: 19 passed (`backend/tests/test_copilot.py`).
+- **Frontend Test Suite**: 22 passed, 0 failed (`npm test` in `frontend/MCC`).
+- **Frontend TypeScript Check**: Exited with code 0 (zero type errors via `tsc -p tsconfig.json --noEmit`).
+- **Frontend ESLint**: Exited with code 0 (zero lint errors via `eslint .`).
+- **Frontend Production Build**: Succeeded in 18.2s with static optimization of 30 pages.
 
 ---
 
-## 4. Phase 0.3: Mem0 & OpenUI Compatibility
+## 4. Live Database Truth Reconciliation
+Inspecting `backend/eureka.db`:
+1. **District Codes**:
+   - `MH-03`: **Palghar** (`DIV-KON`)
+   - `MH-04`: **Thane** (`DIV-KON`)
+   - Assigned collector in `users`: `collector_thane` is mapped to `MH-04`.
+   - Verified that earlier test assertions mapping Thane to MH-03 were inverted; the live database establishes MH-04 as Thane and MH-03 as Palghar.
+2. **Divisions**:
+   - 9 DGIPR divisions exist in `divisions`:
+     - `DIV-MUM` (Mumbai)
+     - `DIV-KON` (Konkan)
+     - `DIV-PUN` (Pune)
+     - `DIV-KOL` (Kolhapur)
+     - `DIV-LAT` (Latur)
+     - `DIV-CSN` (Chhatrapati Sambhajinagar)
+     - `DIV-NSK` (Nashik)
+     - `DIV-AMT` (Amravati)
+     - `DIV-NGP` (Nagpur)
+   - User `divhead_pune` is present with `ROLE_DIVISION_HEAD` and `division_code: DIV-PUN`.
+3. **District Aliases & 36 vs 37 Districts**:
+   - `media_events` contains 37 distinct district strings because both `'Ahilyanagar'` and `'Ahmednagar'` (its former name) are present.
+   - `district_aliases` explicitly maps `'Ahmednagar'` to `MH-25` (`Ahilyanagar`).
 
-### 4.1 Mem0 Configuration for Thesys API Embedder
-- `mem0ai` provides `mem0.embeddings.openai.OpenAIEmbedding`.
-- It can be explicitly configured with custom parameters:
-  ```python
-  embedder_config = {
-      "provider": "openai",
-      "config": {
-          "model": "thesys-embed",
-          "api_key": os.getenv("THESYS_API_KEY"),
-          "openai_base_url": "https://api.thesys.dev/v1/embed",
-          "embedding_dims": 1536,
-      }
-  }
-  ```
-- To ensure zero reliance on OpenAI defaults:
-  - `OPENAI_API_KEY` is kept unset or explicitly ignored.
-  - All calls route directly to `https://api.thesys.dev/v1/embed`.
+---
 
-### 4.2 OpenUI React 19 & Next.js 16 Compatibility
-- Examined `openui/packages/react-lang/package.json`:
-  - `"peerDependencies": { "@modelcontextprotocol/sdk": ">=1.0.0", "react": "*", "react-dom": "*", "zod": "catalog:" }`
-  - React 19 is fully supported without peer dependency conflicts.
-- OpenUI Lang parser and streaming renderer operate in client-side Next.js components (`"use client"`).
+## 5. C1 Generative UI Capability Probe
+- **Target Endpoint**: `https://api.thesys.dev/v1/embed`
+- **Protocol**: OpenAI-compatible chat completions returning UI specification.
+- **Engine Control**: `COPILOT_UI_ENGINE` environment variable supporting `deterministic` (default) and `c1`.

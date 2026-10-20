@@ -125,7 +125,7 @@ def evaluate_crisis_sla_groq(district: str, text: str) -> bool:
     if _WORKING_GROQ_MODEL:
         try:
             response = client.chat.completions.create(
-                messages=[{"role": "user", "content": prompt}],
+                messages=[{"role": "system", "content": system_msg}, {"role": "user", "content": user_prompt}],
                 model=_WORKING_GROQ_MODEL,
                 temperature=0.0,
                 max_tokens=10,
@@ -147,7 +147,7 @@ def evaluate_crisis_sla_groq(district: str, text: str) -> bool:
     for model_name in candidate_models:
         try:
             response = client.chat.completions.create(
-                messages=[{"role": "user", "content": prompt}],
+                messages=[{"role": "system", "content": system_msg}, {"role": "user", "content": user_prompt}],
                 model=model_name,
                 temperature=0.0,
                 max_tokens=10,

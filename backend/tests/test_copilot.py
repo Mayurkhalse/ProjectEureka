@@ -443,3 +443,35 @@ def test_all_10_tools_declared_and_mapped():
     declarations = get_copilot_function_declarations()
     decl_names = {d["name"] for d in declarations}
     assert decl_names == expected_tools
+
+
+# ============================================================================
+# 8. STAGE TIMERS & SERVER-TIMING AUDIT
+# ============================================================================
+
+@pytest.mark.asyncio
+async def test_copilot_stage_timers_and_server_timing():
+    """Verify that copilot query emits stage timings and server_timing in done event."""
+    import json
+    import re
+    from eureka.copilot.router import copilot_query, CopilotQueryRequest
+    from eureka.api.auth import TokenData
+    from eureka.models.enums import UserRole
+
+    user = TokenData(username="test_officer", role=UserRole.DG_STATE_ADMIN)
+    req = CopilotQueryRequest(query="Show top 5 districts", language="en")
+
+    response = await copilot_query(req, current_user=user)
+    events = []
+    async for chunk in response.body_iterator:
+        events.append(chunk)
+
+    full_text = "".join(events)
+    assert "event: done" in full_text
+    done_match = re.search(r"event: done\ndata: (\{.*\})", full_text)
+    assert done_match is not None
+    done_data = json.loads(done_match.group(1))
+    assert "timings" in done_data
+    assert "first_byte_ms" in done_data["timings"]
+    assert "last_byte_ms" in done_data["timings"]
+    assert "server_timing" in done_data

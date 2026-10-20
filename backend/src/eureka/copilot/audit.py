@@ -30,12 +30,17 @@ async def record_agent_run(
     fallback_used: bool,
     latency_ms: int,
     tool_executions: Optional[List[Dict[str, Any]]] = None,
+    stage_timings: Optional[Dict[str, Any]] = None,
 ) -> uuid.UUID:
     """Record an agent run and all its associated tool calls atomically."""
     run_id = uuid.uuid4()
     
     async with AsyncSessionLocal() as session:
         try:
+            recorded_tools = list(tools_called)
+            if stage_timings:
+                recorded_tools.append({"_stage_timings": stage_timings})
+
             agent_run = AgentRun(
                 id=run_id,
                 principal_id=principal_id,
@@ -44,7 +49,7 @@ async def record_agent_run(
                 prompt_version_hash=prompt_version_hash,
                 user_query=user_query,
                 language=language,
-                tools_called=tools_called,
+                tools_called=recorded_tools,
                 validation_result=validation_result,
                 fallback_used=fallback_used,
                 latency_ms=latency_ms,
