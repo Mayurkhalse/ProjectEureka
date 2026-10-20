@@ -4,6 +4,7 @@ Complies strictly with:
 - GIGW 3.0 & UX4G Accessibility (every visual element has text summary + table alternative)
 - Number Grounding (rejects any fabricated numerical literal not present in tool data)
 - Whitelisted Component Library (no raw HTML, scripts, or external links)
+- Devanagari & Arabic-Indic numeral normalization (०-९ -> 0-9)
 - Deterministic ViewSpec Fallback (if repair attempt fails)
 """
 
@@ -31,6 +32,43 @@ ALLOWED_COMPONENTS = {
 
 # Regex to detect HTML scripts, iframes, styles, links, or images
 DISALLOWED_HTML_TAGS = re.compile(r'<\s*(?:script|iframe|object|embed|style|a\s+href|img\s+src)', re.IGNORECASE)
+
+# Digit normalization translation table
+DEVANAGARI_DIGITS = str.maketrans('०१२३४५६७८९', '0123456789')
+ARABIC_INDIC_DIGITS = str.maketrans('٠١٢३٤٥٦٧٨٩', '0123456789')
+
+
+def normalize_numerals_and_text(text: str) -> str:
+    """Translate Devanagari and Arabic-Indic numerals to standard ASCII digits and clean separators."""
+    if not text:
+        return ""
+    normalized = text.translate(DEVANAGARI_DIGITS).translate(ARABIC_INDIC_DIGITS)
+    # Remove thousand-separator commas between digits (e.g., 1,234 -> 1234)
+    normalized = re.sub(r'(?<=\d),(?=\d)', '', normalized)
+    return normalized
+
+
+def validate_props_and_security(markup: str) -> Tuple[bool, List[str]]:
+    """Verify that attributes do not contain external URLs, scripts, or exceed length caps."""
+    errors = []
+    if not markup or not markup.strip():
+        return False, ["Output is completely empty."]
+
+    # 1. Disallow raw HTML scripts, images, links
+    if DISALLOWED_HTML_TAGS.search(markup):
+        errors.append("SECURITY_VIOLATION: Output contains forbidden HTML tags (<script>, <iframe>, <a>, or <img>).")
+
+    # 2. Check for URL schemas in props
+    if re.search(r'=["\'][^"\']*(?:https?://|ftp://|javascript:|data:)', markup, re.IGNORECASE):
+        errors.append("SECURITY_VIOLATION: Output contains forbidden external URL schema in attributes.")
+
+    # 3. Check attribute length caps (> 600 chars in single prop)
+    attr_matches = re.findall(r'[a-zA-Z0-9_]+=["\']([^"\']*)["\']', markup)
+    for val in attr_matches:
+        if len(val) > 600:
+            errors.append(f"SECURITY_VIOLATION: Attribute value exceeds max length cap ({len(val)} > 600).")
+
+    return len(errors) == 0, errors
 
 
 def detect_language(text: str) -> str:
@@ -121,18 +159,24 @@ def extract_all_numbers(data: Any) -> Set[float]:
 
 
 def extract_numbers_from_openui(markup: str) -> List[float]:
-    """Extract numeric literals from generated OpenUI attributes and content."""
-    # Look for value="...", delta=..., and numbers in content="..."
+    """Extract numeric literals from generated OpenUI attributes and content after numeral normalization."""
+    clean_markup = normalize_numerals_and_text(markup)
     numbers = []
     # Match value="..." or value=...
-    val_matches = re.findall(r'value=["\']?(\d+(?:\.\d+)?)["\']?', markup)
+    val_matches = re.findall(r'value=["\']?(-?\d+(?:\.\d+)?)["\']?', clean_markup)
     for m in val_matches:
-        numbers.append(round(float(m), 2))
+        try:
+            numbers.append(round(float(m), 2))
+        except ValueError:
+            pass
     
     # Match delta=...
-    delta_matches = re.findall(r'delta=["\']?(-?\d+(?:\.\d+)?)["\']?', markup)
+    delta_matches = re.findall(r'delta=["\']?(-?\d+(?:\.\d+)?)["\']?', clean_markup)
     for m in delta_matches:
-        numbers.append(round(float(m), 2))
+        try:
+            numbers.append(round(float(m), 2))
+        except ValueError:
+            pass
 
     return numbers
 
@@ -141,7 +185,7 @@ def validate_openui_output(
     markup: str,
     tool_results: List[Dict[str, Any]],
 ) -> Tuple[bool, List[str]]:
-    """Strictly validate OpenUI Lang against the component allowlist and ground numbers against tool data.
+    """Strictly validate OpenUI Lang against component allowlist, props security, accessibility, and data grounding.
     
     Returns (is_valid, list_of_error_reasons).
     """
@@ -150,9 +194,10 @@ def validate_openui_output(
     if not markup or not markup.strip():
         return False, ["Output is completely empty."]
 
-    # 1. Disallow raw HTML scripts, images, links
-    if DISALLOWED_HTML_TAGS.search(markup):
-        return False, ["Output contains forbidden HTML tags (<script>, <iframe>, <a>, or <img>)."]
+    # 1. Security & Prop validation
+    sec_valid, sec_errors = validate_props_and_security(markup)
+    if not sec_valid:
+        errors.extend(sec_errors)
 
     # 2. Check component tags against allowlist
     tag_matches = re.findall(r'<\s*([A-Z][a-zA-Z0-9]+)', markup)
@@ -160,16 +205,31 @@ def validate_openui_output(
         if tag not in ALLOWED_COMPONENTS:
             errors.append(f"UNKNOWN_COMPONENT: Tag '<{tag}>' is not permitted in OpenUI library.")
 
-    # 3. Check number grounding
+    # 3. Accessibility Enforcement: BarChart, LineChart, and GraphView must include text summary AND table alternative
+    chart_tags = ["BarChart", "LineChart", "GraphView"]
+    for c_tag in chart_tags:
+        pattern = rf'<{c_tag}\b([^>]*?)(?:/>|>([\s\S]*?)</{c_tag}>)'
+        for match in re.finditer(pattern, markup):
+            attrs = match.group(1) or ""
+            children = match.group(2) or ""
+            has_summary = ('summary=' in attrs) or ('<Text ' in children) or ('content=' in children)
+            has_table = ('<DataTable ' in children) or ('<table' in children.lower())
+            if not has_summary or not has_table:
+                errors.append(
+                    f"ACCESSIBILITY_VIOLATION: <{c_tag}> must include both a text summary and an accessible <DataTable /> alternative."
+                )
+
+    # 4. Strict Number Grounding (No arbitrary constant whitelist)
     allowed_numbers = set()
     for res in tool_results:
-        allowed_numbers.update(extract_all_numbers(res.get("data", {})))
-        # Also allow standard constants like 0, 100, 25, 30, 20 (pillar max limits)
-        allowed_numbers.update({0.0, 1.0, 25.0, 30.0, 20.0, 100.0, 90.0, 45.0})
+        t_data = res.get("data", res)
+        allowed_numbers.update(extract_all_numbers(t_data))
+    
+    # 0.0 is permissible as a baseline/zero delta
+    allowed_numbers.add(0.0)
 
     markup_numbers = extract_numbers_from_openui(markup)
     for num in markup_numbers:
-        # Allow +/- 0.05 rounding difference
         matched = any(abs(num - allowed) < 0.05 for allowed in allowed_numbers)
         if not matched:
             errors.append(f"FABRICATED_NUMBER: Literal '{num}' was found in OpenUI markup but does not exist in tool data.")

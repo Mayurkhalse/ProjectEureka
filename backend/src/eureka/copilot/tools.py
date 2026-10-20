@@ -28,13 +28,27 @@ class CopilotPrincipal(BaseModel):
 
 
 # Division to district codes mapping for RBAC enforcement
+# Exact 9 DGIPR divisions mapped by both code and name
 DIVISION_DISTRICT_MAP: Dict[str, List[str]] = {
-    "Konkan": ["MH-01", "MH-02", "MH-03", "MH-04", "MH-05", "MH-06", "MH-07"],
-    "Pune": ["MH-09", "MH-10", "MH-11", "MH-12", "MH-13"],
-    "Nashik": ["MH-14", "MH-15", "MH-16", "MH-17", "MH-18"],
-    "Chhatrapati Sambhajinagar": ["MH-19", "MH-20", "MH-21", "MH-22", "MH-23", "MH-24", "MH-25", "MH-26"],
-    "Amravati": ["MH-27", "MH-28", "MH-29", "MH-30", "MH-31"],
-    "Nagpur": ["MH-32", "MH-33", "MH-34", "MH-35", "MH-36", "MH-37"],
+    "DIV-MUM": ["MH-01", "MH-02"],
+    "Mumbai": ["MH-01", "MH-02"],
+    "DIV-KON": ["MH-03", "MH-04", "MH-05", "MH-06"],
+    "Konkan": ["MH-03", "MH-04", "MH-05", "MH-06"],
+    "director_konkan": ["MH-03", "MH-04", "MH-05", "MH-06"],
+    "DIV-PUN": ["MH-07", "MH-08", "MH-09"],
+    "Pune": ["MH-07", "MH-08", "MH-09"],
+    "DIV-KOL": ["MH-10", "MH-11", "MH-12"],
+    "Kolhapur": ["MH-10", "MH-11", "MH-12"],
+    "DIV-LAT": ["MH-13", "MH-14", "MH-15", "MH-16"],
+    "Latur": ["MH-13", "MH-14", "MH-15", "MH-16"],
+    "DIV-CSN": ["MH-17", "MH-18", "MH-19", "MH-20"],
+    "Chhatrapati Sambhajinagar": ["MH-17", "MH-18", "MH-19", "MH-20"],
+    "DIV-NSK": ["MH-21", "MH-22", "MH-23", "MH-24", "MH-25"],
+    "Nashik": ["MH-21", "MH-22", "MH-23", "MH-24", "MH-25"],
+    "DIV-AMT": ["MH-26", "MH-27", "MH-28", "MH-29", "MH-30"],
+    "Amravati": ["MH-26", "MH-27", "MH-28", "MH-29", "MH-30"],
+    "DIV-NGP": ["MH-31", "MH-32", "MH-33", "MH-34", "MH-35", "MH-36"],
+    "Nagpur": ["MH-31", "MH-32", "MH-33", "MH-34", "MH-35", "MH-36"],
 }
 
 

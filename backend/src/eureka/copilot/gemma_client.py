@@ -63,6 +63,12 @@ class GemmaClient:
         self._user_requests: Dict[str, List[float]] = defaultdict(list)
         self._global_requests: List[float] = []
 
+        # Persistent shared client with connection pooling & keep-alive
+        self._client = httpx.AsyncClient(
+            timeout=httpx.Timeout(connect=15.0, read=60.0, write=15.0, pool=15.0),
+            limits=httpx.Limits(max_keepalive_connections=20, max_connections=50),
+        )
+
     def _check_rate_limits(self, user_id: str) -> None:
         """Enforce per-user and global queries-per-minute rate caps."""
         now = time.time()
@@ -74,6 +80,10 @@ class GemmaClient:
             raise CopilotSecurityException("Global copilot rate limit exceeded. Please wait a moment.")
 
         self._user_requests[user_id] = [t for t in self._user_requests[user_id] if now - t < window]
+        # Prune stale inactive users to avoid unbounded memory growth
+        stale_users = [u for u, ts in self._user_requests.items() if not any(now - t < window for t in ts)]
+        for u in stale_users:
+            self._user_requests.pop(u, None)
         if len(self._user_requests[user_id]) >= self.settings.COPILOT_RATE_LIMIT_USER_PER_MIN:
             raise CopilotSecurityException("Per-user copilot query limit exceeded (max 10/min).")
 
@@ -167,27 +177,28 @@ class GemmaClient:
             url = f"https://generativelanguage.googleapis.com/v1beta/{cur_model}:generateContent"
             for attempt in range(max_retries + 1):
                 try:
-                    async with httpx.AsyncClient(timeout=client_timeout) as client:
-                        resp = await client.post(url, json=payload, headers=headers)
-                        
-                        if resp.status_code == 200:
-                            self._record_success()
-                            return resp.json()
-                        
-                        # Handle rate limit (429) or transient server error (500/503)
-                        if resp.status_code in (429, 500, 502, 503, 504) and attempt < max_retries:
-                            backoff = (2 ** attempt) * 0.5
-                            logger.warning("%s returned HTTP %d. Retrying in %.1fs...", cur_model, resp.status_code, backoff)
-                            await asyncio.sleep(backoff)
-                            continue
-
-                        # If status is 500 or 404 and there's a fallback candidate, try fallback
-                        if resp.status_code in (404, 500, 502, 503) and cur_model != candidate_models[-1]:
-                            logger.warning("%s returned HTTP %d. Trying fallback model %s...", cur_model, resp.status_code, candidate_models[-1])
-                            break
-
+                    resp = await self._client.post(url, json=payload, headers=headers)
+                    
+                    if resp.status_code == 200:
+                        self._record_success()
+                        res_json = resp.json()
+                        res_json["_model_id"] = cur_model
+                        return res_json
+                    
+                    # Non-retryable 4xx client errors (400, 401, 403, 404) must fail immediately without retry
+                    if resp.status_code in (400, 401, 403, 404):
                         err_msg = redact_secrets(resp.text)
-                        raise RuntimeError(f"Gemma API returned HTTP {resp.status_code}: {err_msg[:200]}")
+                        raise RuntimeError(f"Gemma API client error HTTP {resp.status_code} on {cur_model}: {err_msg[:200]}")
+
+                    # Retry only on 429 or 5xx with backoff
+                    if resp.status_code in (429, 500, 502, 503, 504) and attempt < max_retries:
+                        backoff = (2 ** attempt) * 0.5
+                        logger.warning("%s returned HTTP %d. Retrying in %.1fs...", cur_model, resp.status_code, backoff)
+                        await asyncio.sleep(backoff)
+                        continue
+
+                    err_msg = redact_secrets(resp.text)
+                    raise RuntimeError(f"Gemma API returned HTTP {resp.status_code}: {err_msg[:200]}")
 
                 except httpx.TimeoutException as exc:
                     last_error = exc

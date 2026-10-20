@@ -183,41 +183,54 @@ async def copilot_query(
                 if not parts:
                     break
 
-                # Check for function call in ANY part
-                fn_part = next((p for p in parts if "functionCall" in p), None)
-                if fn_part:
-                    fn_call = fn_part["functionCall"]
-                    fn_name = fn_call.get("name")
-                    fn_args = fn_call.get("args", {})
-                    tools_called_names.append(fn_name)
+                # Check for function calls (handle ALL functionCall parts concurrently)
+                fn_parts = [p for p in parts if "functionCall" in p]
+                if fn_parts:
+                    for p in fn_parts:
+                        fc = p["functionCall"]
+                        fn_name = fc.get("name")
+                        fn_args = fc.get("args", {})
+                        tools_called_names.append(fn_name)
+                        yield f"event: status\ndata: {json.dumps({'step': 'tool_call', 'tool': fn_name, 'args': fn_args})}\n\n"
 
-                    yield f"event: status\ndata: {json.dumps({'step': 'tool_call', 'tool': fn_name, 'args': fn_args})}\n\n"
-
-                    # Execute governed tool
-                    t0 = time.time()
-                    tool_def = COPILOT_TOOLS_MAP.get(fn_name)
-                    if tool_def:
-                        arg_model, fn_impl = tool_def
-                        try:
-                            parsed_args = arg_model(**fn_args)
-                            tool_out = fn_impl(principal, parsed_args)
-                            tool_status = "success"
-                        except Exception as t_err:
-                            tool_out = {"error": "EXECUTION_ERROR", "message": str(t_err), "source_status": "unavailable"}
+                    async def _run_single_tool(fc_dict: Dict[str, Any]):
+                        f_name = fc_dict.get("name")
+                        f_args = fc_dict.get("args", {})
+                        t0 = time.time()
+                        tool_def = COPILOT_TOOLS_MAP.get(f_name)
+                        if tool_def:
+                            arg_model, fn_impl = tool_def
+                            try:
+                                parsed_args = arg_model(**f_args)
+                                tool_out = fn_impl(principal, parsed_args)
+                                tool_status = "success"
+                            except Exception as t_err:
+                                tool_out = {"error": "EXECUTION_ERROR", "message": str(t_err), "source_status": "unavailable"}
+                                tool_status = "error"
+                        else:
+                            tool_out = {"error": "UNKNOWN_TOOL", "message": f"Tool '{f_name}' does not exist.", "source_status": "unavailable"}
                             tool_status = "error"
-                    else:
-                        tool_out = {"error": "UNKNOWN_TOOL", "message": f"Tool '{fn_name}' does not exist.", "source_status": "unavailable"}
-                        tool_status = "error"
+                        dur_ms = int((time.time() - t0) * 1000)
+                        return f_name, f_args, tool_out, tool_status, dur_ms
 
-                    duration_ms = int((time.time() - t0) * 1000)
-                    tool_calls_ms += duration_ms
-                    executed_tools_data.append(tool_out)
-                    executed_tool_calls_audit.append({
-                        "tool_name": fn_name,
-                        "tool_args": fn_args,
-                        "tool_status": tool_status,
-                        "duration_ms": duration_ms,
-                    })
+                    results = await asyncio.gather(*[_run_single_tool(p["functionCall"]) for p in fn_parts])
+
+                    user_resp_parts = []
+                    for f_name, f_args, tool_out, tool_status, dur_ms in results:
+                        tool_calls_ms += dur_ms
+                        executed_tools_data.append(tool_out)
+                        executed_tool_calls_audit.append({
+                            "tool_name": f_name,
+                            "tool_args": f_args,
+                            "tool_status": tool_status,
+                            "duration_ms": dur_ms,
+                        })
+                        user_resp_parts.append({
+                            "functionResponse": {
+                                "name": f_name,
+                                "response": tool_out,
+                            }
+                        })
 
                     # Append to conversation
                     contents.append({
@@ -226,12 +239,7 @@ async def copilot_query(
                     })
                     contents.append({
                         "role": "user",
-                        "parts": [{
-                            "functionResponse": {
-                                "name": fn_name,
-                                "response": tool_out,
-                            }
-                        }],
+                        "parts": user_resp_parts,
                     })
                     continue
 

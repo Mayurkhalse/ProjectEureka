@@ -67,9 +67,10 @@ class CopilotSettings(BaseSettings):
 
     def get_effective_gemini_key(self) -> Optional[str]:
         """Return the copilot Gemini key, isolated strictly to copilot and dev studio keys."""
-        if self.OPENUI_COPILOT_GEMINI_API_KEY:
-            return self.OPENUI_COPILOT_GEMINI_API_KEY
-        return os.getenv("GOOGLE_STUDIO_API_KEY")
+        key = self.OPENUI_COPILOT_GEMINI_API_KEY or os.getenv("GOOGLE_STUDIO_API_KEY")
+        if key and key.strip():
+            return key.strip()
+        return None
 
 
 @lru_cache(maxsize=1)
