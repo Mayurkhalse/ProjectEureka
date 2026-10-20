@@ -284,13 +284,19 @@ def _query_36_districts_from_csv(
         if div_filter and (div_filter in d_name or any(div_filter in c for c in d_codes)):
             matched_aliases.extend(d_codes)
 
+    from eureka.core.reference_data import DISTRICTS
+    ref_map = {d[2].lower(): d for d in DISTRICTS}
+
     results = []
     for s in scored_list:
         did = int(s["district_id"])
         meta = dist_meta.get(did, {})
         d_div = s.get("division", meta.get("division", ""))
         d_name_en = s.get("district", meta.get("name_en", f"District {did}"))
-        d_name_mr = meta.get("name_mr", d_name_en)
+        ref_row = ref_map.get(d_name_en.lower())
+        d_code = ref_row[0] if ref_row else f"MH-{did:02d}"
+        d_div_code = ref_row[1] if ref_row else f"DIV-{d_div[:3].upper()}"
+        d_name_mr = ref_row[3] if ref_row else meta.get("name_mr", d_name_en)
         try:
             lat = float(meta.get("approx_hq_lat", 19.0))
             lon = float(meta.get("approx_hq_lon", 74.0))
@@ -303,8 +309,8 @@ def _query_36_districts_from_csv(
                 continue
 
         results.append({
-            "district_code": f"MH-{did:02d}",
-            "division_code": f"DIV-{d_div[:3].upper()}",
+            "district_code": d_code,
+            "division_code": d_div_code,
             "name_en": d_name_en,
             "name_mr": d_name_mr,
             "display_order": did,

@@ -52,17 +52,49 @@ DIVISION_DISTRICT_MAP: Dict[str, List[str]] = {
 }
 
 
+from eureka.core.reference_data import DISTRICTS, DISTRICT_ALIASES
+
+# Comprehensive in-memory alias lookup loaded directly from authoritative reference data
+ALIAS_TO_DISTRICT_CODE: Dict[str, str] = {}
+for d in DISTRICTS:
+    # d is (district_code, division_code, name_en, name_mr, former_name_en)
+    code = d[0]
+    ALIAS_TO_DISTRICT_CODE[d[2].strip().lower()] = code
+    ALIAS_TO_DISTRICT_CODE[d[3].strip()] = code
+    if d[4]:
+        ALIAS_TO_DISTRICT_CODE[d[4].strip().lower()] = code
+
+for alias_tuple in DISTRICT_ALIASES:
+    # (alias_text, district_code, language, alias_type)
+    alias_txt = alias_tuple[0].strip()
+    code = alias_tuple[1]
+    ALIAS_TO_DISTRICT_CODE[alias_txt.lower()] = code
+    ALIAS_TO_DISTRICT_CODE[alias_txt] = code
+
+
 def normalize_district_code(code_or_name: str) -> Optional[str]:
-    """Convert district code (e.g. MH-04) or English name (e.g. Palghar) into official MH-XX code."""
-    raw = code_or_name.strip().upper()
-    if raw.startswith("MH-"):
-        return raw
+    """Convert district code (e.g. MH-04) or English/Marathi name or alias into official MH-XX code."""
+    if not code_or_name:
+        return None
+    raw = code_or_name.strip()
+    raw_upper = raw.upper()
+    if raw_upper.startswith("MH-"):
+        parts = raw_upper.split("-")
+        if len(parts) == 2 and len(parts[1]) == 1:
+            return f"MH-0{parts[1]}"
+        return raw_upper
+
+    raw_lower = raw.lower()
+    if raw_lower in ALIAS_TO_DISTRICT_CODE:
+        return ALIAS_TO_DISTRICT_CODE[raw_lower]
+    if raw in ALIAS_TO_DISTRICT_CODE:
+        return ALIAS_TO_DISTRICT_CODE[raw]
 
     # Search in all 36 districts
     try:
         res = tool_query_all_36_districts(include_metrics=False)
         for d in res.get("districts", []):
-            if d["name_en"].upper() == raw or d["name_mr"] == code_or_name.strip():
+            if d["name_en"].upper() == raw_upper or d["name_mr"] == raw:
                 return d["district_code"]
     except Exception:
         pass
@@ -87,7 +119,19 @@ def extract_district_from_query(query: str) -> Optional[str]:
             code = f"MH-0{parts[1]}"
         return code
 
-    # 2. Check 36 districts by English and Marathi names
+    # 2. Check alias map sorted by length descending (longest match first)
+    sorted_aliases = sorted(ALIAS_TO_DISTRICT_CODE.items(), key=lambda x: len(x[0]), reverse=True)
+    for alias, code in sorted_aliases:
+        # If alias contains ascii letters, use word boundary check
+        if re.search(r'[a-zA-Z]', alias):
+            if re.search(r'\b' + re.escape(alias) + r'\b', q_lower):
+                return code
+        else:
+            # Marathi script check
+            if alias in query:
+                return code
+
+    # 3. Fallback query
     try:
         res = tool_query_all_36_districts(include_metrics=False)
         for d in res.get("districts", []):
