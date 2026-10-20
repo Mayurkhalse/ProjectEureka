@@ -5,6 +5,7 @@ import { useDashboardStore } from '@/stores/dashboardStore';
 import { useTranslation } from '@/lib/translations';
 import { LockClosedIcon, ChevronDownIcon, ArrowDownTrayIcon } from '@heroicons/react/20/solid';
 import { getDistrictName } from '@/lib/dataLocalization';
+import { exportTelemetryReportPdf } from '@/lib/exportTelemetryPdf';
 
 export const DashboardToolbar: React.FC = () => {
   const {
@@ -32,20 +33,33 @@ export const DashboardToolbar: React.FC = () => {
     ? (language === 'mr' ? 'विभागीय मंजुरी' : 'Divisional Clearance')
     : (language === 'mr' ? 'राज्यस्तरीय मंजुरी' : 'Statewide Clearance');
 
-  const handleExport = () => {
-    setToast({
-      type: 'success',
-      message: language === 'mr'
-        ? 'माहिती अहवाल यशस्वीरित्या निर्यात केला.'
-        : 'Telemetry operations report exported successfully (CSV/PDF).',
-    });
-  };
-
   const currentDistrictValue =
     searchDistrict ||
     (selectedDistrictId && selectedDistrictId !== 'all'
       ? selectedDistrictId.charAt(0).toUpperCase() + selectedDistrictId.slice(1)
       : '');
+
+  const handleExport = () => {
+    try {
+      exportTelemetryReportPdf({
+        language,
+        district: currentDistrictValue || (language === 'mr' ? 'सर्व जिल्हे (राज्यस्तरीय)' : 'All Districts (Statewide)'),
+        scope: scopeBadgeText,
+        period: selectedPeriod,
+      });
+      setToast({
+        type: 'success',
+        message: language === 'mr'
+          ? 'माहिती अहवाल यशस्वीरित्या पीडीएफ स्वरूपात निर्यात केला.'
+          : 'Telemetry operations report exported to PDF successfully.',
+      });
+    } catch {
+      setToast({
+        type: 'error',
+        message: language === 'mr' ? 'अहवाल निर्यात अयशस्वी.' : 'PDF generation encountered an error.',
+      });
+    }
+  };
 
   return (
     <div className="shrink-0 bg-white border-b border-slate-200/80 px-6 py-3.5 flex flex-wrap items-center justify-between gap-4 select-none z-10">

@@ -26,7 +26,7 @@ export const ThreeColumnDashboard: React.FC = () => {
   }, []);
 
   return (
-    <div className="p-3.5 sm:p-4 md:p-5 xl:p-6 max-w-[1860px] w-full mx-auto flex flex-col gap-4 sm:gap-5 xl:gap-6 bg-[#f4f6fa]">
+    <div className="p-4 sm:p-5 lg:p-6 max-w-[1920px] w-full mx-auto flex flex-col gap-5 lg:gap-6 bg-transparent">
       {/* 1. FULL-WIDTH KPI RIBBON AT TOP */}
       <section className="w-full">
         <KPIRibbon layout="ribbon" />
@@ -56,23 +56,19 @@ export const ThreeColumnDashboard: React.FC = () => {
         </div>
       ) : (
         /* STAGE 3 (WIDE DESKTOP & COMMAND WALL: 1360px+ 3-COLUMN BALANCED BASELINE) */
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 xl:gap-6 items-stretch w-full">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 xl:gap-6 items-start w-full">
           {/* LEFT COLUMN (3/12 on XL, 4/12 on LG) - Analytics & Rankings */}
           <div className="lg:col-span-4 xl:col-span-3 flex flex-col gap-5 min-w-0">
             <ScoreDecomposition />
             <KeyMetricsTrends />
-            <div className="flex-1 flex flex-col [&>*]:flex-1 [&>*]:h-full">
-              <TopLowerMatrix />
-            </div>
+            <TopLowerMatrix />
           </div>
 
           {/* CENTER COLUMN (5/12 on XL, 4/12 on LG) - Map, Ticker & State Leaderboard */}
           <div className="lg:col-span-4 xl:col-span-5 flex flex-col gap-5 min-w-0">
             <GISMap />
             <BreakingNewsTicker />
-            <div className="flex-1 flex flex-col [&>*]:flex-1 [&>*]:h-full">
-              <DistrictLeaderboard showChart={false} />
-            </div>
+            <DistrictLeaderboard showChart={false} />
           </div>
 
           {/* RIGHT COLUMN (4/12 on XL, 4/12 on LG) - Live Intelligence & Streaming */}
@@ -80,9 +76,7 @@ export const ThreeColumnDashboard: React.FC = () => {
             <SocialMediaAnalysis />
             <EmergencyAlert />
             <LiveNewsQueue />
-            <div className="flex-1 flex flex-col [&>*]:flex-1 [&>*]:h-full">
-              <LiveStreaming />
-            </div>
+            <LiveStreaming />
           </div>
         </div>
       )}

@@ -357,15 +357,15 @@ export const Header: React.FC = () => {
             type="button"
             onClick={() => setCopilotOpen(!copilotOpen)}
             className="hover:bg-amber-500/15 border border-amber-500/40 hover:border-amber-500/60 bg-amber-500/10 px-2.5 py-1.5 rounded-lg transition-all cursor-pointer flex items-center gap-2 text-amber-300 font-semibold text-xs shadow-2xs select-none group"
-            title={language === 'mr' ? 'ओपन यूआय कोपायलट उघडा' : 'Open DGIPR OpenUI Copilot'}
-            aria-label="DGIPR OpenUI Copilot"
+            title={language === 'mr' ? 'डीजीआयपीआर निर्देशक उघडा' : 'Open DGIPR Nirdeshak'}
+            aria-label="DGIPR Nirdeshak"
           >
             <div className="w-5 h-5 rounded bg-amber-500/20 border border-amber-500/30 flex items-center justify-center text-amber-400 group-hover:scale-105 transition-transform">
               <MaterialIcon name="auto_awesome" size="xs" />
             </div>
-            <span className="font-bold tracking-wide">OpenUI</span>
+            <span className="font-bold tracking-wide">Nirdeshak</span>
             <span className="text-[10px] font-mono px-1 py-0.2 rounded bg-amber-500/20 text-amber-200 border border-amber-500/30 hidden md:inline">
-              Copilot
+              निर्देशाक
             </span>
           </button>
         )}

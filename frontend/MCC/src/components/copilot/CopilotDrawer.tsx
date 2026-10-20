@@ -85,7 +85,7 @@ export const CopilotDrawer: React.FC = () => {
       id: 'welcome-1',
       role: 'assistant',
       content:
-        '# DGIPR OpenUI Copilot\n\nWelcome Officer. Ask questions in **Marathi (मराठी)**, **Hindi (हिंदी)**, or **English** to inspect role-scoped governance metrics across Maharashtra.',
+        '# DGIPR Nirdeshak (निर्देशाक)\n\nWelcome Officer. Ask questions in **Marathi (मराठी)**, **Hindi (हिंदी)**, or **English** to inspect role-scoped governance metrics across Maharashtra.',
       sourceStatus: 'live',
       asOf: new Date().toISOString(),
     },
@@ -553,11 +553,11 @@ export const CopilotDrawer: React.FC = () => {
       <button
         onClick={() => setIsOpen(true)}
         className="fixed bottom-6 right-6 z-40 bg-gradient-to-r from-amber-600 to-amber-700 text-white p-3.5 rounded-full shadow-xl hover:shadow-2xl hover:scale-105 transition-all flex items-center gap-2 cursor-pointer focus:outline-none focus:ring-4 focus:ring-amber-300"
-        aria-label="Open DGIPR OpenUI Copilot"
-        title="DGIPR OpenUI Copilot"
+        aria-label="Open DGIPR Nirdeshak"
+        title="DGIPR Nirdeshak"
       >
         <MaterialIcon name="auto_awesome" size="md" />
-        <span className="text-xs font-bold tracking-wide pr-1 hidden sm:inline">OpenUI</span>
+        <span className="text-xs font-bold tracking-wide pr-1 hidden sm:inline">Nirdeshak</span>
       </button>
 
       {/* Slide-out Copilot Drawer */}
@@ -566,7 +566,7 @@ export const CopilotDrawer: React.FC = () => {
           <div
             className="w-full max-w-lg bg-slate-50 h-full shadow-2xl flex flex-col border-l border-slate-200 animate-in slide-in-from-right duration-300"
             role="dialog"
-            aria-label="DGIPR Open UI Copilot Interface"
+            aria-label="DGIPR Nirdeshak Interface"
           >
             {/* Header */}
             <div className="bg-slate-900 text-white p-4 flex items-center justify-between border-b border-slate-800">
@@ -576,7 +576,7 @@ export const CopilotDrawer: React.FC = () => {
                 </div>
                 <div>
                   <h3 className="text-xs font-bold tracking-tight text-white flex items-center gap-2">
-                    <span>DGIPR OpenUI Copilot</span>
+                    <span>DGIPR Nirdeshak (निर्देशाक)</span>
                     <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30">
                       {messages.slice().reverse().find((m) => m.modelId)?.modelId?.replace('models/', '') || 'gemma-4-26b'}
                     </span>
@@ -598,7 +598,7 @@ export const CopilotDrawer: React.FC = () => {
                 <button
                   onClick={() => setIsOpen(false)}
                   className="p-1.5 rounded-md hover:bg-slate-800 text-slate-400 hover:text-white transition-colors"
-                  aria-label="Close Copilot"
+                  aria-label="Close Nirdeshak"
                 >
                   <MaterialIcon name="close" size="sm" />
                 </button>
@@ -682,7 +682,7 @@ export const CopilotDrawer: React.FC = () => {
                 placeholder="प्रश्न विचारा (मराठी, हिंदी, or English)..."
                 disabled={isLoading}
                 className="flex-1 text-xs border border-slate-300 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-slate-50/50"
-                aria-label="Copilot query input"
+                aria-label="Nirdeshak query input"
               />
               <button
                 onClick={() => handleSendQuery()}
