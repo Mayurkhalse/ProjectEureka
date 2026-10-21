@@ -6,16 +6,13 @@ readme = "README.md"
 authors = [
     { name = "himanshu-anonymous", email = "himanshupatilpianist@gmail.com" }
 ]
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 dependencies = [
     "fastapi>=0.110.0",
     "groq>=0.9.0",
     "httpx>=0.27.0",
     "networkx>=3.2",
     "numpy>=1.26.0",
-    "onnx>=1.23.2",
-    "onnxruntime>=1.24.3",
-    "onnxscript>=0.7.2",
     "pandas>=2.0.0",
     "psutil>=7.2.2",
     "pydantic>=2.6.0",
@@ -23,9 +20,6 @@ dependencies = [
     "qdrant-client>=1.19.1",
     "requests>=2.31.0",
     "scipy>=1.12.0",
-    "torch>=2.14.1",
-    "torch-geometric>=2.8.1",
-    "tritonclient[grpc]>=2.73.0",
     "uvicorn>=0.29.0",
 ]
 
@@ -40,17 +34,22 @@ db = [
     "psycopg2-binary>=2.9.9",
     "sqlalchemy>=2.0.28",
 ]
-
-
+ml = [
+    "torch>=2.14.1",
+    "torch-geometric>=2.8.1",
+    "onnx>=1.23.2",
+    "onnxruntime>=1.24.3",
+    "onnxscript>=0.7.2",
+    "tritonclient[grpc]>=2.73.0",
+]
 
 [build-system]
-requires = ["uv_build>=0.11.28,<0.12.0"]
-build-backend = "uv_build"
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
 
 [tool.uv]
 no-build-isolation-package = ["torch-sparse", "torch-scatter"]
 
 [tool.uv.extra-build-dependencies]
-torch-sparse = ["torch", "setuptools"]
-torch-scatter = ["torch", "setuptools"]
-
+torch-sparse = ["setuptools"]
+torch-scatter = ["setuptools"]
