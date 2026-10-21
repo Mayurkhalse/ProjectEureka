@@ -1,7 +1,26 @@
 import { DistrictData, IncidentData } from '@/types/dashboard';
 import { getServerDistricts, getServerIncidents, getServerOverviewMetrics, updateServerIncidentAction } from './serverData';
 
-export const FASTAPI_BACKEND_URL = process.env.FASTAPI_BACKEND_URL || 'http://127.0.0.1:8000';
+/**
+ * Resolves the internal backend service URL at request runtime.
+ * Prioritizes Vercel Service Binding (process.env.BACKEND_URL), then FASTAPI_BACKEND_URL,
+ * with 'http://127.0.0.1:8000' as local fallback.
+ */
+export function getBackendBaseUrl(): string {
+  const url = process.env.BACKEND_URL || process.env.FASTAPI_BACKEND_URL || 'http://127.0.0.1:8000';
+  return url.replace(/\/$/, '');
+}
+
+/**
+ * Builds a full target URL to the backend service using the bound URL.
+ */
+export function getBackendEndpoint(endpointPath: string): URL {
+  const base = getBackendBaseUrl();
+  const cleanPath = endpointPath.startsWith('/') ? endpointPath.slice(1) : endpointPath;
+  return new URL(cleanPath, base + "/");
+}
+
+export const FASTAPI_BACKEND_URL = process.env.BACKEND_URL || process.env.FASTAPI_BACKEND_URL || 'http://127.0.0.1:8000';
 
 export interface DistrictMeta {
   code: string;

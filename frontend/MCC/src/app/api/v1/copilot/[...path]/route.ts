@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { FASTAPI_BACKEND_URL } from '@/lib/backendClient';
+import { getBackendEndpoint } from '@/lib/backendClient';
 import { verifyAuthToken } from '@/lib/jwt';
 import { MOCK_USERS } from '@/lib/serverData';
 import { SignJWT, jwtVerify } from 'jose';
@@ -105,7 +105,7 @@ async function resolveBackendToken(request: NextRequest): Promise<string | null>
     console.error('Failed to generate direct backend token:', err);
     // Fallback: try fetching from FastAPI auth endpoint if local signing fails
     try {
-      const tokenRes = await fetch(`${FASTAPI_BACKEND_URL}/api/v1/auth/token`, {
+      const tokenRes = await fetch(getBackendEndpoint('api/v1/auth/token'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(officer),
@@ -130,7 +130,7 @@ async function proxyToFastApi(
 ) {
   const { path } = await params;
   const subpath = path.join('/');
-  const targetUrl = `${FASTAPI_BACKEND_URL}/api/v1/copilot/${subpath}`;
+  const targetUrl = getBackendEndpoint(`api/v1/copilot/${subpath}`).toString();
 
   const backendToken = await resolveBackendToken(request);
 
