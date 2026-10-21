@@ -352,7 +352,7 @@ export const Header: React.FC = () => {
         </Link>
 
         {/* DGIPR OpenUI Copilot Header Trigger */}
-        {process.env.NEXT_PUBLIC_COPILOT_ENABLED === 'true' && (
+        {process.env.NEXT_PUBLIC_COPILOT_ENABLED !== 'false' && (
           <button
             type="button"
             onClick={() => setCopilotOpen(!copilotOpen)}

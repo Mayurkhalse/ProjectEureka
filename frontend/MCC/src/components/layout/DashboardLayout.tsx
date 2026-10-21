@@ -104,7 +104,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) =>
         <Sidebar />
 
         {/* Open UI Copilot Drawer */}
-        {process.env.NEXT_PUBLIC_COPILOT_ENABLED === 'true' && <CopilotDrawer />}
+        {process.env.NEXT_PUBLIC_COPILOT_ENABLED !== 'false' && <CopilotDrawer />}
 
         {/* Right Column Wrapper (The ONLY Scrollable Region) */}
         <div className="flex-1 flex flex-col min-w-0 min-h-0 overflow-hidden relative">
