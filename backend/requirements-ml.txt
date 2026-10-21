@@ -1,0 +1,60 @@
+# Project EUREKA - Full Offline ML & Model Training Requirements
+# Use for StGNN training, ONNX export, and local GPU inference
+
+# Core API & Runtime
+fastapi>=0.110.0
+uvicorn[standard]>=0.28.0
+pydantic>=2.6.4
+pydantic-settings>=2.2.1
+python-multipart>=0.0.9
+
+# Persistence & Relational Database (PostgreSQL 16)
+sqlalchemy>=2.0.28
+asyncpg>=0.29.0
+greenlet>=3.0.0
+psycopg2-binary>=2.9.9
+psycopg[binary]>=3.1.18
+alembic>=1.13.1
+
+# Graph Database (Neo4j 5.x)
+neo4j>=5.18.0
+
+# Distributed Queues & Cache
+redis>=5.0.3
+celery[redis]>=5.3.6
+
+# HTTP & Web Scraping (QUAD System)
+httpx>=0.27.0
+crawl4ai>=0.4.0
+requests>=2.31.0
+python-dotenv>=1.0.0
+
+# Cloud NLP & LLM Inference
+groq>=0.9.0
+openai>=1.12.0
+
+# Multilingual ML & NLP (MuRIL)
+transformers>=4.38.2
+torch>=2.2.0
+scipy>=1.12.0
+torch-geometric>=2.5.0
+torch-geometric-temporal>=0.54.0
+
+# ONNX & Triton Client Inference
+onnx>=1.15.0
+onnxruntime>=1.17.0
+tritonclient[grpc]>=2.40.0
+
+# Security, Auth & RBAC
+python-jose[cryptography]>=3.3.0
+passlib[bcrypt]>=1.7.4
+
+# Utilities & Resilience
+tenacity>=8.2.3
+numpy>=1.26.4
+pandas>=2.0.0
+networkx>=3.2.1
+
+# Testing
+pytest>=8.1.0
+pytest-asyncio>=0.23.5
