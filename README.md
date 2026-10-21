@@ -5,8 +5,8 @@
 [![Next.js 16](https://img.shields.io/badge/Next.js-16.4.1-black?style=flat&logo=next.js&logoColor=white)](https://nextjs.org)
 [![PostgreSQL 16](https://img.shields.io/badge/PostgreSQL-16--alpine-336791?style=flat&logo=postgresql&logoColor=white)](https://www.postgresql.org)
 [![Neo4j 5.x](https://img.shields.io/badge/Neo4j-5.18-008CC1?style=flat&logo=neo4j&logoColor=white)](https://neo4j.com)
-[![Open UI Copilot](https://img.shields.io/badge/Open_UI_Copilot-Gemma_4--26B-FF6F00?style=flat)](docs/COPILOT.md)
-[![Mem0 Memory](https://img.shields.io/badge/Mem0-Qdrant_Vector_Store-red?style=flat)](docs/COPILOT.md)
+[![Nirdeshak Copilot](https://img.shields.io/badge/Nirdeshak_Copilot-Thesys_C1_%7C_Gemma-FF6F00?style=flat)](context.md)
+[![Mem0 Memory](https://img.shields.io/badge/Mem0-Qdrant_Vector_Store-red?style=flat)](context.md)
 [![Hermes Agent](https://img.shields.io/badge/Hermes-Nous_Research-8A2BE2?style=flat)](https://hermes-agent.nousresearch.com)
 [![Tests Passing](https://img.shields.io/badge/Tests-102_Backend_%7C_22_Frontend_Passed-brightgreen?style=flat)](tests/)
 
@@ -46,7 +46,7 @@ Across Maharashtra's 112+ million citizens and 36 administrative districts, EURE
 ├── backend/                             # Project EUREKA FastAPI & AI Engine
 │   ├── src/eureka/
 │   │   ├── api/                         # FastAPI application & REST routers
-│   │   ├── copilot/                     # Governed Open UI Copilot, Gemma client & Mem0
+│   │   ├── copilot/                     # Governed Nirdeshak Copilot, Thesys C1, Fast-Path Router & Mem0
 │   │   │   ├── tools.py                 # 10 governed read-only domain tools
 │   │   │   ├── memory.py                # Mem0 + Qdrant with HMAC user pseudonymization
 │   │   │   ├── viewspec.py              # Canonical Pydantic ViewSpec builder

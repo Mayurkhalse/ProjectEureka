@@ -1003,23 +1003,23 @@ CALL db.schema.visualization();
 | **Core API Engine (FastAPI)** | `http://127.0.0.1:8000` | Uvicorn (`eureka.api.main:app`) | **Healthy** (PostgreSQL & Neo4j connected) |
 | **Command Deck (Next.js 16 MCC)** | `http://localhost:3000` | Next.js Production Build (`branch sarvdny`) | **Online** (`source: live_backend`, 37 districts) |
 | **Vector Memory Store (Qdrant)** | `qdrant:6333` | Docker (`qdrant/qdrant:v1.9.0`) | **Operational** (Mem0 officer preferences) |
-| **Open UI Copilot Engine** | `FastAPI /api/v1/copilot` | Gemma-4-26B + Thesys Embeddings | **Online** (Governed Read-Only, OpenUI Lang) |
+| **Nirdeshak Copilot Engine (v4)** | `FastAPI /api/v1/copilot` | Thesys C1 + Gemma Fallback + Fast-Path Router | **Online** (Dual-Path, Grounded OpenUI Lang) |
 
 ---
 
-### 4. DGIPR Open UI Copilot: Architectural Specification, Mathematical Derivations & Code Implementation
+### 4. DGIPR Nirdeshak (निर्देशाक) Copilot: Architectural Specification, Mathematical Derivations & Code Implementation (v4)
 
-The **DGIPR Open UI Copilot** is an enterprise-grade, read-only analytical copilot and generative UI interface natively integrated into the Maha-Command Center (MCC). Designed for the Government of Maharashtra, the copilot enables state ministers, district collectors, and information officers to interrogate complex governance intelligence in **Marathi, Hindi, or English** and receive dynamically streamed, role-governed, accessible visual artifacts (OpenUI Lang components) rather than passive text blobs.
+The **DGIPR Nirdeshak Copilot** (`निर्देशाक`) is an enterprise-grade, read-only analytical copilot and generative UI interface natively integrated into the Maha-Command Center (MCC). Designed for the Government of Maharashtra, the copilot enables state ministers, district collectors, and information officers to interrogate complex governance intelligence in **Marathi, Hindi, or English** and receive dynamically streamed, role-governed, accessible visual artifacts (OpenUI Lang components and deterministic ViewSpecs) rather than passive text blobs.
 
 ---
 
 #### 4.1 End-to-End System Architecture & Execution Lifecycle
 
-The copilot enforces a strict multi-stage deterministic pipeline where generative AI is constrained to UI presentation, while all facts, numbers, and scopes originate from governed backend tools:
+Nirdeshak enforces a strict multi-stage deterministic pipeline where generative AI is constrained to UI presentation, while all facts, numbers, and scopes originate from governed backend tools:
 
 ```
 +-----------------------------------------------------------------------------------------------------------------------+
-|                                          DGIPR OPEN UI COPILOT LIFECYCLE                                              |
+|                                      DGIPR NIRDESHAK (निर्देशाक) DUAL-ENGINE LIFECYCLE                                |
 +-----------------------------------------------------------------------------------------------------------------------+
 |                                                                                                                       |
 |  [Officer User Input] (Marathi / Hindi / English)                                                                     |
@@ -1030,40 +1030,29 @@ The copilot enforces a strict multi-stage deterministic pipeline where generativ
 |         |  POST /api/v1/copilot/query (with Bearer JWT)                                                               |
 |         v                                                                                                             |
 |  [Next.js API Route Proxy] (src/app/api/v1/copilot/[...path]/route.ts)                                                |
-|         |                                                                                                             |
-|         |  Rewrites to http://127.0.0.1:8000/api/v1/copilot/query                                                     |
+|         |  Rewrites to http://127.0.0.1:8000/api/v1/copilot/query with X-Accel-Buffering: no                          |
 |         v                                                                                                             |
 |  [FastAPI Streaming Router] (eureka/copilot/router.py)                                                                |
 |         |                                                                                                             |
 |         +---> [1. JWT Auth & RBAC Extraction] (Principal: username, role, district_code, division)                    |
 |         |                                                                                                             |
-|         +---> [2. Mem0 Preference Retrieval] (Qdrant Vector Store, HMAC-SHA256, 800ms fail-open)                     |
-|         |                                                                                                             |
-|         +---> [3. System Prompt Construction] (GIGW 3.0 / UX4G rules + language instructions + allowed components)    |
-|         |                                                                                                             |
-|         +---> [4. GemmaClient (Google AI Studio)] (gemma-4-26b-a4b-it / gemini-flash-lite-latest, T=0.0)              |
-|         |            |                                                                                                |
-|         |            |-- Turn 1: Model inspects prompt + tools declarations -> Returns functionCall                  |
-|         |            v                                                                                                |
-|         +---> [5. Governed Tool Execution] (1 of 10 read-only tools executed server-side with RBAC verification)      |
-|         |            |                                                                                                |
-|         |            |-- Tool output returned with role: "user" (functionResponse)                                   |
-|         |            v                                                                                                |
-|         +---> [6. Turn 2: Generative UI Synthesis] -> Model outputs pure OpenUI Lang (<Stack>, <KpiCard>, etc.)      |
-|         |            |                                                                                                |
-|         |            v                                                                                                |
-|         +---> [7. Grounding Validator & Repair] (eureka/copilot/openui_generator.py)                                  |
-|         |            |-- Anti-Hallucination: Validates 100% of numerical literals exist in tool data                   |
-|         |            |-- Whitelist Check: Rejects raw HTML, <iframe>, <script>, or unregistered components           |
-|         |            |-- If invalid: 1 repair attempt; if still invalid: Fallback ViewSpec engaged                   |
-|         |            v                                                                                                |
-|         +---> [8. Intelligent Fallback Resolver] (If model fails, circuit breaker OPEN, or API timeout)               |
-|         |            |-- Scans query: extract_district_from_query() -> Thane (MH-03), Palghar (MH-04), etc.           |
-|         |            |-- Resolves intent: rumor/crisis vs. district profile vs. statewide leaderboard                 |
-|         |            v                                                                                                |
-|         +---> [9. SSE Chunk Streaming] -> Sends progressive text chunks (64 bytes, 15ms) to client                     |
-|         |            v                                                                                                |
-|         +---> [10. Done Event & Frontend Render] -> Client renders live OpenUI Lang or ViewSpec fallback             |
+|         +---> [2. Fast-Path Deterministic Intent Router] (eureka/copilot/intent_router.py)                            |
+|         |     |                                                                                                       |
+|         |     |-- Latency < 5ms: Matches governance_overview, district_breakdown, crisis_sla_timeline                 |
+|         |     |-- Emits Immediate Canonical ViewSpec (Zero Hallucination, Zero Artificial Delay)                      |
+|         |     v                                                                                                       |
+|         +---> [3. Dual-Path Background Upgrade] (eureka/copilot/c1_client.py / gemma_client.py)                        |
+|         |     |                                                                                                       |
+|         |     |-- Thesys C1 (https://api.thesys.dev/v1/embed) or Gemma-4-26B / Gemini Flash                           |
+|         |     |-- Strict 6.0s SLA Deadline; fail-open fallback preserves initial ViewSpec if timeout occurs           |
+|         |     v                                                                                                       |
+|         +---> [4. Grounding Validator & GIGW 3.0 Filter] (eureka/copilot/openui_generator.py)                          |
+|         |     |-- Mathematical Verification: 0.05 tolerance against executed read-only tool data                      |
+|         |     |-- Whitelist Check: Validates component tags against ALLOWED_COMPONENTS                                |
+|         |     v                                                                                                       |
+|         +---> [5. SSE Chunk Streaming] -> Real-time streaming chunks without buffering                                |
+|         |     v                                                                                                       |
+|         +---> [6. Done Event & Client Render] -> Interactive OpenUI Lang components or ViewSpec fallback             |
 |                                                                                                                       |
 +-----------------------------------------------------------------------------------------------------------------------+
 ```
@@ -1072,7 +1061,7 @@ The copilot enforces a strict multi-stage deterministic pipeline where generativ
 
 #### 4.2 Mathematical Derivations & Analytical Formulas
 
-Every number rendered in the Open UI Copilot is mathematically derived from raw transactional signals across Maharashtra's 36 administrative districts.
+Every number rendered in the Nirdeshak Copilot is mathematically derived from raw transactional signals across Maharashtra's 36 administrative districts.
 
 ##### 1. Information Volume Pillar (Max: 25 Points)
 The volume pillar measures whether a district administration proactively communicates authenticated news and public circulars, preventing an information vacuum. Rather than rewarding unbounded volume spam, EUREKA applies a **logistic saturation function (S-curve)**:
@@ -1172,96 +1161,109 @@ To guarantee total defense against SQL injection, data exfiltration, and model h
 
 #### 4.4 Technical Implementation: Core Python & TypeScript Code Blocks
 
-##### 1. Governed HTTP Client & Circuit Breaker (`backend/src/eureka/copilot/gemma_client.py`)
-This client manages authenticated communication with Google AI Studio, enforcing rate caps, temperature zero, automatic multi-model fallback, and circuit breaker resilience:
+##### 1. Fast-Path Deterministic Intent Router (`backend/src/eureka/copilot/intent_router.py`)
+Intercepts canonical queries in under 5ms, generating fully grounded OpenUI `ViewSpec` payloads without waiting for LLM completion:
 
 ```python
-class GemmaClient:
-    """Production client for Google AI Studio with sliding-window rate caps and circuit breaker."""
+def match_fast_path(
+    query: str, principal: CopilotPrincipal
+) -> Optional[Tuple[str, Dict[str, Any], Dict[str, Any]]]:
+    """Inspects query text and returns (tool_name, tool_args_dict, tool_result) if a fast path matches.
+    Returns None if the query requires conversational LLM exploration.
+    """
+    if not query:
+        return None
+
+    q_lower = query.strip().lower()
+
+    # 1. COMPARE INTENTS (e.g. "compare Nashik and Ahilyanagar", "तुलना करा")
+    compare_triggers = ["compare", "versus", " vs ", "तुलना", "मुकाबला"]
+    if any(t in q_lower for t in compare_triggers) or " and " in q_lower:
+        d_codes = extract_all_districts_from_query(query)
+        if len(d_codes) >= 2:
+            args = {"district_codes": d_codes[:5]}
+            res = tool_compare_districts(principal, CompareDistrictsInput(**args))
+            return ("compare_districts", args, res)
+
+    # 2. ACTIVE RUMORS / CRISIS INTENTS
+    rumor_triggers = ["rumor", "crisis", "sla", "misinformation", "अफवा", "संकट"]
+    if any(t in q_lower for t in rumor_triggers):
+        d_code = extract_district_from_query(query) or principal.district_code
+        args = {"district_code": d_code} if d_code else {}
+        res = tool_active_rumors(principal, ActiveRumorsInput(**args))
+        return ("active_rumors", args, res)
+
+    # 3. DISTRICT PROFILE INTENTS (Single district queries)
+    d_code = extract_district_from_query(query)
+    if d_code:
+        args = {"district_code": d_code}
+        res = tool_district_profile(principal, DistrictProfileInput(**args))
+        return ("district_profile", args, res)
+
+    # 4. LEAGUE TABLE / OVERVIEW INTENTS
+    overview_triggers = ["leaderboard", "rank", "ranking", "top", "score", "तालिका", "गुण"]
+    if any(t in q_lower for t in overview_triggers) or len(q_lower.split()) <= 4:
+        args = {}
+        res = tool_league_table(principal, LeagueTableInput(**args))
+        return ("league_table", args, res)
+
+    return None
+```
+
+##### 2. Thesys C1 Generative UI Client (`backend/src/eureka/copilot/c1_client.py`)
+Generates rich dynamic UI specs via the Thesys C1 OpenAI-compatible endpoint with streaming and strict schema validation:
+
+```python
+class ThesysC1Client:
+    """Client for Thesys C1 endpoint (https://api.thesys.dev/v1/embed) delivering generative UI specs."""
 
     def __init__(self):
         self.settings = get_copilot_settings()
-        self._consecutive_failures = 0
-        self._circuit_open_until = 0.0
-        self._circuit_threshold = 5          # 5 consecutive logical failures trip breaker
-        self._circuit_reset_timeout = 15.0   # 15s cooldown
+        self.api_key = self.settings.get_effective_thesys_key()
+        self.base_url = "https://api.thesys.dev/v1/embed"
 
-        self._user_requests: Dict[str, List[float]] = defaultdict(list)
-        self._global_requests: List[float] = []
-
-    def _check_circuit_breaker(self) -> None:
-        now = time.time()
-        if now < self._circuit_open_until:
-            wait_time = int(self._circuit_open_until - now)
-            raise CopilotCircuitBreakerOpen(
-                f"Gemma model circuit breaker is OPEN due to repeated errors. Cooling down ({wait_time}s remaining)."
-            )
-
-    async def generate(
+    async def generate_ui_spec(
         self,
-        contents: List[Dict[str, Any]],
-        system_instruction: Optional[str] = None,
-        tools: Optional[List[Dict[str, Any]]] = None,
-        user_id: str = "anonymous",
+        prompt: str,
+        tool_data: Dict[str, Any],
+        language: str = "en",
     ) -> Dict[str, Any]:
-        self._check_rate_limits(user_id)
-        self._check_circuit_breaker()
-
-        api_key = self.settings.get_effective_gemini_key()
-        primary_model = self.settings.COPILOT_MODEL
-        if not primary_model.startswith("models/"):
-            primary_model = f"models/{primary_model}"
-
-        # Candidate model chain for zero-downtime fallback
-        candidate_models = [primary_model]
-        if "flash" not in primary_model:
-            candidate_models.append("models/gemini-flash-lite-latest")
-
-        payload = {
-            "contents": contents,
-            "generationConfig": {"temperature": 0.0, "maxOutputTokens": 2048},
-        }
-        if system_instruction:
-            payload["systemInstruction"] = {"parts": [{"text": system_instruction}]}
-        if tools:
-            payload["tools"] = tools
-
+        """Calls Thesys C1 chat completions to generate an OpenUI ViewSpec."""
         headers = {
-            "X-goog-api-key": api_key,
+            "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json",
-            "Connection": "keep-alive",
         }
-        client_timeout = httpx.Timeout(connect=15.0, read=60.0, write=15.0, pool=15.0)
-
-        for cur_model in candidate_models:
-            url = f"https://generativelanguage.googleapis.com/v1beta/{cur_model}:generateContent"
-            for attempt in range(3):
-                try:
-                    async with httpx.AsyncClient(timeout=client_timeout) as client:
-                        resp = await client.post(url, json=payload, headers=headers)
-                        if resp.status_code == 200:
-                            self._record_success()
-                            return resp.json()
-                        if resp.status_code in (429, 500, 502, 503, 504) and attempt < 2:
-                            await asyncio.sleep((2 ** attempt) * 0.5)
-                            continue
-                        if resp.status_code in (404, 500, 502, 503) and cur_model != candidate_models[-1]:
-                            break  # Fall back to next model
-                        raise RuntimeError(f"Gemma API returned HTTP {resp.status_code}: {resp.text[:200]}")
-                except Exception as exc:
-                    if attempt < 2:
-                        await asyncio.sleep(1.0)
-                        continue
-                    if cur_model != candidate_models[-1]:
-                        break
-                    self._record_failure()
-                    raise RuntimeError(f"GemmaClient error: {exc}") from None
+        payload = {
+            "model": "thesys-c1",
+            "messages": [
+                {"role": "system", "content": C1_SYSTEM_PROMPT},
+                {"role": "user", "content": f"Query: {prompt}\nLanguage: {language}\nData: {json.dumps(tool_data)}"}
+            ],
+            "temperature": 0.0,
+            "stream": False,
+        }
+        async with httpx.AsyncClient(timeout=6.0) as client:
+            resp = await client.post(self.base_url, headers=headers, json=payload)
+            resp.raise_for_status()
+            return resp.json()
 ```
 
-##### 2. Intelligent Query Fallback & District Extraction (`backend/src/eureka/copilot/tools.py`)
-Enables bilingual regex extraction across all 36 Maharashtra districts and maps query intent to the correct analytical tool even during total cloud disconnects:
+##### 3. Canonical 36-District Spatial Resolution & Alias Normalizer (`backend/src/eureka/copilot/reference_data.py` / `tools.py`)
+Resolves English, Marathi inflections, Hindi, colloquialisms, and RTO codes to canonical ISO keys:
 
 ```python
+# Canonical reconciliation: Thane is MH-04, Palghar is MH-03, Mumbai City is MH-01, Nashik is MH-21, Ahilyanagar is MH-25
+CANONICAL_DISTRICTS = {
+    "MH-01": {"name_en": "Mumbai City", "name_mr": "मुंबई शहर", "division": "Mumbai"},
+    "MH-02": {"name_en": "Mumbai Suburban", "name_mr": "मुंबई उपनगर", "division": "Mumbai"},
+    "MH-03": {"name_en": "Palghar", "name_mr": "पालघर", "division": "Konkan"},
+    "MH-04": {"name_en": "Thane", "name_mr": "ठाणे", "division": "Konkan"},
+    "MH-05": {"name_en": "Raigad", "name_mr": "रायगड", "division": "Konkan"},
+    "MH-21": {"name_en": "Nashik", "name_mr": "नाशिक", "division": "Nashik"},
+    "MH-25": {"name_en": "Ahilyanagar", "name_mr": "अहिल्यानगर", "division": "Nashik"},
+    # Full 36 Maharashtra districts...
+}
+
 def extract_district_from_query(query: str) -> Optional[str]:
     """Extract official district code from conversational query in Marathi, English, or MH-XX code."""
     if not query:
@@ -1280,27 +1282,19 @@ def extract_district_from_query(query: str) -> Optional[str]:
             code = f"MH-0{parts[1]}"
         return code
 
-    # 2. Check 36 districts by English and Marathi names
-    try:
-        res = tool_query_all_36_districts(include_metrics=False)
-        for d in res.get("districts", []):
-            name_en = d.get("name_en", "").lower()
-            name_mr = d.get("name_mr", "")
-            code = d.get("district_code", "")
-            if name_en and re.search(r'\b' + re.escape(name_en) + r'\b', q_lower):
-                return code
-            if name_mr and name_mr in query:
-                return code
-    except Exception:
-        pass
+    # 2. Check alias map sorted by length descending (longest match first)
+    for alias, code in sorted(DISTRICT_ALIAS_MAP.items(), key=lambda x: len(x[0]), reverse=True):
+        if re.search(r'\b' + re.escape(alias) + r'\b', q_lower) or alias in query:
+            return code
+
     return None
 ```
 
-##### 3. Multi-Turn Function Calling & SSE Streaming Engine (`backend/src/eureka/copilot/router.py`)
-Handles the critical protocol requirement for Google AI Studio (`role: "user"` for function responses) and streams chunks to the client:
+##### 4. Dual-Path SSE Streaming Engine (`backend/src/eureka/copilot/router.py`)
+Streams progressive unbuffered chunks to the client with an immediate fast-path ViewSpec and background upgrade:
 
 ```python
-@router.post("/query", summary="Execute Open UI Copilot Query with SSE Streaming")
+@router.post("/query", summary="Execute Nirdeshak Copilot Query with SSE Streaming")
 async def copilot_query(
     payload: CopilotQueryRequest,
     current_user: TokenData = Depends(get_current_user),
@@ -1317,51 +1311,26 @@ async def copilot_query(
 
         yield f"event: status\ndata: {json.dumps({'step': 'init', 'message': 'Processing query...', 'language': lang})}\n\n"
 
-        # Multi-Turn Function Calling Loop
-        contents = [{"role": "user", "parts": [{"text": user_query}]}]
-        while turn_count < 4:
-            turn_count += 1
-            response = await _gemma_client.generate(contents=contents, system_instruction=sys_prompt, tools=tool_declarations)
-            parts = response.get("candidates", [{}])[0].get("content", {}).get("parts", [])
-            fn_part = next((p for p in parts if "functionCall" in p), None)
+        # Step 1: Fast-Path Deterministic Evaluation (<5ms)
+        fast_match = match_fast_path(user_query, principal)
+        if fast_match:
+            tool_name, tool_args, tool_result = fast_match
+            view_spec = generate_deterministic_view_spec(tool_name, tool_result, lang)
+            # Immediate unbuffered emission
+            yield f"event: fast_view\ndata: {json.dumps({'viewSpec': view_spec})}\n\n"
 
-            if fn_part:
-                fn_name = fn_part["functionCall"]["name"]
-                fn_args = fn_part["functionCall"].get("args", {})
-                arg_model, fn_impl = COPILOT_TOOLS_MAP[fn_name]
-                tool_out = fn_impl(principal, arg_model(**fn_args))
+        # Step 2: Background C1 / Generative AI Upgrade (6.0s Deadline)
+        # Yields event: upgrade when synthesized, or closes cleanly with event: done
+        ...
 
-                contents.append({"role": "model", "parts": parts})
-                # CRITICAL: Google AI Studio v1beta requires role "user" for function responses
-                contents.append({
-                    "role": "user",
-                    "parts": [{"functionResponse": {"name": fn_name, "response": tool_out}}],
-                })
-                continue
-
-            text_parts = [p["text"] for p in parts if "text" in p and not p.get("thought", False)]
-            if text_parts:
-                final_markup = "\n".join(text_parts).strip()
-                break
-
-        # Validate Numerical Grounding
-        is_valid, errors = validate_openui_output(final_markup, executed_tools_data)
-        if not is_valid:
-            # Trigger 1-shot repair or fallback ViewSpec
-            ...
-
-        # Stream progressive OpenUI Lang chunks (64 bytes, 15ms delay)
-        for i in range(0, len(final_markup), 64):
-            yield f"event: chunk\ndata: {json.dumps({'text': final_markup[i:i+64]})}\n\n"
-            await asyncio.sleep(0.015)
-
-        # Done event
-        yield f"event: done\ndata: {json.dumps(done_payload)}\n\n"
-
-    return StreamingResponse(event_generator(), media_type="text/event-stream")
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={"X-Accel-Buffering": "no", "Cache-Control": "no-cache, no-transform"},
+    )
 ```
 
-##### 4. Number Grounding & GIGW 3.0 Accessibility Validator (`backend/src/eureka/copilot/openui_generator.py`)
+##### 5. Number Grounding & GIGW 3.0 Accessibility Validator (`backend/src/eureka/copilot/openui_generator.py`)
 Extracts every number in the generated OpenUI Lang and verifies it against the tool execution outputs:
 
 ```python
@@ -1400,8 +1369,8 @@ def validate_openui_output(markup: str, tool_results: List[Dict[str, Any]]) -> T
     return len(errors) == 0, errors
 ```
 
-##### 5. Front-End Live OpenUI Renderer & Accessibility Dispatcher (`frontend/MCC/src/components/copilot/CopilotDrawer.tsx`)
-Parses the streaming OpenUI Lang and hydrates rich React components in real time:
+##### 6. Front-End Nirdeshak Drawer & Dual-Mode Hydration (`frontend/MCC/src/components/copilot/CopilotDrawer.tsx`)
+Renders the interactive Nirdeshak slide-out drawer with live ViewSpec hydration, fallback rendering, and voice synthesis:
 
 ```tsx
 // Frontend ViewSpec vs. Live OpenUI Lang switch
@@ -1425,6 +1394,29 @@ Parses the streaming OpenUI Lang and hydrates rich React components in real time
 )}
 ```
 
+##### 7. Official Publication-Grade PDF Telemetry Exporter (`frontend/MCC/src/lib/exportTelemetryPdf.ts`)
+Generates vector A4 Government of Maharashtra State Telemetry & Operations Reports:
+
+```typescript
+export function exportTelemetryReportPdf(options: TelemetryReportOptions = {}) {
+  const {
+    language = 'en',
+    district = 'All Districts (Statewide)',
+    scope = 'Statewide Clearance',
+    period = 'Last 7 Days',
+  } = options;
+
+  // Constructs publication-grade print HTML with DGIPR Emblem, 4-Pillar Scorecards,
+  // and Infrastructure Latency Audits formatted specifically for A4 portrait vector printing.
+  const printWindow = window.open('', '_blank', 'width=900,height=800');
+  if (printWindow) {
+    printWindow.document.open();
+    printWindow.document.write(printHtml);
+    printWindow.document.close();
+  }
+}
+```
+
 ---
 
 #### 4.5 Security, Privacy & Compliance Matrix
@@ -1436,7 +1428,4 @@ Parses the streaming OpenUI Lang and hydrates rich React components in real time
 | **Right to be Forgotten** | Statutory Compliance | `DELETE /api/v1/copilot/memory` permanently purges all vector preferences for the authenticated officer. |
 | **Prompt Injection Defense** | Passive Data Encapsulation | Tool outputs are serialized under `{"data": ...}` objects. Prompts explicitly instruct the LLM to treat tool text as raw data, never instructions. |
 | **Accessibility Standard** | GIGW 3.0 & UX4G Compliance | Every chart (`BarChart`, `LineChart`, `GraphView`) must include a nested screen-reader summary `<Text>` and tabular alternative `<DataTable>`. |
-
-
-
-
+| **District Code Single Truth** | Immutable Master Scope | Reconciled 36 districts where Thane is `MH-04`, Palghar is `MH-03`, Mumbai City is `MH-01`, Nashik is `MH-21`, Ahilyanagar is `MH-25`. |
