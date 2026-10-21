@@ -23,9 +23,16 @@ if "torch_sparse" not in sys.modules:
 if "torch_scatter" not in sys.modules:
     sys.modules["torch_scatter"] = types.ModuleType("torch_scatter")
 
-import torch
-from torch_geometric.data import Data
-from torch_geometric_temporal.signal import StaticGraphTemporalSignal
+try:
+    import torch
+    from torch_geometric.data import Data
+    from torch_geometric_temporal.signal import StaticGraphTemporalSignal
+    HAS_TORCH_GEOMETRIC = True
+except ImportError:
+    torch = None
+    Data = None
+    StaticGraphTemporalSignal = None
+    HAS_TORCH_GEOMETRIC = False
 
 from eureka.core.neo4j_driver import Neo4jGraphService
 from eureka.processor.stgnn_prep import StGNNDataPreparation

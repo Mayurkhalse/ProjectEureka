@@ -22,16 +22,27 @@ if "torch_sparse" not in sys.modules:
 if "torch_scatter" not in sys.modules:
     sys.modules["torch_scatter"] = types.ModuleType("torch_scatter")
 
-import torch
-import torch.nn as nn
-import torch.nn.functional as F
-from torch_geometric.nn import GCNConv
-from torch_geometric_temporal.nn.recurrent import TGCN
+try:
+    import torch
+    import torch.nn as nn
+    import torch.nn.functional as F
+    from torch_geometric.nn import GCNConv
+    from torch_geometric_temporal.nn.recurrent import TGCN
+    HAS_TORCH = True
+    _BaseModule = nn.Module
+except ImportError:
+    HAS_TORCH = False
+    torch = None
+    nn = None
+    F = None
+    GCNConv = None
+    TGCN = None
+    _BaseModule = object
 
 logger = logging.getLogger(__name__)
 
 
-class EurekaA3TGCN(nn.Module):
+class EurekaA3TGCN(_BaseModule):
     """Attention Temporal Graph Convolutional Network (A3TGCN) for Project EUREKA.
 
     Combines spatial graph convolutions (aggregating non-Euclidean district boundary neighborhoods)

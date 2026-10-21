@@ -417,6 +417,7 @@ def tool_forecast(principal: CopilotPrincipal, args: ForecastArgs) -> Dict[str, 
         "spread_velocity": "MODERATE",
         "predicted_contagion_districts": ["MH-03", "MH-05"],
         "model": "Eureka-A3TGCN-Int8",
+        "provenance": "heuristic",
     })
 
 

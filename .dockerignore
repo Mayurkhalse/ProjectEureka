@@ -1,0 +1,17 @@
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.env
+.env.*
+.git
+.gitignore
+.venv/
+node_modules/
+tests/
+.pytest_cache/
+models/
+*.pt
+*.onnx
+frontend/
+docs/

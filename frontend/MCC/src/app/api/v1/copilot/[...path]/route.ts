@@ -6,6 +6,7 @@ import { SignJWT, jwtVerify } from 'jose';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
+export const maxDuration = 60;
 
 const FASTAPI_JWT_SECRET = process.env.FASTAPI_JWT_SECRET || 'dgipr_maha_command_center_secret_2026_key';
 const encodedFastApiSecret = new TextEncoder().encode(FASTAPI_JWT_SECRET);

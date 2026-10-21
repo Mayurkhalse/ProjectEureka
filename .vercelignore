@@ -1,0 +1,4 @@
+backend/
+scripts/
+.venv/
+__pycache__/

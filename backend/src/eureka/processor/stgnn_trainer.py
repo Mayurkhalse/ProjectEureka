@@ -12,10 +12,19 @@ from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 import numpy as np
-import torch
-import torch.nn as nn
-from torch.optim.lr_scheduler import ReduceLROnPlateau
-from torch_geometric_temporal.signal import StaticGraphTemporalSignal
+
+try:
+    import torch
+    import torch.nn as nn
+    from torch.optim.lr_scheduler import ReduceLROnPlateau
+    from torch_geometric_temporal.signal import StaticGraphTemporalSignal
+    HAS_TORCH = True
+except ImportError:
+    HAS_TORCH = False
+    torch = None
+    nn = None
+    ReduceLROnPlateau = None
+    StaticGraphTemporalSignal = None
 
 from eureka.core.celery_app import celery_app
 from eureka.processor.stgnn_dataset import (
@@ -242,6 +251,11 @@ def infer_risk_diffusion(
     else:
         raise TypeError("current_state must be a StaticGraphTemporalSignal or dict with keys 'x' and 'edge_index'.")
 
+    risk_vector = None
+    preds = None
+    attention = None
+    provenance = "model"
+
     # When no explicit PyTorch model is passed, offload inference to Triton / local INT8 ONNX
     if model is None:
         try:
@@ -256,38 +270,57 @@ def infer_risk_diffusion(
             norm_rumors = np.clip(preds[:, 1] / 15.0, 0.0, 1.0)
             risk_vector = np.clip(0.4 * norm_vol + 0.6 * norm_rumors, 0.0, 1.0)
         except Exception as exc:
-            logger.warning("Triton/INT8 inference failed (%s); falling back to PyTorch model.", exc)
-            model = EurekaA3TGCN(in_channels=3, hidden_dim_1=32, hidden_dim_2=16, periods=12, out_features=2)
-            target_path = weights_path or DEFAULT_WEIGHTS_PATH
-            if os.path.exists(target_path):
-                try:
-                    model.load_weights(target_path)
-                except Exception as w_exc:
-                    logger.warning("Could not load weights from %s: %s", target_path, w_exc)
+            logger.warning("Triton/INT8 inference failed (%s); attempting PyTorch fallback.", exc)
+            if HAS_TORCH and torch is not None:
+                model = EurekaA3TGCN(in_channels=3, hidden_dim_1=32, hidden_dim_2=16, periods=12, out_features=2)
+                target_path = weights_path or DEFAULT_WEIGHTS_PATH
+                if os.path.exists(target_path):
+                    try:
+                        model.load_weights(target_path)
+                    except Exception as w_exc:
+                        logger.warning("Could not load weights from %s: %s", target_path, w_exc)
 
-    if model is not None:
-        dev = device or torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        model.to(dev)
-        model.eval()
+    if model is not None and HAS_TORCH and torch is not None:
+        try:
+            dev = device or torch.device("cuda" if torch.cuda.is_available() else "cpu")
+            model.to(dev)
+            model.eval()
 
-        x = torch.tensor(x_np, dtype=torch.float32, device=dev)
-        edge_index = (
-            edge_index_raw.to(dev)
-            if hasattr(edge_index_raw, "to")
-            else torch.tensor(edge_index_raw, dtype=torch.long, device=dev)
-        )
-        edge_weight = None
-        if edge_weight_raw is not None:
-            edge_weight = (
-                edge_weight_raw.to(dev)
-                if hasattr(edge_weight_raw, "to")
-                else torch.tensor(edge_weight_raw, dtype=torch.float32, device=dev)
+            x = torch.tensor(x_np, dtype=torch.float32, device=dev)
+            edge_index = (
+                edge_index_raw.to(dev)
+                if hasattr(edge_index_raw, "to")
+                else torch.tensor(edge_index_raw, dtype=torch.long, device=dev)
             )
+            edge_weight = None
+            if edge_weight_raw is not None:
+                edge_weight = (
+                    edge_weight_raw.to(dev)
+                    if hasattr(edge_weight_raw, "to")
+                    else torch.tensor(edge_weight_raw, dtype=torch.float32, device=dev)
+                )
 
-        with torch.no_grad():
-            preds_torch, attention = model(x, edge_index, edge_weight)
-            preds = preds_torch.cpu().numpy()
-            risk_vector = model.compute_risk_scores(x, edge_index, edge_weight).cpu().numpy()
+            with torch.no_grad():
+                preds_torch, attention = model(x, edge_index, edge_weight)
+                preds = preds_torch.cpu().numpy()
+                risk_vector = model.compute_risk_scores(x, edge_index, edge_weight).cpu().numpy()
+        except Exception as p_exc:
+            logger.warning("PyTorch forward inference failed (%s); falling back to heuristic baseline.", p_exc)
+
+    # Fallback to calibrated heuristic baseline when ML models / PyTorch are absent
+    if risk_vector is None or preds is None:
+        provenance = "heuristic"
+        if x_np is not None and x_np.shape[0] == NUM_MAHARASHTRA_DISTRICTS:
+            last_step = x_np[:, :, -1] if x_np.ndim == 3 else x_np
+            norm_vol = np.clip(last_step[:, 0] / 300.0, 0.0, 1.0)
+            norm_rumors = np.clip(last_step[:, 1] / 15.0 if last_step.shape[1] > 1 else 0.2, 0.0, 1.0)
+            risk_vector = np.clip(0.4 * norm_vol + 0.6 * norm_rumors, 0.0, 1.0)
+            preds = np.column_stack([norm_vol * 150.0, norm_rumors * 5.0])
+        else:
+            risk_vector = np.full(NUM_MAHARASHTRA_DISTRICTS, 0.42, dtype=np.float32)
+            preds = np.zeros((NUM_MAHARASHTRA_DISTRICTS, 2), dtype=np.float32)
+        if attention is None:
+            attention = np.full(12, 1.0 / 12.0, dtype=np.float32)
 
     # Build 36-district response
     district_risks: List[Dict[str, Any]] = []
@@ -356,6 +389,7 @@ def infer_risk_diffusion(
         "forecast_timestamp": datetime.now(timezone.utc).isoformat(),
         "forecast_horizon_hours": 6,
         "total_districts_monitored": NUM_MAHARASHTRA_DISTRICTS,
+        "provenance": provenance,
         "attention_weights": [round(float(w), 4) for w in attn_weights],
         "dgipr_5_zone_summary": zone_summary,
         "top_critical_districts": top_critical,
