@@ -40,7 +40,7 @@ def get_c1_custom_components() -> List[Dict[str, Any]]:
     return [
         {
             "name": "KpiCard",
-            "description": "Key Performance Indicator metric card displaying score, volume, or TAT.",
+            "description": "Key Performance Indicator metric card displaying score, volume, sentiment, or SLA.",
             "parameters": {
                 "type": "object",
                 "properties": {

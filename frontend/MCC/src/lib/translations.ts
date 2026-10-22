@@ -92,11 +92,9 @@ export interface Translations {
     zoneLabel: string;
     sectionTitle: string;
     totalReleases: string;
-    avgTAT: string;
     sentimentIndex: string;
     misinformation: string;
     releasesTarget: string;
-    tatTarget: string;
     sentimentTarget: string;
     misinfoTarget: string;
   };
@@ -117,7 +115,6 @@ export interface Translations {
     districtCol: string;
     divisionCol: string;
     releasesCol: string;
-    tatCol: string;
     sentimentCol: string;
     crisisCol: string;
     cpiCol: string;
@@ -134,8 +131,6 @@ export interface Translations {
     cpiPrefix: string;
     volumeTitle: string;
     volumeSub: string;
-    tatTitle: string;
-    tatSub: string;
     sentimentTitle: string;
     sentimentSub: string;
     crisisTitle: string;
@@ -407,11 +402,9 @@ export const TRANSLATIONS: Record<Language, Translations> = {
       zoneLabel: 'Zone 1',
       sectionTitle: 'Key Performance Indicators',
       totalReleases: 'Total Releases',
-      avgTAT: 'Avg. TAT',
       sentimentIndex: 'Sentiment Index',
       misinformation: 'Misinformation Tickets',
       releasesTarget: 'Target 1,500 (83%)',
-      tatTarget: 'Target ≤ 60 min (Met)',
       sentimentTarget: 'Target ≥ 70% (Met)',
       misinfoTarget: 'Target ≤ 15 (Met)',
     },
@@ -432,7 +425,6 @@ export const TRANSLATIONS: Record<Language, Translations> = {
       districtCol: 'District',
       divisionCol: 'Division',
       releasesCol: 'Releases',
-      tatCol: 'Avg. TAT',
       sentimentCol: 'Sentiment',
       crisisCol: 'Crisis SLA',
       cpiCol: 'CPI Score',
@@ -444,19 +436,17 @@ export const TRANSLATIONS: Record<Language, Translations> = {
     zone3: {
       zoneLabel: 'Zone 3',
       title: 'CPI Score Decomposition',
-      subtitle: 'Grouped bar breakdown showing where points were lost (Volume vs. Speed)',
+      subtitle: 'Grouped bar breakdown showing where points were lost (Volume, Sentiment & Crisis SLA)',
       rankPrefix: 'Rank',
       cpiPrefix: 'CPI',
       volumeTitle: 'Volume Score',
-      volumeSub: 'Total releases vs target of 300',
-      tatTitle: 'TAT / Speed Score',
-      tatSub: 'Avg. TAT under 60-min standard',
+      volumeSub: 'Total releases vs target of 300 (max 35 pts)',
       sentimentTitle: 'Media Sentiment Score',
-      sentimentSub: 'Composite tone index across Print OCR, Broadcast TV, Social Listening & User Comments',
+      sentimentSub: 'Composite tone index across Print OCR, Broadcast TV, Social Listening & User Comments (max 35 pts)',
       crisisTitle: 'Crisis SLA Score',
-      crisisSub: 'Rumors refuted within 90-min mandate',
+      crisisSub: 'Rumors refuted within 90-min mandate (max 30 pts)',
       gapSuffix: 'pts lost',
-      footerLeft: 'Each component capped at 25 points',
+      footerLeft: 'Volume (35), Sentiment (35), Crisis SLA (30)',
       footerRight: 'Total Maximum CPI: 100 Points',
     },
     zone4: {
@@ -721,11 +711,9 @@ export const TRANSLATIONS: Record<Language, Translations> = {
       zoneLabel: 'विभाग १',
       sectionTitle: 'मुख्य कार्यक्षमता निर्देशांक',
       totalReleases: 'एकूण प्रसिद्धीपत्रके',
-      avgTAT: 'सरासरी प्रतिसाद वेळ',
       sentimentIndex: 'सकारात्मक भावना टक्केवारी',
       misinformation: 'अफवा व तक्रारी',
       releasesTarget: 'उद्दिष्ट १,५०० (८३%)',
-      tatTarget: 'उद्दिष्ट ≤ ६० मिनिटे (साध्य)',
       sentimentTarget: 'उद्दिष्ट ≥ ७०% (साध्य)',
       misinfoTarget: 'उद्दिष्ट ≤ १५ (साध्य)',
     },
@@ -746,7 +734,6 @@ export const TRANSLATIONS: Record<Language, Translations> = {
       districtCol: 'जिल्हा',
       divisionCol: 'विभाग',
       releasesCol: 'पत्रके',
-      tatCol: 'प्रतिसाद वेळ',
       sentimentCol: 'भावना %',
       crisisCol: 'आपत्ती विहित वेळ',
       cpiCol: 'गुण',
@@ -762,15 +749,13 @@ export const TRANSLATIONS: Record<Language, Translations> = {
       rankPrefix: 'क्रमांक',
       cpiPrefix: 'गुण',
       volumeTitle: 'प्रसिद्धीपत्रक प्रमाण',
-      volumeSub: '३०० उद्दिष्टाच्या तुलनेत प्रसिद्धी',
-      tatTitle: 'वितरण गती व कार्यक्षमता',
-      tatSub: '६० मिनिटांपेक्षा कमी सरासरी वेळ',
+      volumeSub: '३०० उद्दिष्टाच्या तुलनेत प्रसिद्धी (कमाल ३५ गुण)',
       sentimentTitle: 'माध्यम लोकभावना',
-      sentimentSub: 'प्रिंट ओसीआर, टीव्ही प्रसारण, सोशल ऐकणे व नागरिक टिप्पण्यांचा संमिश्र निर्देशांक',
+      sentimentSub: 'प्रिंट ओसीआर, टीव्ही प्रसारण, सोशल ऐकणे व नागरिक टिप्पण्यांचा संमिश्र निर्देशांक (कमाल ३५ गुण)',
       crisisTitle: 'आपत्कालीन विहित वेळ अनुपालन',
-      crisisSub: '९० मिनिटांच्या आत अफवांचे खंडन',
+      crisisSub: '९० मिनिटांच्या आत अफवांचे खंडन (कमाल ३० गुण)',
       gapSuffix: 'गुण घट',
-      footerLeft: 'प्रत्येक घटक कमाल २५ गुणांचा',
+      footerLeft: 'प्रसिद्धी (३५), लोकभावना (३५), आपत्कालीन निवारण (३०)',
       footerRight: 'एकूण कमाल गुण: १००',
     },
     zone4: {

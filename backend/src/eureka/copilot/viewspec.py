@@ -242,7 +242,6 @@ class ViewSpecBuilder:
                     "District": f"{d.get('name_en')} ({d.get('name_mr')})",
                     "Score": d.get("composite_index"),
                     "Volume": d.get("pillars", {}).get("volume", 0),
-                    "TAT Speed": d.get("pillars", {}).get("speed_tat", 0),
                     "Sentiment": d.get("pillars", {}).get("sentiment", 0),
                     "Crisis SLA": d.get("pillars", {}).get("crisis_sla", 0),
                 })
@@ -252,7 +251,7 @@ class ViewSpecBuilder:
                 })
 
             table_spec = DataTableSpec(
-                columns=["Rank", "District", "Score", "Volume", "TAT Speed", "Sentiment", "Crisis SLA"],
+                columns=["Rank", "District", "Score", "Volume", "Sentiment", "Crisis SLA"],
                 rows=table_rows,
                 caption="100-Point Composite Governance Index Leaderboard",
             )
@@ -290,23 +289,21 @@ class ViewSpecBuilder:
 
             kpis = [
                 KpiCardSpec(title="Composite Index", value=score, unit="/100", status="positive" if score >= 75 else "neutral"),
-                KpiCardSpec(title="Volume Pillar", value=pillars.get("volume", 0), unit="/25"),
-                KpiCardSpec(title="TAT Speed Pillar", value=pillars.get("speed_tat", 0), unit="/30"),
-                KpiCardSpec(title="Sentiment Pillar", value=pillars.get("sentiment", 0), unit="/25"),
-                KpiCardSpec(title="Crisis SLA Pillar", value=pillars.get("crisis_sla", 0), unit="/20", status="critical" if raw.get("active_crisis_tickets", 0) > 0 else "positive"),
+                KpiCardSpec(title="Volume Pillar", value=pillars.get("volume", 0), unit="/35"),
+                KpiCardSpec(title="Sentiment Pillar", value=pillars.get("sentiment", 0), unit="/35"),
+                KpiCardSpec(title="Crisis SLA Pillar", value=pillars.get("crisis_sla", 0), unit="/30", status="critical" if raw.get("active_crisis_tickets", 0) > 0 else "positive"),
             ]
 
             pillar_rows = [
-                {"Pillar": "Information Volume", "Score": pillars.get("volume", 0), "Max": 25, "Detail": f"{raw.get('total_releases', 0)} official releases"},
-                {"Pillar": "Turnaround Speed", "Score": pillars.get("speed_tat", 0), "Max": 30, "Detail": f"{raw.get('average_tat_minutes', 0)} min avg response"},
-                {"Pillar": "Net Sentiment", "Score": pillars.get("sentiment", 0), "Max": 25, "Detail": f"{raw.get('net_sentiment', 0):.2f} NSI score"},
-                {"Pillar": "Crisis SLA", "Score": pillars.get("crisis_sla", 0), "Max": 20, "Detail": f"{raw.get('active_crisis_tickets', 0)} active rumors"},
+                {"Pillar": "Information Volume", "Score": pillars.get("volume", 0), "Max": 35, "Detail": f"{raw.get('total_releases', 0)} official releases"},
+                {"Pillar": "Net Sentiment", "Score": pillars.get("sentiment", 0), "Max": 35, "Detail": f"{raw.get('net_sentiment', 0):.2f} NSI score"},
+                {"Pillar": "Crisis SLA", "Score": pillars.get("crisis_sla", 0), "Max": 30, "Detail": f"{raw.get('active_crisis_tickets', 0)} active rumors"},
             ]
 
             table_spec = DataTableSpec(
                 columns=["Pillar", "Score", "Max", "Detail"],
                 rows=pillar_rows,
-                caption=f"4-Pillar Breakdown for {d_name} ({d_code})",
+                caption=f"3-Pillar Breakdown for {d_name} ({d_code})",
             )
 
             return ViewSpec(

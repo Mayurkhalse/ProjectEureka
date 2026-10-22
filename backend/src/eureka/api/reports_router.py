@@ -79,37 +79,27 @@ def get_district_performance_report() -> Dict[str, Any]:
                 else 1.0
             )
 
-            # 100-Point Composite Metric Calculations:
-            # 1. Volume: min(25, (total_releases / 300) * 25)
-            volume_score = min(25.0, (total_releases / 300.0) * 25.0)
+            # 100-Point Composite Metric Calculations (TAT removed per meeting changes):
+            # 1. Volume: min(35, (total_releases / 300) * 35)
+            volume_score = min(35.0, (total_releases / 300.0) * 35.0)
 
-            # 2. Speed / TAT SLA: 45m = 25 pts, 120m = 0 pts (linear degradation)
-            if avg_tat <= 45.0:
-                tat_score = 25.0
-            elif avg_tat >= 120.0:
-                tat_score = 0.0
-            else:
-                tat_score = 25.0 * (1.0 - ((avg_tat - 45.0) / 75.0))
+            # 2. Media Sentiment: ((NSI + 1.0) / 2) * 35
+            sentiment_score = ((net_sentiment + 1.0) / 2.0) * 35.0
 
-            # 3. Media Sentiment: ((NSI + 1.0) / 2) * 25
-            sentiment_score = ((net_sentiment + 1.0) / 2.0) * 25.0
+            # 3. Crisis Containment SLA: (Rumors Refuted / Total Rumors) * 30
+            crisis_score = resolved_ratio * 30.0
 
-            # 4. Crisis Containment SLA: (Rumors Refuted / Total Rumors) * 25
-            crisis_score = resolved_ratio * 25.0
-
-            total_index = volume_score + tat_score + sentiment_score + crisis_score
+            total_index = volume_score + sentiment_score + crisis_score
 
             report_data.append({
                 "district": district,
                 "raw_metrics": {
                     "total_releases": total_releases,
-                    "average_tat_minutes": round(avg_tat, 2),
                     "net_sentiment": round(net_sentiment, 3),
                     "crisis_resolution_rate": f"{round(resolved_ratio * 100, 1)}%",
                 },
                 "pillar_scores": {
                     "volume": round(volume_score, 2),
-                    "speed_tat": round(tat_score, 2),
                     "sentiment": round(sentiment_score, 2),
                     "crisis_sla": round(crisis_score, 2),
                 },

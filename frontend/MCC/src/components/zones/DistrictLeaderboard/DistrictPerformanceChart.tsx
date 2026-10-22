@@ -35,10 +35,9 @@ export const DistrictPerformanceChart: React.FC<DistrictPerformanceChartProps> =
         itemWidth: 10,
         itemHeight: 10,
         data: [
-          language === 'mr' ? 'प्रसिद्धी प्रमाण (२५)' : 'Volume (25)',
-          language === 'mr' ? 'वितरण गती / TAT (२५)' : 'Speed / TAT (25)',
-          language === 'mr' ? 'माध्यम सूर (२५)' : 'Sentiment (25)',
-          language === 'mr' ? 'आपत्ती SLA (२५)' : 'Crisis SLA (25)',
+          language === 'mr' ? 'प्रसिद्धी प्रमाण (३५)' : 'Volume (35)',
+          language === 'mr' ? 'माध्यम सूर (३५)' : 'Sentiment (35)',
+          language === 'mr' ? 'आपत्ती SLA (३०)' : 'Crisis SLA (30)',
         ],
       },
       tooltip: {
@@ -79,7 +78,7 @@ export const DistrictPerformanceChart: React.FC<DistrictPerformanceChartProps> =
       },
       series: [
         {
-          name: language === 'mr' ? 'प्रसिद्धी प्रमाण (२५)' : 'Volume (25)',
+          name: language === 'mr' ? 'प्रसिद्धी प्रमाण (३५)' : 'Volume (35)',
           type: 'bar',
           stack: 'cpi',
           barWidth: '36%',
@@ -87,21 +86,14 @@ export const DistrictPerformanceChart: React.FC<DistrictPerformanceChartProps> =
           itemStyle: { color: '#1E3A8A' },
         },
         {
-          name: language === 'mr' ? 'वितरण गती / TAT (२५)' : 'Speed / TAT (25)',
-          type: 'bar',
-          stack: 'cpi',
-          data: top5.map((d) => d.tatScore),
-          itemStyle: { color: '#0D9488' },
-        },
-        {
-          name: language === 'mr' ? 'माध्यम सूर (२५)' : 'Sentiment (25)',
+          name: language === 'mr' ? 'माध्यम सूर (३५)' : 'Sentiment (35)',
           type: 'bar',
           stack: 'cpi',
           data: top5.map((d) => d.sentimentScore),
           itemStyle: { color: '#D97706' },
         },
         {
-          name: language === 'mr' ? 'आपत्ती SLA (२५)' : 'Crisis SLA (25)',
+          name: language === 'mr' ? 'आपत्ती SLA (३०)' : 'Crisis SLA (30)',
           type: 'bar',
           stack: 'cpi',
           borderRadius: [4, 4, 0, 0],

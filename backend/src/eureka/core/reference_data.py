@@ -793,15 +793,13 @@ REVENUE_DIVISIONS = {
 }
 
 SCORING_CONFIG_V1 = {
-    "version": 1,
-    "weights": {"volume": 25, "tat": 25, "sentiment": 25, "crisis_sla": 25},
+    "version": 2,
+    "weights": {"volume": 35, "sentiment": 35, "crisis_sla": 30},
     "parameters": {
         "volume_saturation_releases": 300,
-        "tat_full_points_max_min": 45,
-        "tat_zero_points_min": 120,
         "crisis_sla_minutes": 90,
-        "crisis_score_when_no_rumors": 25.0,
+        "crisis_score_when_no_rumors": 30.0,
     },
     "is_active": True,
-    "notes": "Seeded from Project EUREKA Governance Specification",
+    "notes": "Updated: TAT removed per meeting changes; weights set to Volume 35, Sentiment 35, Crisis SLA 30 (DGIPR to confirm)",
 }

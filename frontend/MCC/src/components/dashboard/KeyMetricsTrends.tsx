@@ -50,8 +50,8 @@ export const KeyMetricsTrends: React.FC = () => {
             </h3>
             <p className="text-[11px] text-slate-500 font-medium">
               {language === 'mr'
-                ? 'शीर्ष ५ जिल्ह्यांचे ४ सीपीआय घटकांनुसार तुलनात्मक विश्लेषण'
-                : 'Top 5 District Comparative Breakdown (Volume, TAT, Sentiment, SLA)'}
+                ? 'शीर्ष ५ जिल्ह्यांचे ३ सीपीआय घटकांनुसार तुलनात्मक विश्लेषण'
+                : 'Top 5 District Comparative Breakdown (Volume, Sentiment, Crisis SLA)'}
             </p>
           </div>
         </div>

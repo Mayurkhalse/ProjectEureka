@@ -12,14 +12,6 @@ export interface OverviewMetricsData {
     trendValue: string;
     positiveTrend: boolean;
   };
-  avgTAT: {
-    value: number;
-    unit: string;
-    targetText: string;
-    trendDirection: 'up' | 'down';
-    trendValue: string;
-    positiveTrend: boolean;
-  };
   sentimentIndex: {
     value: string;
     targetText: string;

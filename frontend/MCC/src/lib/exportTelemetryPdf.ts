@@ -248,12 +248,12 @@ export function exportTelemetryReportPdf(options: TelemetryReportOptions = {}) {
     </div>
     <div class="kpi-card">
       <div class="kpi-label">${isMr ? 'सर्वोच्च जिल्हा निर्देशांक (Top Ranked)' : 'Top Composite Score'}</div>
-      <div class="kpi-val">96.75 <span style="font-size:10px;">/100</span></div>
+      <div class="kpi-val">95.45 <span style="font-size:10px;">/100</span></div>
       <div class="kpi-sub">Thane (MH-04) • Rank #1</div>
     </div>
   </div>
 
-  <div class="section-title">${isMr ? '१. प्रमुख जिल्हा संनियंत्रण कामगिरी (Top District Performance Benchmark)' : '1. Key District Performance & 4-Pillar Index'}</div>
+  <div class="section-title">${isMr ? '१. प्रमुख जिल्हा संनियंत्रण कामगिरी (Top District Performance Benchmark)' : '1. Key District Performance & 3-Pillar Index'}</div>
   <table>
     <thead>
       <tr>
@@ -262,10 +262,9 @@ export function exportTelemetryReportPdf(options: TelemetryReportOptions = {}) {
         <th>${isMr ? 'जिल्हा' : 'District'}</th>
         <th>${isMr ? 'विभाग' : 'Division'}</th>
         <th>${isMr ? 'एकूण गुण' : 'Composite Score'}</th>
-        <th>${isMr ? 'माध्यम प्रसिद्धी' : 'Volume (25)'}</th>
-        <th>${isMr ? 'वेग' : 'TAT (25)'}</th>
-        <th>${isMr ? 'जनभावना' : 'Sentiment (25)'}</th>
-        <th>${isMr ? 'संकट निवारण' : 'Crisis SLA (25)'}</th>
+        <th>${isMr ? 'माध्यम प्रसिद्धी' : 'Volume (35)'}</th>
+        <th>${isMr ? 'जनभावना' : 'Sentiment (35)'}</th>
+        <th>${isMr ? 'संकट निवारण' : 'Crisis SLA (30)'}</th>
         <th>${isMr ? 'स्थिती' : 'Status'}</th>
       </tr>
     </thead>
@@ -275,95 +274,87 @@ export function exportTelemetryReportPdf(options: TelemetryReportOptions = {}) {
         <td class="mono">MH-04</td>
         <td><strong>${isMr ? 'ठाणे' : 'Thane'}</strong></td>
         <td>Konkan</td>
-        <td class="mono"><strong>96.75</strong></td>
-        <td class="mono">25.00</td>
-        <td class="mono">25.00</td>
-        <td class="mono">21.75</td>
-        <td class="mono">25.00</td>
+        <td class="mono"><strong>95.45</strong></td>
+        <td class="mono">35.00</td>
+        <td class="mono">30.45</td>
+        <td class="mono">30.00</td>
         <td><span class="tag tag-green">${isMr ? 'उत्कृष्ट' : 'Optimal'}</span></td>
       </tr>
       <tr>
         <td class="mono">#2</td>
-        <td class="mono">MH-10</td>
-        <td><strong>${isMr ? 'कोल्हापूर' : 'Kolhapur'}</strong></td>
-        <td>Kolhapur</td>
-        <td class="mono"><strong>93.92</strong></td>
-        <td class="mono">23.42</td>
-        <td class="mono">25.00</td>
-        <td class="mono">20.50</td>
-        <td class="mono">25.00</td>
+        <td class="mono">MH-05</td>
+        <td><strong>${isMr ? 'रायगड' : 'Raigad'}</strong></td>
+        <td>Konkan</td>
+        <td class="mono"><strong>90.77</strong></td>
+        <td class="mono">34.77</td>
+        <td class="mono">26.60</td>
+        <td class="mono">29.40</td>
         <td><span class="tag tag-green">${isMr ? 'उत्कृष्ट' : 'Optimal'}</span></td>
       </tr>
       <tr>
         <td class="mono">#3</td>
-        <td class="mono">MH-05</td>
-        <td><strong>${isMr ? 'रायगड' : 'Raigad'}</strong></td>
+        <td class="mono">MH-03</td>
+        <td><strong>${isMr ? 'पालघर' : 'Palghar'}</strong></td>
         <td>Konkan</td>
-        <td class="mono"><strong>92.78</strong></td>
-        <td class="mono">24.58</td>
-        <td class="mono">24.60</td>
-        <td class="mono">21.38</td>
-        <td class="mono">22.22</td>
+        <td class="mono"><strong>84.27</strong></td>
+        <td class="mono">30.92</td>
+        <td class="mono">24.85</td>
+        <td class="mono">28.50</td>
         <td><span class="tag tag-green">${isMr ? 'उत्कृष्ट' : 'Optimal'}</span></td>
       </tr>
       <tr>
         <td class="mono">#4</td>
-        <td class="mono">MH-21</td>
-        <td><strong>${isMr ? 'नाशिक' : 'Nashik'}</strong></td>
-        <td>Nashik</td>
-        <td class="mono"><strong>92.28</strong></td>
-        <td class="mono">25.00</td>
-        <td class="mono">24.17</td>
-        <td class="mono">20.38</td>
-        <td class="mono">22.73</td>
+        <td class="mono">MH-10</td>
+        <td><strong>${isMr ? 'कोल्हापूर' : 'Kolhapur'}</strong></td>
+        <td>Kolhapur</td>
+        <td class="mono"><strong>83.50</strong></td>
+        <td class="mono">29.50</td>
+        <td class="mono">26.00</td>
+        <td class="mono">28.00</td>
         <td><span class="tag tag-green">${isMr ? 'उत्कृष्ट' : 'Optimal'}</span></td>
       </tr>
       <tr>
         <td class="mono">#5</td>
-        <td class="mono">MH-01</td>
-        <td><strong>${isMr ? 'मुंबई शहर' : 'Mumbai City'}</strong></td>
-        <td>Mumbai</td>
-        <td class="mono"><strong>92.25</strong></td>
-        <td class="mono">25.00</td>
-        <td class="mono">25.00</td>
-        <td class="mono">19.75</td>
-        <td class="mono">22.50</td>
+        <td class="mono">MH-21</td>
+        <td><strong>${isMr ? 'नाशिक' : 'Nashik'}</strong></td>
+        <td>Nashik</td>
+        <td class="mono"><strong>82.20</strong></td>
+        <td class="mono">28.50</td>
+        <td class="mono">25.70</td>
+        <td class="mono">28.00</td>
         <td><span class="tag tag-green">${isMr ? 'उत्कृष्ट' : 'Optimal'}</span></td>
       </tr>
       <tr>
         <td class="mono">#6</td>
+        <td class="mono">MH-01</td>
+        <td><strong>${isMr ? 'मुंबई शहर' : 'Mumbai City'}</strong></td>
+        <td>Mumbai</td>
+        <td class="mono"><strong>81.50</strong></td>
+        <td class="mono">29.00</td>
+        <td class="mono">25.50</td>
+        <td class="mono">27.00</td>
+        <td><span class="tag tag-green">${isMr ? 'उत्कृष्ट' : 'Optimal'}</span></td>
+      </tr>
+      <tr>
+        <td class="mono">#7</td>
         <td class="mono">MH-07</td>
         <td><strong>${isMr ? 'पुणे' : 'Pune'}</strong></td>
         <td>Pune</td>
-        <td class="mono"><strong>91.95</strong></td>
-        <td class="mono">25.00</td>
-        <td class="mono">25.00</td>
-        <td class="mono">21.12</td>
-        <td class="mono">20.83</td>
+        <td class="mono"><strong>80.80</strong></td>
+        <td class="mono">28.20</td>
+        <td class="mono">25.60</td>
+        <td class="mono">27.00</td>
         <td><span class="tag tag-green">${isMr ? 'उत्कृष्ट' : 'Optimal'}</span></td>
       </tr>
       <tr>
         <td class="mono">#8</td>
-        <td class="mono">MH-03</td>
-        <td><strong>${isMr ? 'पालघर' : 'Palghar'}</strong></td>
-        <td>Konkan</td>
-        <td class="mono"><strong>91.18</strong></td>
-        <td class="mono">25.00</td>
-        <td class="mono">22.83</td>
-        <td class="mono">20.62</td>
-        <td class="mono">22.73</td>
-        <td><span class="tag tag-blue">${isMr ? 'चांगले' : 'Good'}</span></td>
-      </tr>
-      <tr>
-        <td class="mono">#12</td>
         <td class="mono">MH-25</td>
         <td><strong>${isMr ? 'अहिल्यानगर' : 'Ahilyanagar'}</strong></td>
         <td>Nashik</td>
-        <td class="mono"><strong>84.85</strong></td>
-        <td class="mono">20.58</td>
-        <td class="mono">22.43</td>
-        <td class="mono">19.62</td>
-        <td class="mono">22.22</td>
+        <td class="mono"><strong>78.40</strong></td>
+        <td class="mono">26.00</td>
+        <td class="mono">25.40</td>
+        <td class="mono">27.00</td>
         <td><span class="tag tag-blue">${isMr ? 'चांगले' : 'Good'}</span></td>
       </tr>
     </tbody>

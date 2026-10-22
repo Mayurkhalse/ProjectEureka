@@ -20,7 +20,7 @@ interface DistrictTableProps {
   onSelectDistrict: (id: string) => void;
 }
 
-type SortColumn = 'rank' | 'name' | 'division' | 'releases' | 'avgTAT' | 'sentiment' | 'crisisSLA' | 'cpi';
+type SortColumn = 'rank' | 'name' | 'division' | 'releases' | 'sentiment' | 'crisisSLA' | 'cpi';
 type SortOrder = 'asc' | 'desc';
 
 export const DistrictTable: React.FC<DistrictTableProps> = ({
@@ -156,21 +156,6 @@ export const DistrictTable: React.FC<DistrictTableProps> = ({
                 </div>
               </th>
 
-              {/* Avg TAT */}
-              <th
-                onClick={() => handleSort('avgTAT')}
-                onKeyDown={(e) => handleHeaderKeyDown(e, 'avgTAT')}
-                tabIndex={0}
-                aria-sort={getAriaSort('avgTAT')}
-                className="py-3 px-3 text-right cursor-pointer hover:bg-gov-primary-light focus-visible:bg-gov-primary-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 transition-colors group"
-                title="Sort by Turnaround Time"
-              >
-                <div className="flex items-center justify-end gap-0.5">
-                  <span>{t.zone2.tatCol}</span>
-                  {renderSortIcon('avgTAT')}
-                </div>
-              </th>
-
               {/* Sentiment */}
               <th
                 onClick={() => handleSort('sentiment')}
@@ -271,11 +256,6 @@ export const DistrictTable: React.FC<DistrictTableProps> = ({
                     </div>
                   </td>
                   <td className="py-3 px-3 text-right font-mono font-medium">{d.releases}</td>
-                  <td className="py-3 px-3 text-right font-mono">
-                    <span className={d.avgTAT <= 45 ? 'text-emerald-700 font-semibold' : 'text-slate-700'}>
-                      {d.avgTAT}{language === 'mr' ? ' मि' : 'm'}
-                    </span>
-                  </td>
                   <td className="py-3 px-3 text-right font-mono">
                     <span
                       className={`inline-flex items-center justify-end gap-1.5 cursor-help ${

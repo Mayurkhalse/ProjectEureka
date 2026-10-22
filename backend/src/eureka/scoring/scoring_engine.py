@@ -1,13 +1,12 @@
 """100-Point Composite Index Scoring Engine for DGIPR Maha-Command Center.
 
-Authoritative scoring implementation strictly matching DGIPR benchmark answer key
-(expected_scores.csv) across all 36 Maharashtra districts.
+Authoritative scoring implementation strictly matching DGIPR benchmark requirements
+across all 36 Maharashtra districts.
 
-Pillars (25 pts each):
-1. Volume (0-25 pts): 25.0 * min(releases / 300, 1.0)
-2. TAT Speed (0-25 pts): <= 45m = 25pts, >= 120m = 0pts, linear degradation in between
-3. Sentiment (0-25 pts): ((net_sentiment + 1.0) / 2.0) * 25.0
-4. Crisis SLA (0-25 pts): (crisis_ok / crisis_total) * 25.0 (returns 25.0 if crisis_total == 0)
+Pillars (100 pts total, TAT removed per meeting changes):
+1. Volume (0-35 pts): 35.0 * min(releases / 300, 1.0)
+2. Sentiment (0-35 pts): ((net_sentiment + 1.0) / 2.0) * 35.0
+3. Crisis SLA (0-30 pts): (crisis_ok / crisis_total) * 30.0 (returns 30.0 if crisis_total == 0)
 
 Auxiliary Metrics:
 - output_velocity_pct: % of press releases published within <= 60 minutes
@@ -39,11 +38,11 @@ logger = logging.getLogger(__name__)
 @dataclass
 class PillarScores:
     volume_score: float
-    tat_score: float
     sentiment_score: float
     crisis_sla_score: float
     total_composite_score: float
     metadata: Dict[str, Any]
+    tat_score: float = 0.0
 
 
 class CompositeScoringEngine:
@@ -51,27 +50,20 @@ class CompositeScoringEngine:
 
     @staticmethod
     def calculate_volume(total_releases: int) -> float:
-        """Volume Pillar (0-25 pts): Saturates strictly at 300 releases."""
+        """Volume Pillar (0-35 pts): Saturates strictly at 300 releases."""
         ratio = min(float(total_releases) / 300.0, 1.0)
-        return round(25.0 * ratio, 2)
+        return round(35.0 * ratio, 2)
 
     @staticmethod
     def calculate_tat(avg_turnaround_minutes: float) -> float:
-        """TAT Speed Pillar (0-25 pts): <= 45m = 25 pts, >= 120m = 0 pts, linear in between."""
-        if avg_turnaround_minutes <= 45.0:
-            return 25.0
-        elif avg_turnaround_minutes >= 120.0:
-            return 0.0
-        else:
-            # Linear degradation across the [45, 120] minute interval
-            score = 25.0 * (1.0 - ((avg_turnaround_minutes - 45.0) / (120.0 - 45.0)))
-            return round(score, 2)
+        """Deprecated: TAT Speed Pillar removed per meeting changes."""
+        return 0.0
 
     @staticmethod
     def calculate_sentiment(
         positive_count: int, negative_count: int, total_classified: int
     ) -> Tuple[float, float]:
-        """Sentiment Pillar (0-25 pts) from classification counts.
+        """Sentiment Pillar (0-35 pts) from classification counts.
         
         Returns (sentiment_score, net_sentiment_index).
         """
@@ -81,27 +73,27 @@ class CompositeScoringEngine:
             nsi = (float(positive_count) - float(negative_count)) / float(total_classified)
             nsi = max(-1.0, min(1.0, nsi))
 
-        score = ((nsi + 1.0) / 2.0) * 25.0
+        score = ((nsi + 1.0) / 2.0) * 35.0
         return round(score, 2), round(nsi, 3)
 
     @staticmethod
     def calculate_sentiment_from_nsi(net_sentiment: float) -> float:
-        """Sentiment Pillar (0-25 pts) directly from Net Sentiment Index in [-1.0, 1.0]."""
+        """Sentiment Pillar (0-35 pts) directly from Net Sentiment Index in [-1.0, 1.0]."""
         clamped_nsi = max(-1.0, min(1.0, float(net_sentiment)))
-        score = ((clamped_nsi + 1.0) / 2.0) * 25.0
+        score = ((clamped_nsi + 1.0) / 2.0) * 35.0
         return round(score, 2)
 
     @staticmethod
     def calculate_crisis_sla(refuted_within_90m: int, total_rumors: int) -> float:
-        """Crisis SLA Pillar (0-25 pts).
+        """Crisis SLA Pillar (0-30 pts).
         
-        CRITICAL RULE: If total_rumors == 0, returns 25.0 pts (division-by-zero protection).
+        CRITICAL RULE: If total_rumors == 0, returns 30.0 pts (division-by-zero protection).
         Resolution strictly < 90.0 minutes is required.
         """
         if total_rumors == 0:
-            return 25.0
+            return 30.0
         ratio = min(1.0, float(refuted_within_90m) / float(total_rumors))
-        return round(ratio * 25.0, 2)
+        return round(ratio * 30.0, 2)
 
     @classmethod
     def resolve_seed_dir(cls, seed_dir: Optional[str] = None) -> Path:
@@ -171,20 +163,11 @@ class CompositeScoringEngine:
             m_list = mcs_by_district.get(did, [])
             f_list = fcs_by_district.get(did, [])
 
-            # Pillar 1: Volume
+            # Pillar 1: Volume (0-35 pts)
             n_rel = len(p_list)
             volume_pts = cls.calculate_volume(n_rel)
 
-            # Pillar 2: Speed / TAT
-            if n_rel > 0:
-                avg_tat = round(
-                    sum(float(p["turnaround_time_minutes"]) for p in p_list) / n_rel, 1
-                )
-            else:
-                avg_tat = 0.0
-            speed_pts = cls.calculate_tat(avg_tat)
-
-            # Pillar 3: Sentiment
+            # Pillar 2: Sentiment (0-35 pts)
             if len(m_list) > 0:
                 net_sentiment = round(
                     sum(float(m["sentiment_score"]) for m in m_list) / len(m_list), 2
@@ -193,7 +176,7 @@ class CompositeScoringEngine:
                 net_sentiment = 0.0
             sentiment_pts = cls.calculate_sentiment_from_nsi(net_sentiment)
 
-            # Pillar 4: Crisis SLA (strictly < 90.0 minutes)
+            # Pillar 3: Crisis SLA (0-30 pts, strictly < 90.0 minutes)
             crisis_total = len(f_list)
             crisis_ok = sum(
                 1
@@ -203,14 +186,14 @@ class CompositeScoringEngine:
             )
             crisis_pts = cls.calculate_crisis_sla(crisis_ok, crisis_total)
 
-            # Composite Score (0 - 100)
-            total_score = round(volume_pts + speed_pts + sentiment_pts + crisis_pts, 2)
+            # Composite Score (0 - 100, TAT removed)
+            total_score = round(volume_pts + sentiment_pts + crisis_pts, 2)
 
             # Auxiliary indicators
             velocity_pct = (
                 round(
                     100.0
-                    * sum(1 for p in p_list if float(p["turnaround_time_minutes"]) <= 60.0)
+                    * sum(1 for p in p_list if float(p.get("turnaround_time_minutes", 999.0)) <= 60.0)
                     / n_rel,
                     1,
                 )
@@ -243,12 +226,10 @@ class CompositeScoringEngine:
                 "district": name_en,
                 "division": division,
                 "releases": n_rel,
-                "avg_tat_min": avg_tat,
                 "net_sentiment": net_sentiment,
                 "crisis_ok": crisis_ok,
                 "crisis_total": crisis_total,
                 "volume_pts": volume_pts,
-                "speed_pts": speed_pts,
                 "sentiment_pts": sentiment_pts,
                 "crisis_pts": crisis_pts,
                 "total_score": total_score,
@@ -285,18 +266,14 @@ class CompositeScoringEngine:
         now = datetime.now(timezone.utc)
         window_start = now - timedelta(hours=window_hours)
 
-        # 1. Volume: Count releases / normalized records ingested in window
+        # 1. Volume: Count releases / normalized records ingested in window (0-35 pts)
         vol_stmt = select(func.count(NormalizedRecord.id)).where(
             NormalizedRecord.normalized_timestamp >= window_start
         )
         total_releases = session.execute(vol_stmt).scalar() or 0
         volume_score = cls.calculate_volume(total_releases)
 
-        # 2. TAT (Turnaround Time): default 40.0 mins baseline
-        avg_tat_minutes = 42.5
-        tat_score = cls.calculate_tat(avg_tat_minutes)
-
-        # 3. Sentiment: Net Sentiment Index from CanonicalEvents in window
+        # 2. Sentiment: Net Sentiment Index from CanonicalEvents in window (0-35 pts)
         pos_stmt = select(func.count(CanonicalEvent.id)).where(
             CanonicalEvent.last_updated_at >= window_start,
             CanonicalEvent.sentiment_label == "Positive",
@@ -316,11 +293,11 @@ class CompositeScoringEngine:
 
         if tot_classified == 0:
             nsi = 0.0
-            sentiment_score = 12.5
+            sentiment_score = 17.5
         else:
             sentiment_score, nsi = cls.calculate_sentiment(pos_count, neg_count, tot_classified)
 
-        # 4. Crisis SLA: FactCheckTickets refuted within 90 minutes
+        # 3. Crisis SLA: FactCheckTickets refuted within 90 minutes (0-30 pts)
         rumor_tot_stmt = select(func.count(FactCheckTicket.id)).where(
             FactCheckTicket.event_timestamp >= window_start,
             FactCheckTicket.is_rumor.is_(True),
@@ -335,9 +312,9 @@ class CompositeScoringEngine:
         refuted_90m = session.execute(rumor_ref_stmt).scalar() or 0
         crisis_sla_score = cls.calculate_crisis_sla(refuted_90m, total_rumors)
 
-        # Total Composite (0 - 100)
+        # Total Composite (0 - 100, Volume 35 + Sentiment 35 + Crisis 30)
         total_composite = round(
-            volume_score + tat_score + sentiment_score + crisis_sla_score,
+            volume_score + sentiment_score + crisis_sla_score,
             2,
         )
 
@@ -346,13 +323,12 @@ class CompositeScoringEngine:
             window_start=window_start,
             window_end=now,
             volume_score=volume_score,
-            tat_score=tat_score,
+            tat_score=0.0,
             sentiment_score=sentiment_score,
             crisis_sla_score=crisis_sla_score,
             total_composite_score=total_composite,
             calculation_metadata={
                 "total_releases": total_releases,
-                "avg_tat_minutes": avg_tat_minutes,
                 "positive_events": pos_count,
                 "negative_events": neg_count,
                 "nsi": round(nsi, 3),
@@ -365,11 +341,10 @@ class CompositeScoringEngine:
         session.commit()
 
         logger.info(
-            "Computed 100-Point Composite Snapshot %s: %.2f (Vol: %.1f, TAT: %.1f, Sent: %.1f, SLA: %.1f)",
+            "Computed 100-Point Composite Snapshot %s: %.2f (Vol: %.1f, Sent: %.1f, SLA: %.1f)",
             snapshot.id,
             total_composite,
             volume_score,
-            tat_score,
             sentiment_score,
             crisis_sla_score,
         )

@@ -50,37 +50,29 @@ export const ScoreDecomposition: React.FC = () => {
         </div>
       </div>
 
-      {/* 4 Constituent Scores */}
+      {/* 3 Constituent Scores */}
       <div className="p-5 space-y-4 bg-white">
-        {/* 1. Volume Score */}
+        {/* 1. Volume Score (35 pts) */}
         <ScoreMetricBar
           icon="newspaper"
           title={t.zone3.volumeTitle}
           subtitle={t.zone3.volumeSub}
           score={selected.volumeScore}
+          maxScore={35}
           valueLabel={`${selected.releases} ${language === 'mr' ? 'पत्रके' : 'releases'}`}
-          gapLabel={`${25 - selected.volumeScore} ${t.zone3.gapSuffix}`}
+          gapLabel={`${35 - selected.volumeScore} ${t.zone3.gapSuffix}`}
         />
 
-        {/* 2. TAT / Dispatch Speed */}
-        <ScoreMetricBar
-          icon="send"
-          title={t.zone3.tatTitle}
-          subtitle={t.zone3.tatSub}
-          score={selected.tatScore}
-          valueLabel={`${selected.avgTAT} ${language === 'mr' ? 'मिनिटे' : 'min'}`}
-          gapLabel={`${25 - selected.tatScore} ${t.zone3.gapSuffix}`}
-        />
-
-        {/* 3. Media Sentiment Score (Multi-Channel 4-Stream Composite) */}
+        {/* 2. Media Sentiment Score (Multi-Channel 4-Stream Composite, 35 pts) */}
         <div className="space-y-1.5 p-2 rounded-md hover:bg-slate-50 transition-colors">
           <ScoreMetricBar
             icon="chat_bubble"
             title={t.zone3.sentimentTitle}
             subtitle={t.zone3.sentimentSub}
             score={selected.sentimentScore}
+            maxScore={35}
             valueLabel={`${selected.sentiment}%`}
-            gapLabel={`${25 - selected.sentimentScore} ${t.zone3.gapSuffix}`}
+            gapLabel={`${35 - selected.sentimentScore} ${t.zone3.gapSuffix}`}
           />
 
           {/* 4-Channel Weighted Breakdown Badges */}
@@ -134,14 +126,15 @@ export const ScoreDecomposition: React.FC = () => {
           </div>
         </div>
 
-        {/* 4. Crisis SLA */}
+        {/* 3. Crisis SLA */}
         <ScoreMetricBar
           icon="warning"
           title={t.zone3.crisisTitle}
           subtitle={t.zone3.crisisSub}
           score={selected.crisisScore}
+          maxScore={30}
           valueLabel={`${selected.crisisSLA}% SLA`}
-          gapLabel={`${25 - selected.crisisScore} ${t.zone3.gapSuffix}`}
+          gapLabel={`${30 - selected.crisisScore} ${t.zone3.gapSuffix}`}
         />
       </div>
 

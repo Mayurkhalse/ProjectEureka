@@ -57,7 +57,6 @@ async def get_latest_scores(
         "total_composite_score": snapshot.total_composite_score,
         "pillars": {
             "volume_score": snapshot.volume_score,
-            "tat_score": snapshot.tat_score,
             "sentiment_score": snapshot.sentiment_score,
             "crisis_sla_score": snapshot.crisis_sla_score,
         },

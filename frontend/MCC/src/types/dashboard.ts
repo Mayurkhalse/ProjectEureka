@@ -40,14 +40,12 @@ export interface DistrictData {
   nameMr?: string;
   division: string;
   releases: number;
-  avgTAT: number; // in minutes
   sentiment: number; // percentage
   sentimentChannels?: SentimentChannelBreakdown;
   crisisSLA: number; // percentage
   cpi: number; // 0 - 100
   // Score decomposition specifics
   volumeScore: number;
-  tatScore: number;
   sentimentScore: number;
   crisisScore: number;
   dioActive: boolean;

@@ -318,13 +318,11 @@ def _query_36_districts_from_csv(
             "composite_index": s["total_score"],
             "pillars": {
                 "volume": s["volume_pts"],
-                "speed_tat": s["speed_pts"],
                 "sentiment": s["sentiment_pts"],
                 "crisis_sla": s["crisis_pts"],
             },
             "raw_metrics": {
                 "total_releases": s["releases"],
-                "average_tat_minutes": s["avg_tat_min"],
                 "net_sentiment": s["net_sentiment"],
                 "active_crisis_tickets": max(0, s["crisis_total"] - s["crisis_ok"]),
             },
@@ -338,8 +336,6 @@ def _query_36_districts_from_csv(
         results.sort(key=lambda x: x["name_en"])
     elif sort_by == "volume":
         results.sort(key=lambda x: x["pillars"]["volume"], reverse=True)
-    elif sort_by == "speed_tat":
-        results.sort(key=lambda x: x["pillars"]["speed_tat"], reverse=True)
     elif sort_by == "sentiment":
         results.sort(key=lambda x: x["pillars"]["sentiment"], reverse=True)
     elif sort_by == "crisis_sla":
@@ -374,8 +370,8 @@ def tool_query_all_36_districts(
 
     Args:
         division: Optional division filter (e.g. 'Konkan', 'Pune', 'Nashik', 'Chhatrapati Sambhajinagar', 'Amravati', 'Nagpur', or division code like 'DIV-MUM').
-        include_metrics: Whether to include live computed governance metrics (Volume, TAT, Sentiment, Crisis SLA, Composite Index).
-        sort_by: Field to sort by ('composite_index', 'display_order', 'district_code', 'name_en', 'volume', 'speed_tat', 'sentiment', 'crisis_sla').
+        include_metrics: Whether to include live computed governance metrics (Volume, Sentiment, Crisis SLA, Composite Index).
+        sort_by: Field to sort by ('composite_index', 'display_order', 'district_code', 'name_en', 'volume', 'sentiment', 'crisis_sla').
 
     Returns:
         dict: Strict JSON structure with metadata, statewide totals, and the list of district objects.
@@ -470,19 +466,12 @@ def tool_query_all_36_districts(
                 total_crisis = m["total_crisis"] if m else 0
                 resolved_crisis = m["resolved_crisis"] if m else 0
 
-                # 4 Governance Pillars
-                vol_score = round(min(25.0, (releases / 300.0) * 25.0), 2)
-                if avg_tat <= 45.0:
-                    tat_score = 30.0
-                elif avg_tat >= 120.0:
-                    tat_score = 0.0
-                else:
-                    tat_score = 30.0 * (1.0 - ((avg_tat - 45.0) / 75.0))
-                tat_score = round(tat_score, 2)
-                sent_score = round(((sentiment + 1.0) / 2.0) * 25.0, 2)
-                crisis_score = round((resolved_crisis / total_crisis * 20.0) if total_crisis > 0 else 20.0, 2)
+                # 3 Governance Pillars (Volume 35, Sentiment 35, Crisis SLA 30)
+                vol_score = round(min(35.0, (releases / 300.0) * 35.0), 2)
+                sent_score = round(((sentiment + 1.0) / 2.0) * 35.0, 2)
+                crisis_score = round((resolved_crisis / total_crisis * 30.0) if total_crisis > 0 else 30.0, 2)
 
-                comp_score = round(vol_score + tat_score + sent_score + crisis_score, 2)
+                comp_score = round(vol_score + sent_score + crisis_score, 2)
                 active_tkts = active_tickets_by_code.get(d.district_code.upper(), 0)
 
                 results.append({
@@ -495,13 +484,11 @@ def tool_query_all_36_districts(
                     "composite_index": comp_score,
                     "pillars": {
                         "volume": vol_score,
-                        "speed_tat": tat_score,
                         "sentiment": sent_score,
                         "crisis_sla": crisis_score,
                     },
                     "raw_metrics": {
                         "total_releases": releases,
-                        "average_tat_minutes": round(avg_tat, 1),
                         "net_sentiment": round(sentiment, 3),
                         "active_crisis_tickets": active_tkts,
                     },
@@ -516,8 +503,6 @@ def tool_query_all_36_districts(
                 results.sort(key=lambda x: x["name_en"])
             elif sort_by == "volume":
                 results.sort(key=lambda x: x["pillars"]["volume"], reverse=True)
-            elif sort_by == "speed_tat":
-                results.sort(key=lambda x: x["pillars"]["speed_tat"], reverse=True)
             elif sort_by == "sentiment":
                 results.sort(key=lambda x: x["pillars"]["sentiment"], reverse=True)
             elif sort_by == "crisis_sla":
@@ -619,7 +604,7 @@ AGENT_TOOL_DEFINITIONS = [
                     },
                     "sort_by": {
                         "type": "string",
-                        "enum": ["composite_index", "display_order", "name_en", "volume", "speed_tat", "sentiment", "crisis_sla"],
+                        "enum": ["composite_index", "display_order", "name_en", "volume", "sentiment", "crisis_sla"],
                         "description": "Sorting metric for district ranking.",
                     },
                 },

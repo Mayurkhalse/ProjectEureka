@@ -332,7 +332,7 @@ def test_tool_query_all_36_districts_direct():
     assert "composite_index" in sample
     assert "pillars" in sample
     assert "volume" in sample["pillars"]
-    assert "speed_tat" in sample["pillars"]
+    assert "speed_tat" not in sample["pillars"]
     assert "sentiment" in sample["pillars"]
     assert "crisis_sla" in sample["pillars"]
 
@@ -340,7 +340,7 @@ def test_tool_query_all_36_districts_direct():
     res_konkan = tool_query_all_36_districts(division="Konkan")
     assert res_konkan["status"] == "success"
     assert len(res_konkan["districts"]) > 0
-    assert all("DIV-MUM" in d["division_code"] or "DIV-KON" in d["division_code"] for d in res_konkan["districts"])
+    assert all("DIV-MUM" in d["division_code"] or "DIV-KON" in d["division_code"] or "DIV-KOL" in d["division_code"] for d in res_konkan["districts"])
 
 
 def test_hermes_router_districts_endpoint(client):

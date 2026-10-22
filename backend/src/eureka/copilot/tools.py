@@ -204,7 +204,7 @@ def build_tool_response(data: Any, status: Optional[str] = None) -> Dict[str, An
 class LeagueTableArgs(BaseModel):
     model_config = ConfigDict(extra="forbid")
     division: Optional[str] = Field(default=None, description="Optional division filter (e.g. Konkan, Pune)")
-    sort_by: Optional[str] = Field(default="composite_index", description="Metric to sort by: composite_index, volume, speed_tat, sentiment, crisis_sla")
+    sort_by: Optional[str] = Field(default="composite_index", description="Metric to sort by: composite_index, volume, sentiment, crisis_sla")
 
 
 def tool_league_table(principal: CopilotPrincipal, args: LeagueTableArgs) -> Dict[str, Any]:
@@ -254,11 +254,11 @@ def tool_district_profile(principal: CopilotPrincipal, args: DistrictProfileArgs
 class PillarBreakdownArgs(BaseModel):
     model_config = ConfigDict(extra="forbid")
     district_code: str = Field(description="Official district code (e.g. MH-04)")
-    pillar_name: Optional[str] = Field(default=None, description="Optional single pillar: volume, speed_tat, sentiment, crisis_sla")
+    pillar_name: Optional[str] = Field(default=None, description="Optional single pillar: volume, sentiment, crisis_sla")
 
 
 def tool_pillar_breakdown(principal: CopilotPrincipal, args: PillarBreakdownArgs) -> Dict[str, Any]:
-    """Deep-dive metrics on Volume, TAT Speed, Sentiment, or Crisis SLA pillars."""
+    """Deep-dive metrics on Volume, Sentiment, or Crisis SLA pillars."""
     code = normalize_district_code(args.district_code) or args.district_code.upper()
     err = verify_district_authorization(principal, code)
     if err:
@@ -292,7 +292,7 @@ def tool_pillar_breakdown(principal: CopilotPrincipal, args: PillarBreakdownArgs
 class TrendArgs(BaseModel):
     model_config = ConfigDict(extra="forbid")
     district_code: str = Field(description="Official district code (e.g. MH-04)")
-    metric: str = Field(description="Metric to evaluate: composite_index, volume, speed_tat, sentiment")
+    metric: str = Field(description="Metric to evaluate: composite_index, volume, sentiment, crisis_sla")
     days: Optional[int] = Field(default=30, ge=1, le=90, description="Window in days (1-90)")
 
 
@@ -568,7 +568,7 @@ def get_copilot_function_declarations() -> List[Dict[str, Any]]:
                 "type": "object",
                 "properties": {
                     "division": {"type": "string", "description": "Optional revenue division: Konkan, Pune, Nashik, Chhatrapati Sambhajinagar, Amravati, Nagpur"},
-                    "sort_by": {"type": "string", "description": "composite_index, volume, speed_tat, sentiment, or crisis_sla"},
+                    "sort_by": {"type": "string", "description": "composite_index, volume, sentiment, or crisis_sla"},
                 },
             },
         },
@@ -585,12 +585,12 @@ def get_copilot_function_declarations() -> List[Dict[str, Any]]:
         },
         {
             "name": "pillar_breakdown",
-            "description": "Inspect granular metrics for a district across Volume, TAT Speed, Net Sentiment, or Crisis SLA pillars.",
+            "description": "Inspect granular metrics for a district across Volume, Net Sentiment, or Crisis SLA pillars.",
             "parameters": {
                 "type": "object",
                 "properties": {
                     "district_code": {"type": "string", "description": "District code (e.g. MH-04)"},
-                    "pillar_name": {"type": "string", "description": "volume, speed_tat, sentiment, or crisis_sla"},
+                    "pillar_name": {"type": "string", "description": "volume, sentiment, or crisis_sla"},
                 },
                 "required": ["district_code"],
             },
@@ -602,7 +602,7 @@ def get_copilot_function_declarations() -> List[Dict[str, Any]]:
                 "type": "object",
                 "properties": {
                     "district_code": {"type": "string", "description": "District code (e.g. MH-04)"},
-                    "metric": {"type": "string", "description": "composite_index, volume, speed_tat, or sentiment"},
+                    "metric": {"type": "string", "description": "composite_index, volume, sentiment, or crisis_sla"},
                     "days": {"type": "integer", "description": "Number of days (default 30)"},
                 },
                 "required": ["district_code", "metric"],

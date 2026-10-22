@@ -314,7 +314,7 @@ async def get_hermes_stats():
 def get_all_36_districts(
     division: Optional[str] = Query(None, description="Optional division filter e.g. Konkan, Pune, Nashik"),
     include_metrics: bool = Query(True, description="Whether to include live calculated 100-point governance metrics"),
-    sort_by: str = Query("composite_index", description="Sorting field: composite_index, display_order, name_en, volume, speed_tat, sentiment, crisis_sla"),
+    sort_by: str = Query("composite_index", description="Sorting field: composite_index, display_order, name_en, volume, sentiment, crisis_sla"),
 ) -> Dict[str, Any]:
     """Retrieves authoritative PostgreSQL database records and live governance scores for all 36 Maharashtra districts."""
     return tool_query_all_36_districts(

@@ -206,7 +206,7 @@ export const PressReleasesScreen: React.FC = () => {
                   <th className="py-2.5 px-3">{language === 'mr' ? 'विभाग' : 'Department'}</th>
                   <th className="py-2.5 px-3">{language === 'mr' ? 'जिल्हा' : 'District'}</th>
                   <th className="py-2.5 px-3">{language === 'mr' ? 'दिनांक' : 'Release Date'}</th>
-                  <th className="py-2.5 px-3 text-right">{language === 'mr' ? 'प्रकाशन वेळ' : 'Publish TAT'}</th>
+                  <th className="py-2.5 px-3 text-right">{language === 'mr' ? 'प्रकाशन वेळ' : 'Publish Time'}</th>
                   <th className="py-2.5 px-3">{language === 'mr' ? 'स्थिती' : 'Status'}</th>
                   <th className="py-2.5 px-3 text-right">{language === 'mr' ? 'डाउनलोड्स' : 'Downloads'}</th>
                   <th className="py-2.5 px-3 text-center">{language === 'mr' ? 'कृती' : 'Action'}</th>

@@ -40,7 +40,7 @@ def dg_admin_token():
 
 
 def test_all_36_districts_match_expected_scores():
-    """Verify that all 36 districts computed match expected_scores.csv within 0.02 tolerance."""
+    """Verify that all 36 districts computed match three-pillar formula (Volume 35, Sentiment 35, Crisis SLA 30)."""
     seed_dir = CompositeScoringEngine.resolve_seed_dir()
     expected_path = seed_dir / "expected_scores.csv"
     assert expected_path.exists(), f"expected_scores.csv not found at {expected_path}"
@@ -63,19 +63,26 @@ def test_all_36_districts_match_expected_scores():
         name = exp["district"]
         # Basic counts
         assert comp["releases"] == int(exp["releases"]), f"{name}: releases mismatch"
-        assert abs(comp["avg_tat_min"] - float(exp["avg_tat_min"])) <= 0.15, f"{name}: avg_tat mismatch"
         assert abs(comp["net_sentiment"] - float(exp["net_sentiment"])) <= 0.02, f"{name}: net_sentiment mismatch"
         assert comp["crisis_ok"] == int(exp["crisis_ok"]), f"{name}: crisis_ok mismatch"
         assert comp["crisis_total"] == int(exp["crisis_total"]), f"{name}: crisis_total mismatch"
 
-        # Four Pillars (within 0.02 pts)
-        assert abs(comp["volume_pts"] - float(exp["volume_pts"])) <= 0.02, f"{name}: volume_pts mismatch"
-        assert abs(comp["speed_pts"] - float(exp["speed_pts"])) <= 0.02, f"{name}: speed_pts mismatch"
-        assert abs(comp["sentiment_pts"] - float(exp["sentiment_pts"])) <= 0.02, f"{name}: sentiment_pts mismatch"
-        assert abs(comp["crisis_pts"] - float(exp["crisis_pts"])) <= 0.02, f"{name}: crisis_pts mismatch"
+        # Three Pillars (Volume 35, Sentiment 35, Crisis SLA 30)
+        expected_vol = round(35.0 * min(float(exp["releases"]) / 300.0, 1.0), 2)
+        expected_sent = round(((float(exp["net_sentiment"]) + 1.0) / 2.0) * 35.0, 2)
+        total_rumors = int(exp["crisis_total"])
+        if total_rumors == 0:
+            expected_crisis = 30.0
+        else:
+            expected_crisis = round(30.0 * (float(exp["crisis_ok"]) / float(total_rumors)), 2)
 
-        # Total Composite Score (within 0.02 pts)
-        assert abs(comp["total_score"] - float(exp["total_score"])) <= 0.02, f"{name}: total_score mismatch"
+        assert abs(comp["volume_pts"] - expected_vol) <= 0.02, f"{name}: volume_pts mismatch"
+        assert abs(comp["sentiment_pts"] - expected_sent) <= 0.02, f"{name}: sentiment_pts mismatch"
+        assert abs(comp["crisis_pts"] - expected_crisis) <= 0.02, f"{name}: crisis_pts mismatch"
+
+        # Total Composite Score without TAT (within 0.02 pts)
+        expected_total = round(expected_vol + expected_sent + expected_crisis, 2)
+        assert abs(comp["total_score"] - expected_total) <= 0.02, f"{name}: total_score mismatch"
 
         # Auxiliary Metrics
         assert abs(comp["output_velocity_pct"] - float(exp["output_velocity_pct"])) <= 0.15, f"{name}: velocity mismatch"
@@ -84,43 +91,41 @@ def test_all_36_districts_match_expected_scores():
 
 
 def test_edge_cases_planted_in_benchmark_data():
-    """Verify specific planted edge cases across benchmark districts."""
+    """Verify specific planted edge cases across benchmark districts under 35/35/30 weights."""
     seed_dir = CompositeScoringEngine.resolve_seed_dir()
     scores = CompositeScoringEngine.compute_district_scores_from_csv(seed_dir=str(seed_dir))
     scores_by_id = {d["district_id"]: d for d in scores}
 
-    # 1. Rank 1 is Thane with 96.75
+    # 1. Rank 1 is Thane with 95.45
     assert scores[0]["district"] == "Thane"
     assert scores[0]["district_id"] == 3
-    assert scores[0]["total_score"] == 96.75
+    assert scores[0]["total_score"] == 95.45
     assert scores[0]["rank"] == 1
 
-    # 2. Pune volume saturation at 25.0 points with 541 releases
+    # 2. Pune volume saturation at 35.0 points with 541 releases
     pune = scores_by_id[8]
     assert pune["releases"] == 541
-    assert pune["volume_pts"] == 25.0
+    assert pune["volume_pts"] == 35.0
 
-    # 3. Washim speed is 0.0 with 131.0 min TAT, rank 36 with 16.0 total
+    # 3. Washim rank 36 with 22.4 total score
     washim = scores_by_id[28]
-    assert washim["avg_tat_min"] == 131.0
-    assert washim["speed_pts"] == 0.0
-    assert washim["total_score"] == 16.0
+    assert washim["total_score"] == 22.4
     assert washim["rank"] == 36
 
-    # 4. Hingoli (district 25) & Gadchiroli (district 36): 0 rumors -> 25.0 points
+    # 4. Hingoli (district 25) & Gadchiroli (district 36): 0 rumors -> 30.0 points
     hingoli = scores_by_id[25]
     assert hingoli["crisis_total"] == 0
-    assert hingoli["crisis_pts"] == 25.0
+    assert hingoli["crisis_pts"] == 30.0
 
     gadchiroli = scores_by_id[36]
     assert gadchiroli["crisis_total"] == 0
-    assert gadchiroli["crisis_pts"] == 25.0
+    assert gadchiroli["crisis_pts"] == 30.0
 
     # 5. Nagpur (district 31): rumor resolved at exactly 90.0m is a breach!
     nagpur = scores_by_id[31]
     assert nagpur["crisis_total"] == 14
     assert nagpur["crisis_ok"] == 12  # exactly 90.0m is breached, so 12 of 14 ok
-    assert nagpur["crisis_pts"] == 21.43
+    assert nagpur["crisis_pts"] == 25.71
 
 
 def test_csv_adapter_temporal_sequence_rejection():
@@ -155,7 +160,7 @@ def test_scoring_api_leaderboard_endpoint(api_client, dg_admin_token):
     top1 = leaderboard[0]
     assert top1["rank"] == 1
     assert top1["district"] == "Thane"
-    assert top1["total_score"] == 96.75
+    assert top1["total_score"] == 95.45
 
 
 def test_scoring_api_single_district_endpoint(api_client, dg_admin_token):
@@ -167,10 +172,10 @@ def test_scoring_api_single_district_endpoint(api_client, dg_admin_token):
 
     thane = response.json()
     assert thane["district"] == "Thane"
-    assert thane["volume_pts"] == 25.0
-    assert thane["speed_pts"] == 25.0
-    assert thane["crisis_pts"] == 25.0
-    assert thane["total_score"] == 96.75
+    assert thane["volume_pts"] == 35.0
+    assert thane["sentiment_pts"] == 30.45
+    assert thane["crisis_pts"] == 30.0
+    assert thane["total_score"] == 95.45
 
     # Test nonexistent district returns 404
     non_existent = api_client.get("/api/v1/scoring/district/999", headers=headers)

@@ -129,7 +129,6 @@ export async function getLiveDistricts(
             nameMr: meta.nameMr,
             division: meta.division,
             releases: Number(rawMetrics.total_releases || 0),
-            avgTAT: Number(rawMetrics.average_tat_minutes || 45.0),
             sentiment: sentimentPct,
             sentimentChannels: {
               printOcr: Math.min(100, Math.round(sentimentPct * 1.05)),
@@ -141,7 +140,6 @@ export async function getLiveDistricts(
             crisisSLA: crisisPercent,
             cpi: Number(item.total_index || 0),
             volumeScore: Number(pillarScores.volume || 0),
-            tatScore: Number(pillarScores.speed_tat || 0),
             sentimentScore: Number(pillarScores.sentiment || 0),
             crisisScore: Number(pillarScores.crisis_sla || 0),
             dioActive: true,
@@ -297,9 +295,6 @@ export async function getLiveOverviewMetrics(role?: string, district?: string, d
         }
 
         const totalReleases = filtered.reduce((acc: number, item: any) => acc + (item.raw_metrics?.total_releases || 0), 0);
-        const avgTatSum = filtered.reduce((acc: number, item: any) => acc + (item.raw_metrics?.average_tat_minutes || 45), 0);
-        const avgTat = filtered.length > 0 ? Math.round((avgTatSum / filtered.length) * 10) / 10 : 45.0;
-
         const sentimentSum = filtered.reduce((acc: number, item: any) => acc + (item.raw_metrics?.net_sentiment || 0.5), 0);
         const avgNsi = filtered.length > 0 ? sentimentSum / filtered.length : 0.5;
         const sentimentPct = Math.round(((avgNsi + 1.0) / 2.0) * 1000) / 10;
@@ -315,14 +310,6 @@ export async function getLiveOverviewMetrics(role?: string, district?: string, d
             trendDirection: 'up' as const,
             trendValue: '+14%',
             positiveTrend: true,
-          },
-          avgTAT: {
-            value: avgTat,
-            unit: 'min',
-            targetText: avgTat <= 45 ? 'Target: ≤45m (Met)' : 'Target: ≤45m (Near Target)',
-            trendDirection: avgTat <= 45 ? ('down' as const) : ('up' as const),
-            trendValue: '-12%',
-            positiveTrend: avgTat <= 45,
           },
           sentimentIndex: {
             value: `${sentimentPct}%`,
