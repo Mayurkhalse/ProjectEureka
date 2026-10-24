@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { useDashboardStore } from '@/stores/dashboardStore';
 import { useTranslation } from '@/lib/translations';
 import { MaterialIcon } from '@/components/shared/MaterialIcon';
+import { LiveAudioTranscriptionPanel } from '@/components/dashboard/LiveAudioTranscriptionPanel';
 
 export interface LiveStreamingProps {
   layout?: 'default' | 'column';
@@ -164,6 +165,9 @@ export const LiveStreaming: React.FC<LiveStreamingProps> = ({ layout = 'default'
             </div>
           </div>
         </div>
+
+        {/* Live Audio Speech-to-Text Transcription Stream */}
+        <LiveAudioTranscriptionPanel />
 
         {/* Footer */}
         <div className="mt-2.5 pt-2 border-t border-slate-100 flex items-center justify-between text-[10px] text-slate-500">
