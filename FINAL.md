@@ -1,20 +1,28 @@
-# EUREKA Open UI Copilot v4 - Final Summary
+# EUREKA / DGIPR Command Center - Meeting Changes Final Summary
+**Branch:** `feature/meeting-changes` (DO NOT MERGE TO MAIN YET - awaiting DGIPR preview sign-off)
 
-- **Architecture Patched**: Connected Thesys C1 generative UI (`c1-20250416`) with fail-open fallback; added sub-second deterministic fast-path intent router; removed 15ms artificial sleep; pruned rate-limiters.
-- **Data Truth Reconciled**: Reconciled Thane (`MH-04`) and Palghar (`MH-03`) across DB, backend, and frontend. Built canonical in-memory alias table from `reference_data.py` (resolving former names Aurangabad, Osmanabad, Ahmednagar).
-- **Security Enforced**: Isolated `OPENUI_COPILOT_GEMINI_API_KEY` exclusively inside `eureka/copilot/`; blocked javascript: URI injections; enforced GIGW 3.0 chart accessibility and honest model metadata.
-- **Source Status**: PostgreSQL container is offline (`0.0.0.0:5433`), so system truthful source_status is `demo` across all tools, done payloads, and UI badges.
+### 12 Meeting Items Status (100% Complete)
+1. DIPR Panel (9 Dropdowns): **Done** (`DIPRDivisionsPanel.tsx` with 9 DGIPR divisions & quick links)
+2. Scheme Hoardings Panel: **Done** (`GovernmentSchemeHoardingsPanel.tsx` with Census 2011 GIS & accessible list)
+3. Face Lock: **Done** (WebAuthn FIDO2 device biometrics; 0 biometric templates on server; profile & login)
+4 & 5. 36 Districts Dummy Data & Positions: **Done** (Deterministic seeder `scripts/seed_demo_dashboard.py`)
+6. District Map: **Done** (Zero-tile-server Census 2011 / Survey of India boundary SVG)
+7 & 8. Clipping, Social & TV In-App Sources: **Done** (`/sources/[type]/[id]` with strict URL security)
+9. Top 5 / Bottom 5 DIO Rankings: **Done** (`TopLowerMatrix.tsx` with CPI > Volume > Name tiebreaker)
+10. Live Audio-to-Text: **Done** (GeminiAudioProvider + DemoProvider SSE `/api/v1/transcription/stream`)
+11. Remove TAT: **Done & Committed** (`9e165d8`: Volume 35, Sentiment 35, Crisis SLA 30; sum = 100)
+12. Live News Ticker: **Done** (`LiveNewsTicker.tsx` with smooth CSS marquee & accessible pause/play)
 
-### Authoritative District Code Reconciliation Table
-| District | PostgreSQL | eureka.db | districts.csv | reference_data.py | Frontend Mapped |
-|---|---|---|---|---|---|
-| Thane | Offline | MH-04 | id=3 | MH-04 (DIV-KON) | MH-04 |
-| Palghar | Offline | MH-03 | id=4 | MH-03 (DIV-KON) | MH-03 |
-| Mumbai City | Offline | MH-01 | id=1 | MH-01 (DIV-MUM) | MH-01 |
-| Nashik | Offline | MH-21 | id=13 | MH-21 (DIV-NSK) | MH-21 |
-| Ahilyanagar | Offline | MH-25 | id=17 | MH-25 (DIV-NSK) | MH-25 |
+### New API Endpoints
+- `GET /api/v1/districts/{code}/[positions|hoardings|clippings|social|tv]` | `GET /api/v1/hoardings` | `GET /api/v1/ticker`
+- `GET /api/v1/sources/{type}/{id}` | `POST /api/v1/auth/webauthn/[register-options|verify-registration|login-options|verify-login]`
+- `GET /api/v1/auth/webauthn/credentials` | `GET /api/v1/transcription/stream` | `POST /api/v1/transcription/chunk`
 
-- **How to Run**:
-  - Backend: `uv run uvicorn eureka.api.main:app --host 127.0.0.1 --port 8000 --app-dir backend/src`
-  - Frontend: `cd frontend/MCC && npx next start -p 3000` (Access http://localhost:3000)
-- **Deferred Tasks**: Logged in `BACKLOG.md` (latency load testing, Qdrant cluster upgrade, Redis-shared rate-limits, C1 default toggle).
+### Assumptions Requiring DGIPR Confirmation
+- **A1:** 9 DGIPR divisions config (`diprDivisionsConfig.ts`).
+- **A2:** Post-TAT 3-pillar weights: Volume 35, Sentiment 35, Crisis SLA 30.
+- **A3:** WebAuthn hardware device biometric standard (Face ID/Windows Hello) rather than camera template storage.
+
+### How to Test Locally
+- **Face Lock:** Open Profile -> click "Set up Face Lock / Biometric Login". Log out and use "Sign in with Face ID".
+- **Audio-to-Text:** View Audio-Visual panel on dashboard; observe live monotonic transcript with pause/resume toggle.

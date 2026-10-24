@@ -45,19 +45,19 @@ At the executive level, leadership does not need raw data dumps; they need **una
 
 ```
 +--------------------------------------------------------------------------------------------------+
-|                            THE 4 GOVERNANCE PILLARS (100 POINTS TOTAL)                           |
+|                            THE 3 GOVERNANCE PILLARS (100 POINTS TOTAL)                           |
 +--------------------------------------------------------------------------------------------------+
-|      VOLUME PILLAR (25%)       |    TAT / SPEED PILLAR (30%)    |      SENTIMENT PILLAR (25%)    |
-|   Proactive Information Flow   |  Speed of Administrative Action|    Public Mood & Tone (NSI)    |
-+-----------------------------------------------------------------+--------------------------------+
-|                                    CRISIS SLA PILLAR (20%)                                       |
-|                    Zero-Tolerance Emergency Rebuttal & Containment Speed                         |
+|            VOLUME PILLAR (35%)           |                 SENTIMENT PILLAR (35%)                |
+|         Proactive Information Flow       |                Public Mood & Tone (NSI)               |
++------------------------------------------+-------------------------------------------------------+
+|                                       CRISIS SLA PILLAR (30%)                                    |
+|                        Zero-Tolerance Emergency Rebuttal & 90-Min Containment SLA                |
 +--------------------------------------------------------------------------------------------------+
 ```
 
 ---
 
-### Pillar 1: Information Volume & Saturation (25 Points)
+### Pillar 1: Information Volume & Saturation (35 Points)
 
 #### The Plain-English Concept
 *Are public administrators proactively communicating government decisions, developmental work, and public notices to the people, or is an information vacuum being left for gossip and speculation?*
@@ -76,27 +76,19 @@ When public officials do not regularly issue verified releases and factual annou
 
 ---
 
-### Pillar 2: Turnaround Time (TAT) / Speed of Response (30 Points)
-
-#### The Plain-English Concept
-*When an issue, query, or public complaint emerges, how quickly does the district administration respond with verified facts?*
-
-#### Why It Matters to Leadership
-In modern digital communications, **speed is truth**. If an incorrect report of a water shortage or infrastructure failure sits unaddressed for 12 hours, public frustration hardens into anger. A factual response delivered within 45 minutes halts negative escalation.
-
-#### How EUREKA Concludes This Parameter
-1. **Timestamp Correlation:** EUREKA tracks the exact microsecond when an event or news report is first logged in the public domain ($T_{\text{event}}$), and matches it against the exact moment an authorized rebuttal, press release, or clarification is issued ($T_{\text{published}}$).
-2. **Turnaround Calculation:** 
-   $$\text{TAT}_{\text{minutes}} = T_{\text{published}} - T_{\text{event}}$$
-3. **Logarithmic Decay Penalty:** EUREKA evaluates response times across administrative operations using a steep decay function:
-   * **Under 45 Minutes:** Receives maximum points (gold-standard crisis agility).
-   * **45 Minutes to 3 Hours:** Standard acceptable operational response (scaled score).
-   * **Over 6 to 12 Hours:** Severe point deductions.
-   * **Anti-Cheating Chronological Validation:** If any district records a release timestamp earlier than the event timestamp itself (an artifact of falsified record-keeping), EUREKA's validation layer immediately rejects the entry and flags the audit trail.
+### Historical Note: Removal of TAT (Turnaround Time) Pillar
+> [!NOTE]
+> Per the executive directive from the DGIPR leadership meeting (Item 11), Turnaround Time (TAT / Speed) has been **completely retired from all scoring calculations, user interface metrics, and copilot intents**.
+> 
+> To preserve mathematical integrity while summing to 100 points, weights are reallocated to the remaining core governance pillars:
+> - **Volume Pillar:** 35 Points (35%)
+> - **Sentiment Pillar:** 35 Points (35%)
+> - **Crisis SLA Pillar:** 30 Points (30%)
+> Database columns (`turnaround_time_mins`) remain non-destructively preserved in schema for historical ingestion audits, but are strictly no longer read by the scoring engine.
 
 ---
 
-### Pillar 3: Multilingual Sentiment Analysis & Net Sentiment Index (25 Points)
+### Pillar 2: Multilingual Sentiment Analysis & Net Sentiment Index (35 Points)
 
 #### The Plain-English Concept
 *What is the genuine mood, tone, and perception of the public regarding government initiatives and local issues in that district?*
@@ -109,11 +101,11 @@ Standard keyword scrapers look for simple English words like "bad" or "good" and
 2. **Polarity Scoring:** Every press report, editorial, social post, and citizen comment is assigned an objective polarity score between $-1.0$ (Extremely Critical / Angry) to $+1.0$ (Extremely Positive / Satisfied).
 3. **Net Sentiment Index (NSI):** EUREKA normalizes district discourse using the formula:
    $$\text{NSI} = \frac{\text{Positive Mentions} - \text{Negative Mentions}}{\text{Total Mentions}}$$
-4. **Governance Pillar Conversion:** An NSI of $+1.0$ translates to the full 25 points; neutral discourse scores around 15–18 points; chronic negative coverage pulls the district score down, signaling a critical communication disconnect.
+4. **Governance Pillar Conversion:** An NSI of $+1.0$ translates to the full 35 points; neutral discourse scores around 15–18 points; chronic negative coverage pulls the district score down, signaling a critical communication disconnect.
 
 ---
 
-### Pillar 4: Crisis SLA & Rumor Mitigation (20 Points)
+### Pillar 3: Crisis SLA & Rumor Mitigation (30 Points)
 
 #### The Plain-English Concept
 *During an emergency or rumor outbreak, did the district administration completely dismantle the misinformation within the mandatory Service Level Agreement (SLA) window?*
@@ -125,11 +117,36 @@ This is the ultimate test of administrative resilience. A district may have grea
 1. **Fact-Check Ticket Lifecycle:** Whenever an unverified viral claim appears, EUREKA opens a monitored `FactCheck` case tagged to the originating district.
 2. **Active Rumor Tracking:** The system monitors the count of pending, unrefuted rumor tickets in that district.
 3. **The "Zero Rumors" Critical Rule:** EUREKA enforces a strict, non-negotiable governance condition:
-   * **If a district has ZERO unrefuted rumors:** Full 20 points awarded.
+   * **If a district has ZERO unrefuted rumors:** Full 30 points awarded.
    * **If even a single active rumor lingers beyond the SLA window:** The Crisis SLA score drops immediately to **0 points**, and triggers an automated high-priority escalation to the state command center.
 4. **No Half-Measures:** By converting crisis handling into an unambiguous binary threshold, EUREKA prevents administrative complacency.
 
 ---
+
+
+---
+
+## 2.1 The 12 Meeting Changes Architecture (Branch `feature/meeting-changes`)
+
+The latest production enhancement sprint addresses twelve critical stakeholder requests in strict priority sequence:
+
+```
++-----------------------------------------------------------------------------------------------------+
+|                                 12 MEETING CHANGES DELIVERY MATRIX                                  |
++----+----------+------------------------------------------+------------------------------------------+
+| Pr | Item #   | Functionality                            | Implementation Highlights                |
++----+----------+------------------------------------------+------------------------------------------+
+| P0 | Item 11  | Remove TAT from Scoring & UI             | 3-pillar model (Vol 35, Sent 35, SLA 30) |
+| P1 | Items 4,5| 36 Districts Dummy Data & Positions      | Deterministic seeder, role-scoped APIs   |
+| P1 | Item 12  | Live News Ticker                         | Smooth marquee, accessible pause/resume  |
+| P1 | Item 9   | Top 5 / Bottom 5 DIO Performance Ranks   | Deterministic sort: CPI > Volume > Name  |
+| P2 | Item 1   | DIPR Panel (Nine Dropdowns)              | 9 DGIPR divisions & quick resource links |
+| P2 | Item 2,6 | Scheme Hoardings GIS Map & Register      | Census 2011 open-boundary SVG, zero keys |
+| P2 | Item 7,8 | In-App Source Detail Viewer              | /sources/[type]/[id] with URL security   |
+| P3 | Item 3   | Device Biometric Face Lock               | WebAuthn FIDO2, zero server biometrics   |
+| P3 | Item 10  | Live Audio-to-Text Pipeline              | Gemini 2.0 Flash + DemoProvider SSE      |
++----+----------+------------------------------------------+------------------------------------------+
+```
 
 ## 3. Technology Stack: What We Are Using & Why It Operates So Efficiently
 

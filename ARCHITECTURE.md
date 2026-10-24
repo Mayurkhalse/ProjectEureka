@@ -18,7 +18,7 @@ Project EUREKA replaces legacy experimental prototypes with an enterprise-grade,
 2. **Deterministic Entity & Incident Resolution (IRF Binding):** Replaces ambiguous continuous scoring with discrete formal logic primitives (`Choice`, `Noul`, `Score`) derived from **SemIf-OpenJev**, establishing strict convergence thresholds for incident clustering.
 3. **Multilingual Indic Natural Language Processing:** Classifies Marathi, Hindi, and English content using **MuRIL** (`google/muril-base-cased`), deriving fine-grained sentiment polarity and factual claim boundaries.
 4. **Hybrid Relational-Graph Synchronization:** Leverages PostgreSQL 16 as the transactional source of truth and Neo4j 5.x for spatio-temporal graph projections, unified via a **Transactional Outbox Pattern** with zero dual-write vulnerability.
-5. **100-Point Composite Index Performance Measurement:** Evaluates state and district-level narrative operations across four 25-point performance pillars: Volume, Turnaround Speed (TAT), Sentiment Polarity (NSI), and Crisis Refutation SLA.
+5. **100-Point Composite Index Performance Measurement:** Evaluates state and district-level narrative operations across a 3-pillar 100-point composite model: Volume (35%), Sentiment Polarity NSI (35%), and Crisis Refutation 90-min SLA (30%). Turnaround Speed (TAT) has been removed.
 6. **Strict Role-Based Human Review Workflow:** Mandates a formal state machine (`draft -> pending_review -> approved | overridden | rejected`) protected by cryptographically signed JWT role claims for Command Center administrators and district personnel.
 
 ---
@@ -1251,3 +1251,67 @@ To guarantee immediate accessibility in all deployed environments without manual
 ## 11. Conclusion & Architectural Integrity Guarantee
 
 Project EUREKA represents a fully deterministic, enterprise-grade architecture engineered for real-world government media intelligence. By decoupling ingestion, normalization, graph projection, and human authorization into independent, asynchronous, idempotent micro-pipelines, the system guarantees high throughput, complete data provenance, zero data loss, and strict bureaucratic accountability.
+
+---
+
+## 13. Meeting Changes Architecture Specification (Branch: `feature/meeting-changes`)
+
+### 13.1 Scoring Engine Refactor: 3-Pillar Governance Model (P0 - Item 11)
+- **Elimination of TAT:** Turnaround Time (Speed 30) has been completely decoupled from the scoring engine (`eureka/scoring/service.py`), agent intent router (`eureka/copilot/intent_router.py`), and frontend interfaces.
+- **Authoritative Weights:**
+  - Volume Pillar ($W_V$): **35.0%**
+  - Sentiment Pillar ($W_S$): **35.0%**
+  - Crisis SLA Pillar ($W_C$): **30.0%**
+  - Total Score: $S = 0.35 \times S_V + 0.35 \times S_S + 0.30 \times S_C \in [0, 100]$.
+- **Database Non-Destruction:** Existing column `media_events.turnaround_time_mins` is retained in schema for historical reference; zero columns dropped.
+
+### 13.2 Data Foundation & Deterministic Seeding (P1 - Items 4 & 5)
+- **New Relational Entities:**
+  - `DistrictPosition`: Models guardianship, MP, MLA, Collector, SP, ZP CEO, Municipal Commissioner, and DIO positions with bilingual designations and responsibilities.
+  - `SchemeHoarding`: Outdoor publicity assets with GPS coordinates, scheme names, dimensions, validity periods, and announcements.
+  - `Clipping`: Print newspaper coverage with OCR text, summaries, and clipping image placeholders.
+  - `SocialPost`: Multi-platform public discourse with verified handles and engagement metrics.
+  - `TvClip`: Television broadcast clips with channel, programme, transcript, and offset.
+  - `TickerItem`: Statewide breaking headlines, announcements, and crisis alerts.
+- **Deterministic Seeder:** `scripts/seed_demo_dashboard.py` (`random.seed(42)`) seeds all 36 Maharashtra districts with `provenance="synthetic"` and fictional personas.
+- **Endpoints:**
+  - `GET /api/v1/districts/{code}/positions`
+  - `GET /api/v1/districts/{code}/hoardings`
+  - `GET /api/v1/districts/{code}/clippings`
+  - `GET /api/v1/districts/{code}/social`
+  - `GET /api/v1/districts/{code}/tv`
+  - `GET /api/v1/hoardings`
+  - `GET /api/v1/ticker`
+
+### 13.3 Live News Ticker (P1 - Item 12)
+- Mounted below header toolbar across all views (`LiveNewsTicker.tsx`).
+- Smooth CSS marquee with pause-on-hover/focus, keyboard accessible controls, and `prefers-reduced-motion` compliance.
+
+### 13.4 DIO Performance Rankings (P1 - Item 9)
+- Top 5 and Bottom 5 ranked districts (`TopLowerMatrix.tsx`).
+- Deterministic sort order: CPI descending -> Volume score descending -> District name ascending.
+
+### 13.5 DIPR Panel & Scheme Hoardings GIS Map (P2 - Items 1, 2, 6)
+- **DIPR Divisions Panel:** Built from authoritative data config (`diprDivisionsConfig.ts`) grouping all 36 districts under the 9 DGIPR divisions (Mumbai, Konkan, Pune, Kolhapur, Latur, Chhatrapati Sambhajinagar, Nashik, Amravati, Nagpur).
+- **Hoardings GIS Map:** Open-boundary SVG map using pre-projected Census 2011 / Survey of India boundary paths (`maharashtraGeo.generated.ts`). Plotted via district centroid pole-of-inaccessibility pins with zero external tile server or API keys. Accompanied by an accessible, keyboard-operable register.
+
+### 13.6 In-App Source Verification & URL Security (P2 - Items 7 & 8)
+- Dynamic route `/sources/[type]/[id]` renders verified archival clippings, social posts, or TV broadcast transcripts.
+- Strict security utility (`urlSecurity.ts`): Enforces that "Open original source" button renders ONLY for valid `http:` or `https:` schemes, completely rejecting `javascript:`, `data:`, `vbscript:`, and protocol-relative evasions.
+
+### 13.7 WebAuthn Device Biometric Face Lock (P3 - Item 3)
+- **Zero Server Biometrics:** No facial images, embeddings, or biometric templates are transmitted or stored on the server.
+- **FIDO2 Standard:** Operates via hardware Secure Enclave (Windows Hello / Apple Face ID / Touch ID) using public-key cryptography (`py_webauthn`).
+- **Endpoints:**
+  - `POST /api/v1/auth/webauthn/register-options`
+  - `POST /api/v1/auth/webauthn/verify-registration`
+  - `POST /api/v1/auth/webauthn/login-options`
+  - `POST /api/v1/auth/webauthn/verify-login`
+  - `GET /api/v1/auth/webauthn/credentials`
+  - `DELETE /api/v1/auth/webauthn/credentials/{credential_id}`
+
+### 13.8 Live Audio-to-Text Pipeline (P3 - Item 10)
+- **Provider Architecture:** `TranscriptionProvider` interface with `GeminiAudioProvider` (using main `GEMINI_API_KEY` and `GEMINI_TRANSCRIBE_MODEL`) and `DemoProvider` (deterministic pre-seeded monotonic Marathi broadcasts).
+- **Streaming Ingestion:** `GET /api/v1/transcription/stream?channel=tv_marathi_live` (SSE `text/event-stream`).
+- **Persisted Database Entity:** `transcript_segments` records monotonic chunk timestamps, Devanagari text, and `machine_generated=True`.
+- **UI Component:** `LiveAudioTranscriptionPanel.tsx` embedded in `LiveStreaming.tsx` with auto-scroll and play/pause freeze toggle.

@@ -1,11 +1,18 @@
-# EUREKA Open UI Copilot v4 - Deferred Backlog
+# EUREKA / DGIPR Command Center - Backlog & Environment Notes
 
-The following non-blocking and exploratory tasks were deferred to keep execution rapid and stable:
+### 12 Meeting Changes Status
+All 12 meeting changes are **100% complete** on branch `feature/meeting-changes`. No items blocked.
 
-1. **Latency Stress & Load Scripts**: Automated multi-user concurrency benchmarking under Apache Bench / Locust.
-2. **Context.md Formula Corrections**: Mathematical documentation clarifications for Volume S-curve and A3TGCN.
-3. **Qdrant Cluster Upgrade**: Container pinned to `v1.13.2`; cluster distributed mode deferred.
-4. **Redis-Shared Sliding-Window Rate Limits**: Currently using in-memory bounded timestamp pruning per instance.
-5. **Response Cache Layer**: Caching deterministic view specs for repeated identical queries.
-6. **Promoting Thesys C1 to Global Default**: C1 engine available via `COPILOT_UI_ENGINE=c1`; deterministic remains default.
-7. **DGIPR 6-to-9 Division Database Migrations**: SQLite and Postgres currently recognize both division codes and names without destructive schema changes.
+### Environment & Integration Notes
+1. **PostgreSQL Test Container (Port 5433)**:
+   - Error in full suite: `psycopg2.OperationalError: connection to server at "127.0.0.1", port 5433 failed: Connection refused`.
+   - Cause: 7 integration tests in `test_hermes_integration.py` specifically expect a live PostgreSQL 16 instance on port 5433.
+   - Solution: Run `docker compose up -d db` when testing Hermes PG outbox pipeline. All 131 unit and demo tests pass cleanly on SQLite fallback.
+
+2. **WebAuthn Biometric Domain Binding**:
+   - WebAuthn specification strictly requires HTTPS or `localhost` and domain matching `WEBAUTHN_RP_ID`.
+   - Vercel dynamic preview URLs change per commit. For end-to-end device face lock testing, use `localhost:3000` or set `WEBAUTHN_RP_ID` to the stable production domain.
+
+3. **Gemini Live Audio Transcription**:
+   - Uses `GEMINI_TRANSCRIBE_MODEL` (`gemini-2.0-flash`) and main `GEMINI_API_KEY`.
+   - `DemoProvider` automatically takes over when no key is supplied, ensuring seamless offline functionality.
