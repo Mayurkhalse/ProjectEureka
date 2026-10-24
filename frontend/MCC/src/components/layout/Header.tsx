@@ -17,7 +17,6 @@ import {
   ArrowRightOnRectangleIcon,
   CheckIcon,
 } from '@heroicons/react/20/solid';
-import { MaterialIcon } from '@/components/shared/MaterialIcon';
 
 export const Header: React.FC = () => {
   const router = useRouter();
@@ -32,8 +31,6 @@ export const Header: React.FC = () => {
     setMobileMenuOpen,
     sidebarCollapsed,
     setSidebarCollapsed,
-    copilotOpen,
-    setCopilotOpen,
   } = useDashboardStore();
   const t = useTranslation(language);
 
@@ -180,7 +177,7 @@ export const Header: React.FC = () => {
                 {language === 'mr' ? 'महा-कमांड' : 'Maha-Command'}
               </span>
               <span className="text-[10px] font-bold tracking-[0.14em] uppercase text-amber-500 mt-1.5 leading-none whitespace-nowrap">
-                {language === 'mr' ? 'माहिती व जनसंपर्क • महाराष्ट्र' : 'DGIPR • MAHARASHTRA'}
+                {language === 'mr' ? 'माहिती व जनसंपर्क (DGPR) • महाराष्ट्र' : 'DGPR • MAHARASHTRA'}
               </span>
             </div>
           )}
@@ -240,14 +237,26 @@ export const Header: React.FC = () => {
             title={language === 'mr' ? 'सक्रिय प्रणाली दालन' : 'Active Navigation Module'}
           >
             <span>
-              {pathname.startsWith('/districts')
-                ? (language === 'mr' ? 'जिल्हे व कार्यालये' : 'Districts')
+              {pathname.startsWith('/newspaper')
+                ? (language === 'mr' ? 'वृत्तपत्र कात्रणे व विश्लेषण' : 'Newspaper Clippings (516 Daily)')
+                : pathname.startsWith('/live-news')
+                ? (language === 'mr' ? 'थेट प्रक्षेपण व बातम्या' : 'Live News & Broadcast Desk')
+                : pathname.startsWith('/advertisements')
+                ? (language === 'mr' ? 'शासकीय जाहिराती व होर्डिंग्ज' : 'Advertisements & Hoardings')
+                : pathname.startsWith('/publications')
+                ? (language === 'mr' ? 'लोकराज्य मासिक' : 'Publications (लोकराज्य)')
+                : pathname.startsWith('/settings')
+                ? (language === 'mr' ? 'प्रणाली संरचना व सेटिंग्ज' : 'Institutional Settings')
+                : pathname.startsWith('/attendance')
+                ? (language === 'mr' ? 'बायोमेट्रिक उपस्थिती' : 'Biometrics Attendance')
+                : pathname.startsWith('/districts')
+                ? (language === 'mr' ? '३६ जिल्हे व कार्यालये' : '36 Districts & DIO Offices')
                 : pathname.startsWith('/crisis')
                 ? (language === 'mr' ? 'आपत्कालीन प्रतिसाद' : 'Crisis Response')
                 : pathname.startsWith('/press-releases')
                 ? (language === 'mr' ? 'प्रसिद्धीपत्रके' : 'Press Releases')
                 : pathname.startsWith('/media')
-                ? (language === 'mr' ? 'माध्यम निरीक्षण' : 'Media Monitoring')
+                ? (language === 'mr' ? 'माध्यम कक्ष' : 'Communication Centre')
                 : pathname.startsWith('/activities')
                 ? (language === 'mr' ? 'क्षेत्रीय उपक्रम' : 'Field Activities')
                 : pathname.startsWith('/reports')
@@ -351,25 +360,6 @@ export const Header: React.FC = () => {
           <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-rose-500 animate-pulse" />
         </Link>
 
-        {/* DGIPR OpenUI Copilot Header Trigger */}
-        {process.env.NEXT_PUBLIC_COPILOT_ENABLED !== 'false' && (
-          <button
-            type="button"
-            onClick={() => setCopilotOpen(!copilotOpen)}
-            className="hover:bg-amber-500/15 border border-amber-500/40 hover:border-amber-500/60 bg-amber-500/10 px-2.5 py-1.5 rounded-lg transition-all cursor-pointer flex items-center gap-2 text-amber-300 font-semibold text-xs shadow-2xs select-none group"
-            title={language === 'mr' ? 'डीजीआयपीआर निर्देशक उघडा' : 'Open DGIPR Nirdeshak'}
-            aria-label="DGIPR Nirdeshak"
-          >
-            <div className="w-5 h-5 rounded bg-amber-500/20 border border-amber-500/30 flex items-center justify-center text-amber-400 group-hover:scale-105 transition-transform">
-              <MaterialIcon name="auto_awesome" size="xs" />
-            </div>
-            <span className="font-bold tracking-wide">Nirdeshak</span>
-            <span className="text-[10px] font-mono px-1 py-0.2 rounded bg-amber-500/20 text-amber-200 border border-amber-500/30 hidden md:inline">
-              निर्देशाक
-            </span>
-          </button>
-        )}
-
         {/* Vertical Divider */}
         <div className="h-5 w-px bg-slate-800 mx-1 hidden sm:block" />
 
@@ -394,9 +384,20 @@ export const Header: React.FC = () => {
                 <div className="w-7 h-7 rounded-full bg-amber-500/15 border border-amber-500/40 text-amber-400 font-bold text-xs flex items-center justify-center shrink-0">
                   {displayInitials}
                 </div>
-                <span className="text-xs font-semibold text-white leading-tight truncate max-w-[140px] hidden sm:inline">
-                  {displayName}
-                </span>
+                <div className="flex flex-col text-left hidden sm:flex">
+                  <span className="text-xs font-semibold text-white leading-tight truncate max-w-[140px]">
+                    {displayName}
+                  </span>
+                  <span className="text-[10px] text-amber-400 font-mono leading-none mt-0.5 truncate max-w-[140px]">
+                    {userRole === 'dg_admin'
+                      ? 'State DG Admin • Tier 1'
+                      : userRole === 'director_konkan'
+                      ? 'Divisional Director • Tier 2'
+                      : userRole === 'collector'
+                      ? 'District Collector • Tier 3'
+                      : 'DIO Desk Operator • Tier 4'}
+                  </span>
+                </div>
               </>
             )}
             <ChevronDownIcon

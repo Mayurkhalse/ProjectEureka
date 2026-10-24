@@ -20,17 +20,17 @@ export const KeyMetricsTrends: React.FC = () => {
 
   if (isLoadingData) {
     return (
-      <div className="bg-white border border-slate-200/90 rounded-xl p-4 shadow-sm space-y-3 min-h-[220px]">
+      <div className="bg-white border border-slate-200/90 rounded-xl p-5 shadow-sm space-y-4 min-h-[240px]">
         <div className="flex justify-between items-center pb-2 border-b border-slate-100">
-          <Skeleton className="h-4 w-48 rounded" />
-          <Skeleton variant="subtle" className="h-3 w-28 rounded" />
+          <Skeleton className="h-5 w-56 rounded" />
+          <Skeleton variant="subtle" className="h-4 w-32 rounded" />
         </div>
-        <div className="h-40 flex items-end justify-between gap-4 px-6 pt-4">
-          <Skeleton className="h-28 w-14 rounded-t" />
-          <Skeleton className="h-36 w-14 rounded-t" />
-          <Skeleton className="h-24 w-14 rounded-t" />
-          <Skeleton className="h-32 w-14 rounded-t" />
-          <Skeleton className="h-20 w-14 rounded-t" />
+        <div className="h-48 flex items-end justify-between gap-6 px-8 pt-5">
+          <Skeleton className="h-32 w-16 rounded-t" />
+          <Skeleton className="h-36 w-16 rounded-t" />
+          <Skeleton className="h-28 w-16 rounded-t" />
+          <Skeleton className="h-32 w-16 rounded-t" />
+          <Skeleton className="h-24 w-16 rounded-t" />
         </div>
       </div>
     );
@@ -39,7 +39,7 @@ export const KeyMetricsTrends: React.FC = () => {
   return (
     <div className="bg-white rounded-xl shadow-sm border border-slate-200/80 flex flex-col overflow-hidden">
       {/* Header */}
-      <div className="p-4 sm:p-5 border-b border-slate-100 bg-white flex items-center justify-between flex-wrap gap-2">
+      <div className="p-5 sm:p-6 border-b border-slate-100 bg-white flex items-center justify-between flex-wrap gap-3">
         <div className="flex items-center gap-2">
           <div className="p-1.5 rounded bg-blue-50 text-gov-blue">
             <MaterialIcon name="bar_chart" size="sm" />
@@ -50,21 +50,21 @@ export const KeyMetricsTrends: React.FC = () => {
             </h3>
             <p className="text-[11px] text-slate-500 font-medium">
               {language === 'mr'
-                ? 'शीर्ष ५ जिल्ह्यांचे ३ सीपीआय घटकांनुसार तुलनात्मक विश्लेषण'
+? 'शीर्ष ५ जिल्ह्यांचे ३ सीपीआय घटकांनुसार तुलनात्मक विश्लेषण'
                 : 'Top 5 District Comparative Breakdown (Volume, Sentiment, Crisis SLA)'}
             </p>
           </div>
         </div>
 
         <div className="flex items-center gap-2">
-          <span className="text-[11px] font-mono font-semibold text-slate-600 bg-slate-100 border border-slate-200 px-2 py-0.5 rounded">
+          <span className="text-[11px] font-mono font-semibold text-slate-600 bg-slate-100 border border-slate-200 px-3 py-1 rounded">
             {selectedDivision}
           </span>
         </div>
       </div>
 
       {/* Chart Canvas */}
-      <div className="p-4 sm:p-5">
+      <div className="p-5 sm:p-6">
         <DistrictPerformanceChart
           districts={districts}
           selectedDistrictId={selectedDistrictId}

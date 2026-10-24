@@ -1,6 +1,12 @@
 'use client';
 
 import React, { useEffect } from 'react';
+import dynamic from 'next/dynamic';
+
+const CopilotDrawer = dynamic(
+  () => import('@/components/copilot/CopilotDrawer').then((mod) => mod.CopilotDrawer),
+  { ssr: false }
+);
 import { useRouter, usePathname } from 'next/navigation';
 import { Header } from './Header';
 import { Sidebar } from './Sidebar';
@@ -8,11 +14,6 @@ import { DashboardToolbar } from './DashboardToolbar';
 import { LiveNewsTicker } from '@/components/dashboard/LiveNewsTicker';
 import { useDashboardStore } from '@/stores/dashboardStore';
 import { MaterialIcon } from '@/components/shared/MaterialIcon';
-import dynamic from 'next/dynamic';
-const CopilotDrawer = dynamic(
-  () => import('@/components/copilot/CopilotDrawer').then((mod) => mod.CopilotDrawer),
-  { ssr: false }
-);
 
 // Precision Skeletons for Route-Aware Initial Load
 import { DashboardPageSkeleton } from '@/components/skeletons/DashboardPageSkeleton';
@@ -40,6 +41,10 @@ interface DashboardLayoutProps {
 function getRouteSkeleton(pathname: string) {
   if (pathname.startsWith('/crisis')) return <CrisisPageSkeleton />;
   if (pathname.startsWith('/districts')) return <DistrictsPageSkeleton />;
+  if (pathname.startsWith('/publications')) return <ActivitiesSkeleton />;
+  if (pathname.startsWith('/attendance')) return <DistrictsPageSkeleton />;
+  if (pathname.startsWith('/live-events')) return <CommandCenterSkeleton />;
+  if (pathname.startsWith('/advertisements')) return <PressReleasesSkeleton />;
   if (pathname === '/command-center/pipeline-flow' || pathname === '/system-monitoring/pipeline-flow') {
     return <PipelineFlowSkeleton />;
   }
@@ -104,9 +109,6 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) =>
         {/* Left Sidebar (Permanently Mounted — Never Unmounts or Hides) */}
         <Sidebar />
 
-        {/* Open UI Copilot Drawer */}
-        {process.env.NEXT_PUBLIC_COPILOT_ENABLED !== 'false' && <CopilotDrawer />}
-
         {/* Right Column Wrapper (The ONLY Scrollable Region) */}
         <div className="flex-1 flex flex-col min-w-0 min-h-0 overflow-hidden relative">
           {/* Stationary White Sub-Header Bar */}
@@ -125,6 +127,9 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) =>
             {isVerifyingAuth ? getRouteSkeleton(pathname || '/') : children}
           </main>
         </div>
+
+        {/* Open UI Copilot Drawer */}
+        {process.env.NEXT_PUBLIC_COPILOT_ENABLED !== 'false' && <CopilotDrawer />}
 
         {/* Floating Operational Toast Feedback */}
         {toast && (

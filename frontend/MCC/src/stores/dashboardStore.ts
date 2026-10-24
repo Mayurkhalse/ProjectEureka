@@ -169,6 +169,8 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
       currentUser: null,
       authToken: null,
       userRole: 'dg_admin',
+  copilotOpen: false,
+  setCopilotOpen: (open: boolean) => set({ copilotOpen: open }),
       selectedDivision: 'All Maharashtra',
     });
   },

@@ -49,6 +49,8 @@ export interface DistrictData {
   sentimentScore: number;
   crisisScore: number;
   dioActive: boolean;
+  avgTAT?: number;
+  tatScore?: number;
 }
 
 export interface IncidentData {

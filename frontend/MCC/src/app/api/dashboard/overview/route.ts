@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getLiveOverviewMetrics } from '@/lib/backendClient';
+import { getServerOverviewMetrics } from '@/lib/serverData';
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
@@ -7,6 +7,6 @@ export async function GET(request: NextRequest) {
   const district = searchParams.get('district') || undefined;
   const division = searchParams.get('division') || undefined;
 
-  const metrics = await getLiveOverviewMetrics(role, district, division);
+  const metrics = getServerOverviewMetrics(role, district, division);
   return NextResponse.json({ success: true, data: metrics });
 }

@@ -11,9 +11,12 @@ import { LeaderboardSkeleton } from '@/components/skeletons/LeaderboardSkeleton'
 
 export interface DistrictLeaderboardProps {
   showChart?: boolean;
+  /** Optional prop to enable cross-panel highlighting when a district row is clicked */
+  highlightDistrict?: (districtId: string) => void;
 }
 
-export const DistrictLeaderboard: React.FC<DistrictLeaderboardProps> = ({ showChart = true }) => {
+export const DistrictLeaderboard: React.FC<DistrictLeaderboardProps> = (
+  { showChart = true, highlightDistrict }: DistrictLeaderboardProps) => {
   const {
     districts,
     selectedDistrictId,
@@ -76,11 +79,12 @@ export const DistrictLeaderboard: React.FC<DistrictLeaderboardProps> = ({ showCh
           totalCount={districts.length}
         />
 
-        {/* Ranked District Table */}
+        {/* Ranked District Table - rows now support cross-panel highlighting */}
         <DistrictTable
           districts={filteredDistricts}
           selectedDistrictId={selectedDistrictId}
           onSelectDistrict={setSelectedDistrictId}
+          highlightDistrict={highlightDistrict}
         />
       </div>
     </div>

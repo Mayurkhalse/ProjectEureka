@@ -59,6 +59,10 @@ export interface Translations {
     districts: string;
     pressReleases: string;
     media: string;
+    publications: string;
+    advertisements: string;
+    liveEvents: string;
+    attendance: string;
     activities: string;
     crisis: string;
     reports: string;
@@ -366,10 +370,14 @@ export const TRANSLATIONS: Record<Language, Translations> = {
       telemetryAudit: 'Telemetry Operations',
       rawIngestion: 'Raw Ingestion',
       pipelineFlow: 'Pipeline & Ops Flow',
-      districts: 'Districts',
-      pressReleases: 'Press Releases',
-      media: 'Media Monitoring',
-      activities: 'Field Activities',
+      districts: '36 Districts & Hoardings',
+      pressReleases: 'Press Releases & Dispatches',
+      media: 'Communication Centre (516 Clippings)',
+      advertisements: 'Advertisements & Campaigns',
+      publications: 'Publications (लोकराज्य)',
+      liveEvents: 'Live Events & Webcasts',
+      attendance: 'Biometrics Attendance',
+      activities: 'Field Activities & IEC',
       crisis: 'Crisis Response',
       reports: 'Reports & Analytics',
       notifications: 'Notifications',
@@ -425,6 +433,7 @@ export const TRANSLATIONS: Record<Language, Translations> = {
       districtCol: 'District',
       divisionCol: 'Division',
       releasesCol: 'Releases',
+
       sentimentCol: 'Sentiment',
       crisisCol: 'Crisis SLA',
       cpiCol: 'CPI Score',
@@ -675,10 +684,14 @@ export const TRANSLATIONS: Record<Language, Translations> = {
       telemetryAudit: 'दूरमिती ऑपरेशन्स',
       rawIngestion: 'कच्चा डेटा अंतर्ग्रहण',
       pipelineFlow: 'पाइपलाइन व डेटा प्रवाह',
-      districts: 'जिल्हे व कार्यालये',
-      pressReleases: 'प्रसिद्धीपत्रके',
-      media: 'माध्यम निरीक्षण',
-      activities: 'क्षेत्रीय उपक्रम',
+      districts: '३६ जिल्हे व होर्डिंग्ज',
+      pressReleases: 'प्रसिद्धीपत्रके व घोषणा',
+      media: 'संवाद केंद्र (५१६ वृत्त कात्रणे)',
+      advertisements: 'जाहिराती व मोहीम',
+      publications: 'प्रकाशने (लोकराज्य)',
+      liveEvents: 'थेट प्रक्षेपण व कार्यक्रम',
+      attendance: 'बायोमेट्रिक्स उपस्थिती',
+      activities: 'क्षेत्रीय उपक्रम व प्रचार व्हॅन',
       crisis: 'आपत्कालीन प्रतिसाद',
       reports: 'सांख्यिकी अहवाल',
       notifications: 'शासकीय सूचना',
@@ -734,6 +747,7 @@ export const TRANSLATIONS: Record<Language, Translations> = {
       districtCol: 'जिल्हा',
       divisionCol: 'विभाग',
       releasesCol: 'पत्रके',
+
       sentimentCol: 'भावना %',
       crisisCol: 'आपत्ती विहित वेळ',
       cpiCol: 'गुण',

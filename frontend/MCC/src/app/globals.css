@@ -350,5 +350,22 @@ tr.search-highlight-target {
   animation-play-state: paused !important;
 }
 
+/* Continuous News Marquee Ticker */
+@keyframes continuousMarquee {
+  0% {
+    transform: translateX(0%);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
 
+.animate-marquee-scroll {
+  display: flex;
+  width: max-content;
+  animation: continuousMarquee 36s linear infinite;
+}
 
+.animate-marquee-scroll:hover {
+  animation-play-state: paused;
+}

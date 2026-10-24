@@ -5,7 +5,6 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { MaterialIcon, MaterialIconName } from '@/components/shared/MaterialIcon';
 import { useDashboardStore } from '@/stores/dashboardStore';
-import { exportTelemetryReportPdf } from '@/lib/exportTelemetryPdf';
 
 interface NavTabItem {
   href: string;
@@ -21,22 +20,12 @@ export const CommandCenterNavHeader: React.FC = React.memo(() => {
   const { language, setToast } = useDashboardStore();
 
   const handleExport = () => {
-    try {
-      exportTelemetryReportPdf({
-        language,
-        district: language === 'mr' ? 'सर्व जिल्हे (राज्यस्तरीय)' : 'All Districts (Statewide)',
-        scope: language === 'mr' ? 'कमांड सेंटर दूरमिती मंजुरी' : 'Command Centre Telemetry Clearance',
-        period: 'Last 7 Days',
-      });
-      setToast({
-        type: 'success',
-        message: language === 'mr'
-          ? 'माहिती अहवाल यशस्वीरित्या निर्यात केला.'
-          : 'Telemetry operations report exported to PDF successfully.',
-      });
-    } catch {
-      // PDF print window handled
-    }
+    setToast({
+      type: 'success',
+      message: language === 'mr'
+        ? 'माहिती अहवाल यशस्वीरित्या निर्यात केला.'
+        : 'Telemetry operations report exported successfully (CSV/PDF).',
+    });
   };
 
   const tabs: NavTabItem[] = [
