@@ -13,6 +13,7 @@ import {
   ArrowDownTrayIcon,
   ArrowPathIcon,
   ArrowsPointingOutIcon,
+  ArrowsPointingInIcon,
   ArrowsRightLeftIcon,
   ArchiveBoxIcon,
   Bars3BottomLeftIcon,
@@ -120,6 +121,8 @@ export type MaterialIconName =
   | 'map'
   | 'location_on'
   | 'fullscreen'
+  | 'fullscreen_exit'
+  | 'open_in_full'
   | 'menu'
   | 'chat_bubble'
   | 'speaker_notes'
@@ -224,6 +227,8 @@ const ICON_MAP: Record<string, React.ComponentType<React.ComponentProps<'svg'>>>
   fingerprint: FingerPrintIcon,
   forum: ChatBubbleBottomCenterTextIcon,
   fullscreen: ArrowsPointingOutIcon,
+  fullscreen_exit: ArrowsPointingInIcon,
+  open_in_full: ArrowsPointingOutIcon,
   gavel: DocumentTextIcon,
   gpp_bad: ShieldExclamationIcon,
   grid_view: Squares2X2Icon,

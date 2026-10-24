@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef, Suspense } from 'react';
 import { usePathname } from 'next/navigation';
+import { useDashboardStore } from '@/stores/dashboardStore';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   SparklesIcon,
@@ -32,6 +33,7 @@ const INITIAL_GREETING: ChatMessage = {
 
 export const AIAssistantWidgetContent: React.FC = () => {
   const pathname = usePathname();
+  const { copilotOpen, setCopilotOpen, language } = useDashboardStore();
 
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([INITIAL_GREETING]);
@@ -204,12 +206,12 @@ export const AIAssistantWidgetContent: React.FC = () => {
   return (
     <div className="font-sans">
       <AnimatePresence>
-        {!isOpen ? (
+        {!copilotOpen ? (
           /* State 1: Collapsed Floating Action Button (FAB) */
           <motion.button
             key="fab"
             layoutId="ai-assistant-container"
-            onClick={() => setIsOpen(true)}
+            onClick={() => setCopilotOpen(true)}
             initial={{ scale: 0, borderRadius: '9999px' }}
             animate={{ scale: 1, borderRadius: '9999px' }}
             exit={{ scale: 0, opacity: 0, borderRadius: '9999px' }}
@@ -225,7 +227,8 @@ export const AIAssistantWidgetContent: React.FC = () => {
               transformOrigin: 'bottom right',
               borderRadius: '9999px',
             }}
-            aria-label="Open AI Command Assistant"
+            aria-label="Open DGIPR Nirdeshak AI Copilot"
+            title={language === 'mr' ? 'डीजीआयपीआर निर्देशक (एआय को-पायलट)' : 'DGIPR Nirdeshak (निर्देशाक) • AI Command Assistant'}
             className="fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full flex items-center justify-center cursor-pointer bg-primary text-primary-foreground shadow-lg hover:shadow-xl ring-1 ring-border/20 select-none group !rounded-full"
           >
             <motion.div

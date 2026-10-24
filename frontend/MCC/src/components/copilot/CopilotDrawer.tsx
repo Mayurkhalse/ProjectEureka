@@ -73,7 +73,8 @@ const renderFormattedInlineText = (str: string): React.ReactNode => {
 };
 
 export const CopilotDrawer: React.FC = () => {
-  const { authToken, userRole, currentUser, copilotOpen, setCopilotOpen } = useDashboardStore();
+  const { authToken, userRole, currentUser, copilotOpen, setCopilotOpen, language } = useDashboardStore();
+  const [isExpanded, setIsExpanded] = useState<boolean>(false);
   const isOpen = copilotOpen;
   const setIsOpen = setCopilotOpen;
 
@@ -102,6 +103,18 @@ export const CopilotDrawer: React.FC = () => {
   const [feedbackGiven, setFeedbackGiven] = useState<Record<string, 'up' | 'down'>>({});
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Escape key to close drawer
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isOpen) {
+        setIsOpen(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, setIsOpen]);
+
 
   // Auto-scroll to bottom of chat
   useEffect(() => {
@@ -549,27 +562,23 @@ export const CopilotDrawer: React.FC = () => {
 
   return (
     <>
-      {/* Floating Trigger Button in HUD */}
-      <button
-        onClick={() => setIsOpen(true)}
-        className="fixed bottom-6 right-6 z-40 bg-gradient-to-r from-amber-600 to-amber-700 text-white p-3.5 rounded-full shadow-xl hover:shadow-2xl hover:scale-105 transition-all flex items-center gap-2 cursor-pointer focus:outline-none focus:ring-4 focus:ring-amber-300"
-        aria-label="Open DGIPR Nirdeshak"
-        title="DGIPR Nirdeshak"
-      >
-        <MaterialIcon name="auto_awesome" size="md" />
-        <span className="text-xs font-bold tracking-wide pr-1 hidden sm:inline">Nirdeshak</span>
-      </button>
-
-      {/* Slide-out Copilot Drawer */}
+      {/* Slide-out Copilot Drawer (Side-Expandable Workspace) */}
       {isOpen && (
-        <div className="fixed inset-0 z-50 flex justify-end bg-slate-900/30 backdrop-blur-[2px] transition-all">
+        <div
+          className="fixed inset-0 z-50 flex justify-end bg-slate-900/40 backdrop-blur-[2px] transition-all"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setIsOpen(false);
+          }}
+        >
           <div
-            className="w-full max-w-lg bg-slate-50 h-full shadow-2xl flex flex-col border-l border-slate-200 animate-in slide-in-from-right duration-300"
+            className={`w-full ${
+              isExpanded ? 'max-w-4xl xl:max-w-5xl 2xl:max-w-6xl' : 'max-w-lg'
+            } bg-slate-50 h-full shadow-2xl flex flex-col border-l border-slate-200 animate-in slide-in-from-right duration-300 transition-all ease-in-out`}
             role="dialog"
             aria-label="DGIPR Open UI Copilot Interface"
           >
             {/* Header */}
-            <div className="bg-slate-900 text-white p-4 flex items-center justify-between border-b border-slate-800">
+            <div className="bg-slate-900 text-white p-4 flex items-center justify-between border-b border-slate-800 select-none">
               <div className="flex items-center gap-2.5">
                 <div className="w-8 h-8 rounded-lg bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400">
                   <MaterialIcon name="auto_awesome" size="sm" />
@@ -580,6 +589,12 @@ export const CopilotDrawer: React.FC = () => {
                     <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30">
                       {messages.slice().reverse().find((m) => m.modelId)?.modelId?.replace('models/', '') || 'gemma-4-26b'}
                     </span>
+                    {isExpanded && (
+                      <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 hidden sm:inline-flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                        <span>{language === 'mr' ? 'विस्तृत कार्यक्षेत्र' : 'Expanded Workspace'}</span>
+                      </span>
+                    )}
                   </h3>
                   <p className="text-[11px] text-slate-400">
                     Governed Read-Only Intelligence • User: {currentUser?.name || 'Officer'}
@@ -587,10 +602,28 @@ export const CopilotDrawer: React.FC = () => {
                 </div>
               </div>
               <div className="flex items-center gap-1">
+                {/* Side Expand/Collapse Toggle Button */}
+                <button
+                  type="button"
+                  onClick={() => setIsExpanded(!isExpanded)}
+                  className="p-1.5 rounded-md hover:bg-slate-800 text-slate-400 hover:text-white transition-colors flex items-center justify-center cursor-pointer"
+                  title={
+                    isExpanded
+                      ? language === 'mr'
+                        ? 'कप्पे संकुचित करा (सामान्य आकार)'
+                        : 'Collapse Drawer (Standard Width)'
+                      : language === 'mr'
+                      ? 'कप्पे विस्तृत करा (विस्तृत कार्यक्षेत्र)'
+                      : 'Expand Drawer (Wide Workspace)'
+                  }
+                  aria-label={isExpanded ? 'Collapse Drawer' : 'Expand Drawer'}
+                >
+                  <MaterialIcon name={isExpanded ? 'fullscreen_exit' : 'open_in_full'} size="sm" />
+                </button>
                 <button
                   onClick={() => setShowPreferences(!showPreferences)}
                   className="p-1.5 rounded-md hover:bg-slate-800 text-slate-400 hover:text-white transition-colors"
-                  title="What I remember about you"
+                  title={language === 'mr' ? 'माझ्याविषयी आठवणी' : 'What I remember about you'}
                   aria-label="View user memories"
                 >
                   <MaterialIcon name="history" size="sm" />
@@ -598,7 +631,7 @@ export const CopilotDrawer: React.FC = () => {
                 <button
                   onClick={() => setIsOpen(false)}
                   className="p-1.5 rounded-md hover:bg-slate-800 text-slate-400 hover:text-white transition-colors"
-                  aria-label="Close Nirdeshak"
+                  aria-label={language === 'mr' ? 'निर्देशक बंद करा' : 'Close Nirdeshak'}
                 >
                   <MaterialIcon name="close" size="sm" />
                 </button>
