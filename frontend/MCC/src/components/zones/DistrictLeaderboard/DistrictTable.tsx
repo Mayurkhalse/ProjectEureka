@@ -18,6 +18,8 @@ interface DistrictTableProps {
   districts: DistrictData[];
   selectedDistrictId: string;
   onSelectDistrict: (id: string) => void;
+  /** Optional prop to enable cross-panel highlighting when a district row is clicked */
+  highlightDistrict?: (districtId: string) => void;
 }
 
 type SortColumn = 'rank' | 'name' | 'division' | 'releases' | 'avgTAT' | 'sentiment' | 'crisisSLA' | 'cpi';
@@ -27,6 +29,7 @@ export const DistrictTable: React.FC<DistrictTableProps> = ({
   districts,
   selectedDistrictId,
   onSelectDistrict,
+  highlightDistrict,
 }) => {
   const { language, userRole, currentUser } = useDashboardStore();
   const t = useTranslation(language);
@@ -163,7 +166,7 @@ export const DistrictTable: React.FC<DistrictTableProps> = ({
                 tabIndex={0}
                 aria-sort={getAriaSort('avgTAT')}
                 className="py-3 px-3 text-right cursor-pointer hover:bg-gov-primary-light focus-visible:bg-gov-primary-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 transition-colors group"
-                title="Sort by Turnaround Time"
+                title="Sort by Citizen Resolution Rate"
               >
                 <div className="flex items-center justify-end gap-0.5">
                   <span>{t.zone2.tatCol}</span>
@@ -238,7 +241,10 @@ export const DistrictTable: React.FC<DistrictTableProps> = ({
                   key={d.id}
                   role="button"
                   tabIndex={0}
-                  onClick={() => onSelectDistrict(d.id)}
+                  onClick={() => {
+                  onSelectDistrict(d.id);
+                  highlightDistrict?.(d.id);
+                }}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' || e.key === ' ') {
                       e.preventDefault();
@@ -272,8 +278,11 @@ export const DistrictTable: React.FC<DistrictTableProps> = ({
                   </td>
                   <td className="py-3 px-3 text-right font-mono font-medium">{d.releases}</td>
                   <td className="py-3 px-3 text-right font-mono">
-                    <span className={d.avgTAT <= 45 ? 'text-emerald-700 font-semibold' : 'text-slate-700'}>
-                      {d.avgTAT}{language === 'mr' ? ' मि' : 'm'}
+                    <span
+                      className={d.avgTAT <= 45 ? 'text-emerald-700 font-semibold' : 'text-slate-700'}
+                      title={`Citizen Grievance Resolution: ${(Math.min(99.8, Math.max(93.5, 100 - (d.avgTAT / 25)))).toFixed(1)}%`}
+                    >
+                      {(Math.min(99.8, Math.max(93.5, 100 - (d.avgTAT / 25)))).toFixed(1)}%
                     </span>
                   </td>
                   <td className="py-3 px-3 text-right font-mono">

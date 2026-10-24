@@ -115,10 +115,6 @@ interface DashboardStore {
   setSidebarCollapsed: (collapsed: boolean) => void;
   mobileMenuOpen: boolean;
   setMobileMenuOpen: (open: boolean) => void;
-
-  // OpenUI Copilot Drawer state
-  copilotOpen: boolean;
-  setCopilotOpen: (open: boolean) => void;
 }
 
 // Internal sequence and timer tracking to debounce and prevent overlapping filter transitions
@@ -132,8 +128,6 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
   currentUser: null,
   authToken: null,
   userRole: 'dg_admin',
-  copilotOpen: false,
-  setCopilotOpen: (open: boolean) => set({ copilotOpen: open }),
 
   login: (user: AuthUser, token?: string) => {
     try {

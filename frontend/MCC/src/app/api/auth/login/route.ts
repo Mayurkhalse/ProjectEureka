@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { MOCK_USERS } from '@/lib/serverData';
 import { signAuthToken, JWT_TTL_SECONDS, JWT_TTL_HOURS } from '@/lib/jwt';
-import { getBackendEndpoint } from '@/lib/backendClient';
 
 const EMAIL_ALIAS_MAP: Record<string, string> = {
   'director.konkan@maharashtra.gov.in': 'director_konkan',
@@ -20,13 +19,6 @@ const EMAIL_ALIAS_MAP: Record<string, string> = {
   'mh-dm-palghar-01': 'collector_palghar',
   'mh-dm-thane-01': 'collector_thane',
   'mh-state-dg-01': 'admin',
-};
-
-const BACKEND_ROLE_MAP: Record<string, string> = {
-  dg_admin: 'DG State Admin',
-  director_konkan: 'DG State Admin',
-  collector: 'District Collector',
-  dio_desk: 'DIO Desk',
 };
 
 export async function POST(request: NextRequest) {
@@ -55,34 +47,10 @@ export async function POST(request: NextRequest) {
     // Sign cryptographic HMAC-SHA256 JWT token with 12 hours TTL (43,200s)
     const token = await signAuthToken(matched.user, '12h');
 
-    // Attempt to acquire signed FastAPI backend JWT token
-    let backendToken: string | null = null;
-    try {
-      const backendRole = BACKEND_ROLE_MAP[matched.user.role] || 'DIO Desk';
-      const districtCode = matched.user.district === 'Thane' ? 'MH-04' : (matched.user.district === 'Palghar' ? 'MH-03' : 'MH-01');
-      const backendRes = await fetch(getBackendEndpoint('api/v1/auth/token'), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          username: matched.user.username,
-          role: backendRole,
-          district_code: districtCode,
-        }),
-        signal: AbortSignal.timeout(3000),
-      });
-      if (backendRes.ok) {
-        const tokenJson = await backendRes.json();
-        backendToken = tokenJson.access_token || null;
-      }
-    } catch {
-      // Backend not running synchronously - continue gracefully
-    }
-
     const response = NextResponse.json({
       success: true,
       message: 'Authentication successful.',
       token,
-      backendToken,
       ttlHours: JWT_TTL_HOURS,
       expiresIn: JWT_TTL_SECONDS,
       user: matched.user,
@@ -96,16 +64,6 @@ export async function POST(request: NextRequest) {
       sameSite: 'lax',
       secure: process.env.NODE_ENV === 'production',
     });
-
-    if (backendToken) {
-      response.cookies.set('maha_backend_token', backendToken, {
-        httpOnly: true,
-        path: '/',
-        maxAge: JWT_TTL_SECONDS,
-        sameSite: 'lax',
-        secure: process.env.NODE_ENV === 'production',
-      });
-    }
 
     // Client-accessible user metadata cookie synchronized with 12 hours TTL
     response.cookies.set('maha_auth_user', JSON.stringify(matched.user), {
@@ -124,3 +82,4 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+

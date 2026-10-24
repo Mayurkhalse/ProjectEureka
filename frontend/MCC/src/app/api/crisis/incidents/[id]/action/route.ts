@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { MOCK_USERS } from '@/lib/serverData';
-import { executeLiveIncidentAction } from '@/lib/backendClient';
+import { updateServerIncidentAction, MOCK_USERS } from '@/lib/serverData';
 
 export async function POST(
   request: NextRequest,
@@ -14,7 +13,7 @@ export async function POST(
     const matchedUser = username ? MOCK_USERS[username]?.user : null;
     const role = matchedUser?.role || body.role;
 
-    // Enforce role authorization: DIO desk cannot authorize official rebuttals
+    // Enforce role authorization
     if (role === 'dio_desk') {
       return NextResponse.json(
         {
@@ -32,29 +31,23 @@ export async function POST(
       );
     }
 
-    const authUser = matchedUser || {
-      id: 'collector',
-      username: username || 'collector_palghar',
-      name: 'Vikram S. Mahajan, IAS',
-      marathiName: 'विक्रम एस. महाजन',
-      role: 'collector',
-      designation: 'Collector',
-      division: 'Konkan',
-      district: 'Palghar',
-      avatarInitials: 'VM',
-      permittedDivisions: ['Konkan'],
-      permittedDistricts: ['Palghar'],
-      canAuthorizeRebuttals: true,
-    };
-
-    const authHeader = request.headers.get('authorization') || undefined;
-    const token = authHeader?.startsWith('Bearer ') ? authHeader.substring(7) : undefined;
-
-    const updated = await executeLiveIncidentAction(
+    const updated = updateServerIncidentAction(
       id,
       action as 'authorize' | 'issue_advisory' | 'request_edits',
-      authUser,
-      token
+      matchedUser || {
+        id: 'collector',
+        username: 'collector_palghar',
+        name: 'Vikram S. Mahajan, IAS',
+        marathiName: 'विक्रम एस. महाजन',
+        role: 'collector',
+        designation: 'Collector',
+        division: 'Konkan',
+        district: 'Palghar',
+        avatarInitials: 'VM',
+        permittedDivisions: ['Konkan'],
+        permittedDistricts: ['Palghar'],
+        canAuthorizeRebuttals: true,
+      }
     );
 
     if (!updated) {

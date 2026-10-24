@@ -36,7 +36,7 @@ export const DistrictPerformanceChart: React.FC<DistrictPerformanceChartProps> =
         itemHeight: 10,
         data: [
           language === 'mr' ? 'प्रसिद्धी प्रमाण (२५)' : 'Volume (25)',
-          language === 'mr' ? 'वितरण गती / TAT (२५)' : 'Speed / TAT (25)',
+          language === 'mr' ? 'प्रतिसाद गती (२५)' : 'Response Speed (25)',
           language === 'mr' ? 'माध्यम सूर (२५)' : 'Sentiment (25)',
           language === 'mr' ? 'आपत्ती SLA (२५)' : 'Crisis SLA (25)',
         ],
@@ -87,7 +87,7 @@ export const DistrictPerformanceChart: React.FC<DistrictPerformanceChartProps> =
           itemStyle: { color: '#1E3A8A' },
         },
         {
-          name: language === 'mr' ? 'वितरण गती / TAT (२५)' : 'Speed / TAT (25)',
+          name: language === 'mr' ? 'प्रतिसाद गती (२५)' : 'Response Speed (25)',
           type: 'bar',
           stack: 'cpi',
           data: top5.map((d) => d.tatScore),
