@@ -35,6 +35,7 @@ openai>=1.12.0
 # Security, Auth & RBAC
 python-jose[cryptography]>=3.3.0
 passlib[bcrypt]>=1.7.4
+webauthn>=2.0.0
 
 # Utilities & Data Processing
 tenacity>=8.2.3

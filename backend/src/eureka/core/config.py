@@ -49,6 +49,15 @@ class Settings(BaseSettings):
     JWT_ALGORITHM: str = Field(default="HS256")
     ACCESS_TOKEN_EXPIRE_MINUTES: int = Field(default=480)  # 8 hours
 
+    # WebAuthn (Face Lock / Biometrics - Zero biometric server storage)
+    WEBAUTHN_RP_ID: str = Field(default="localhost", description="WebAuthn Relying Party ID")
+    WEBAUTHN_RP_NAME: str = Field(default="DGIPR Command Center", description="WebAuthn RP Name")
+    WEBAUTHN_ORIGIN: str = Field(default="http://localhost:3000", description="WebAuthn Origin")
+
+    # Speech-to-Text Audio Transcription (Gemini API)
+    GEMINI_API_KEY: Optional[str] = Field(default=None, description="Main Gemini API key for audio transcription")
+    GEMINI_TRANSCRIBE_MODEL: str = Field(default="gemini-2.0-flash", description="Gemini transcription model")
+
     # Outbox Processor
     OUTBOX_POLL_INTERVAL_SECONDS: int = Field(default=5)
     OUTBOX_BATCH_SIZE: int = Field(default=100)
