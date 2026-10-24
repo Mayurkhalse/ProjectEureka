@@ -331,4 +331,24 @@ tr.search-highlight-target {
   animation: shimmerSweep 1.5s ease-in-out infinite;
 }
 
+@keyframes tickerScroll {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.animate-ticker {
+  display: flex;
+  width: max-content;
+  animation: tickerScroll 50s linear infinite;
+}
+
+.animate-ticker-paused {
+  animation-play-state: paused !important;
+}
+
+
 

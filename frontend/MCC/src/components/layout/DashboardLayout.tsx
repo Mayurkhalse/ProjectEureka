@@ -5,6 +5,7 @@ import { useRouter, usePathname } from 'next/navigation';
 import { Header } from './Header';
 import { Sidebar } from './Sidebar';
 import { DashboardToolbar } from './DashboardToolbar';
+import { LiveNewsTicker } from '@/components/dashboard/LiveNewsTicker';
 import { useDashboardStore } from '@/stores/dashboardStore';
 import { MaterialIcon } from '@/components/shared/MaterialIcon';
 import dynamic from 'next/dynamic';
@@ -110,6 +111,9 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) =>
         <div className="flex-1 flex flex-col min-w-0 min-h-0 overflow-hidden relative">
           {/* Stationary White Sub-Header Bar */}
           {isToolbarVisible && <DashboardToolbar />}
+
+          {/* Statewide Horizontal Live News Ticker */}
+          {isToolbarVisible && <LiveNewsTicker />}
 
           {/* 2px Saffron Shimmer Progress Bar (Active when verifying or filtering) */}
           {showProgressBar && (

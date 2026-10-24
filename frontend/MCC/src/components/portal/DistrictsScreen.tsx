@@ -5,6 +5,7 @@ import { DistrictLeaderboard } from '@/components/zones/DistrictLeaderboard/Dist
 import { ScoreDecomposition } from '@/components/zones/ScoreDecomposition/ScoreDecomposition';
 import { TopLowerMatrix } from '@/components/leadership/TopLowerMatrix/TopLowerMatrix';
 import { GISMap } from '@/components/leadership/GISMap/GISMap';
+import { GovernmentPositionsSection } from '@/components/commandCenter/center/GovernmentPositionsSection';
 import { MaterialIcon } from '@/components/shared/MaterialIcon';
 import { useDashboardStore } from '@/stores/dashboardStore';
 
@@ -35,6 +36,7 @@ export const DistrictsScreen: React.FC = () => {
         <div className="lg:col-span-8 space-y-5">
           <DistrictLeaderboard />
           <ScoreDecomposition />
+          <GovernmentPositionsSection />
         </div>
 
         <div className="lg:col-span-4 space-y-5">

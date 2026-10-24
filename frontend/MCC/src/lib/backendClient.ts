@@ -1,4 +1,14 @@
-import { DistrictData, IncidentData } from '@/types/dashboard';
+import {
+  DistrictData,
+  IncidentData,
+  DistrictPositionData,
+  SchemeHoardingData,
+  ClippingData,
+  SocialPostData,
+  TvClipData,
+  TickerItemData,
+  SourceDetailData,
+} from '@/types/dashboard';
 import { getServerDistricts, getServerIncidents, getServerOverviewMetrics, updateServerIncidentAction } from './serverData';
 
 /**
@@ -335,3 +345,263 @@ export async function getLiveOverviewMetrics(role?: string, district?: string, d
 
   return getServerOverviewMetrics(role, district, division);
 }
+
+// --- Meeting Changes Data Foundation Client API ---
+
+export async function getLiveTickerItems(): Promise<{
+  status: string;
+  total_items: number;
+  is_live: boolean;
+  provenance: string;
+  items: TickerItemData[];
+}> {
+  try {
+    const endpoint = getBackendEndpoint('/api/v1/ticker');
+    const res = await fetch(endpoint.toString(), {
+      next: { revalidate: 30 },
+      headers: { Accept: 'application/json' },
+    });
+    if (res.ok) {
+      return await res.json();
+    }
+  } catch {}
+
+  // Fallback ticker items if backend is offline
+  return {
+    status: 'success',
+    total_items: 6,
+    is_live: false,
+    provenance: 'synthetic',
+    items: [
+      {
+        id: 'TCK-FB-01',
+        kind: 'HEADLINE',
+        text_en: 'Majhi Ladki Bahin Yojana: Over 1.85 crore women receive direct financial transfer across 36 Maharashtra districts.',
+        text_mr: 'मुख्यमंत्री माझी लाडकी बहीण योजना: राज्यातील १.८५ कोटींहून अधिक भगिनींच्या खात्यात थेट अनुदान हस्तांतरित.',
+        link_url: '/sources/clipping/CLIP-MH01-001',
+        provenance: 'synthetic',
+      },
+      {
+        id: 'TCK-FB-02',
+        kind: 'ALERT',
+        text_en: 'WEATHER ADVISORY: IMD issues yellow alert for Konkan & Vidarbha districts; Disaster Management teams on standby.',
+        text_mr: "हवामान इशारा: कोकण व विदर्भ जिल्ह्यांना 'येलो अलर्ट'; आपत्ती व्यवस्थापन यंत्रणा दक्ष.",
+        link_url: '/sources/clipping/CLIP-MH04-001',
+        provenance: 'synthetic',
+      },
+      {
+        id: 'TCK-FB-03',
+        kind: 'ANNOUNCEMENT',
+        text_en: 'DGIPR Command Center activates 24x7 fact-check desk to counter election and policy misinformation in real time.',
+        text_mr: 'माहिती व जनसंपर्क महासंचालनालयाचे २४x७ फॅक्ट-चेक नियंत्रण कक्ष कार्यान्वित; अफवांचे तत्काळ खंडन.',
+        link_url: '/sources/social/SOC-MH07-001',
+        provenance: 'synthetic',
+      },
+      {
+        id: 'TCK-FB-04',
+        kind: 'HEADLINE',
+        text_en: 'Thane district achieves 95.45 composite index, ranking #1 in state governance & public service delivery.',
+        text_mr: 'ठाणे जिल्हा ९५.४५ गुणांसह राज्यात प्रथम क्रमांकावर; उत्कृष्ट संनियंत्रण कामगिरी.',
+        link_url: '/sources/clipping/CLIP-MH04-002',
+        provenance: 'synthetic',
+      },
+      {
+        id: 'TCK-FB-05',
+        kind: 'ALERT',
+        text_en: 'FACT-CHECK: Clarification issued regarding stamp duty rumours; official portal guidelines remain unchanged.',
+        text_mr: 'सत्यता पडताळणी: मुद्रांक शुल्काबाबत समाजमाध्यमांवरील संदेश दिशाभूल करणारे; अधिकृत पोर्टलवरील नियम कायम.',
+        link_url: '/sources/social/SOC-MH02-001',
+        provenance: 'synthetic',
+      },
+      {
+        id: 'TCK-FB-06',
+        kind: 'ANNOUNCEMENT',
+        text_en: 'Maha Agri Solar Feeder 2.0 crosses 7,000 MW capacity benchmark for daytime agricultural power supply.',
+        text_mr: 'सौर कृषी वाहिनी २.०: शेतकऱ्यांना दिवसा अखंड वीजपुरवठ्यासाठी ७,००० मेगावॅटचे उद्दिष्ट दृष्टिक्षेपात.',
+        link_url: '/sources/clipping/CLIP-MH21-001',
+        provenance: 'synthetic',
+      },
+    ],
+  };
+}
+
+export async function getDistrictPositions(
+  districtCode: string,
+  token?: string
+): Promise<{ status: string; district_code: string; total_positions: number; positions: DistrictPositionData[]; provenance: string }> {
+  try {
+    const endpoint = getBackendEndpoint(`/api/v1/districts/${districtCode}/positions`);
+    const headers: Record<string, string> = { Accept: 'application/json' };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    const res = await fetch(endpoint.toString(), {
+      next: { revalidate: 60 },
+      headers,
+    });
+    if (res.ok) {
+      return await res.json();
+    }
+  } catch {}
+
+  return {
+    status: 'success',
+    district_code: districtCode,
+    total_positions: 0,
+    provenance: 'synthetic',
+    positions: [],
+  };
+}
+
+export async function getStatewideHoardings(
+  filter?: { district?: string; department?: string; scheme?: string },
+  token?: string
+): Promise<{ status: string; total_hoardings: number; hoardings: SchemeHoardingData[]; provenance: string }> {
+  try {
+    const endpoint = getBackendEndpoint('/api/v1/hoardings');
+    if (filter?.district) endpoint.searchParams.set('district_code', filter.district);
+    if (filter?.department) endpoint.searchParams.set('department_code', filter.department);
+    if (filter?.scheme) endpoint.searchParams.set('scheme', filter.scheme);
+
+    const headers: Record<string, string> = { Accept: 'application/json' };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
+    const res = await fetch(endpoint.toString(), {
+      next: { revalidate: 60 },
+      headers,
+    });
+    if (res.ok) {
+      return await res.json();
+    }
+  } catch {}
+
+  return {
+    status: 'success',
+    total_hoardings: 0,
+    provenance: 'synthetic',
+    hoardings: [],
+  };
+}
+
+export const getHoardings = getStatewideHoardings;
+
+export async function getDistrictHoardings(
+  districtCode: string,
+  token?: string
+): Promise<{ status: string; district_code: string; total_hoardings: number; hoardings: SchemeHoardingData[]; provenance: string }> {
+  try {
+    const endpoint = getBackendEndpoint(`/api/v1/districts/${districtCode}/hoardings`);
+    const headers: Record<string, string> = { Accept: 'application/json' };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    const res = await fetch(endpoint.toString(), {
+      next: { revalidate: 60 },
+      headers,
+    });
+    if (res.ok) {
+      return await res.json();
+    }
+  } catch {}
+
+  return {
+    status: 'success',
+    district_code: districtCode,
+    total_hoardings: 0,
+    provenance: 'synthetic',
+    hoardings: [],
+  };
+}
+
+export async function getDistrictClippings(
+  districtCode: string,
+  token?: string
+): Promise<{ status: string; district_code: string; total_clippings: number; clippings: ClippingData[]; provenance: string }> {
+  try {
+    const endpoint = getBackendEndpoint(`/api/v1/districts/${districtCode}/clippings`);
+    const headers: Record<string, string> = { Accept: 'application/json' };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    const res = await fetch(endpoint.toString(), {
+      next: { revalidate: 60 },
+      headers,
+    });
+    if (res.ok) {
+      return await res.json();
+    }
+  } catch {}
+
+  return {
+    status: 'success',
+    district_code: districtCode,
+    total_clippings: 0,
+    provenance: 'synthetic',
+    clippings: [],
+  };
+}
+
+export async function getDistrictSocial(
+  districtCode: string,
+  token?: string
+): Promise<{ status: string; district_code: string; total_social_posts: number; social_posts: SocialPostData[]; provenance: string }> {
+  try {
+    const endpoint = getBackendEndpoint(`/api/v1/districts/${districtCode}/social`);
+    const headers: Record<string, string> = { Accept: 'application/json' };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    const res = await fetch(endpoint.toString(), {
+      next: { revalidate: 60 },
+      headers,
+    });
+    if (res.ok) {
+      return await res.json();
+    }
+  } catch {}
+
+  return {
+    status: 'success',
+    district_code: districtCode,
+    total_social_posts: 0,
+    provenance: 'synthetic',
+    social_posts: [],
+  };
+}
+
+export async function getDistrictTv(
+  districtCode: string,
+  token?: string
+): Promise<{ status: string; district_code: string; total_tv_clips: number; tv_clips: TvClipData[]; provenance: string }> {
+  try {
+    const endpoint = getBackendEndpoint(`/api/v1/districts/${districtCode}/tv`);
+    const headers: Record<string, string> = { Accept: 'application/json' };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    const res = await fetch(endpoint.toString(), {
+      next: { revalidate: 60 },
+      headers,
+    });
+    if (res.ok) {
+      return await res.json();
+    }
+  } catch {}
+
+  return {
+    status: 'success',
+    district_code: districtCode,
+    total_tv_clips: 0,
+    provenance: 'synthetic',
+    tv_clips: [],
+  };
+}
+
+export async function getSourceDetail(
+  sourceType: string,
+  sourceId: string
+): Promise<SourceDetailData | null> {
+  try {
+    const endpoint = getBackendEndpoint(`/api/v1/sources/${sourceType}/${sourceId}`);
+    const res = await fetch(endpoint.toString(), {
+      next: { revalidate: 60 },
+      headers: { Accept: 'application/json' },
+    });
+    if (res.ok) {
+      return await res.json();
+    }
+  } catch {}
+
+  return null;
+}
+

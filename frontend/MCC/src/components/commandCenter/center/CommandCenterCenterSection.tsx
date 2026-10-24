@@ -5,6 +5,7 @@ import { useDashboardStore } from '@/stores/dashboardStore';
 import { MaharashtraMapTopology } from './MaharashtraMapTopology';
 import { DistrictSubHeadSelector } from './DistrictSubHeadSelector';
 import { DIODataDrawer } from './DIODataDrawer';
+import { GovernmentPositionsSection } from './GovernmentPositionsSection';
 import { MaterialIcon } from '@/components/shared/MaterialIcon';
 
 export const CommandCenterCenterSection: React.FC = () => {
@@ -38,6 +39,9 @@ export const CommandCenterCenterSection: React.FC = () => {
 
         {/* DIO Data Drawer for Selected Sub-head */}
         <DIODataDrawer />
+
+        {/* Government & Leadership Positions */}
+        <GovernmentPositionsSection />
       </div>
     </div>
   );

@@ -72,6 +72,7 @@ async def generate_dev_token(payload: DevTokenRequest):
 
 # Include all routers
 from eureka.copilot.router import router as copilot_router
+from eureka.api.routers.foundation_router import router as foundation_router
 
 app.include_router(health.router)
 app.include_router(quad.router)
@@ -82,4 +83,5 @@ app.include_router(reports_router)
 app.include_router(jobs_router)
 app.include_router(hermes_router.router)
 app.include_router(copilot_router)
+app.include_router(foundation_router)
 

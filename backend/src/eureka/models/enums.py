@@ -80,3 +80,25 @@ class AggregateType(str, Enum):
     DEPARTMENT = "Department"
     CLAIM = "Claim"
     EVENT_SOURCE_LINK = "EventSourceLink"
+
+
+class PositionCategory(str, Enum):
+    """Administrative and political leadership categories."""
+    MINISTER = "MINISTER"
+    MP = "MP"
+    MLA = "MLA"
+    MLC = "MLC"
+    COLLECTOR = "COLLECTOR"
+    SP = "SP"
+    ZP_CEO = "ZP_CEO"
+    MUNICIPAL = "MUNICIPAL"
+    DIO = "DIO"
+    OTHER = "OTHER"
+
+
+class TickerKind(str, Enum):
+    """Categorization for broadcast news ticker items."""
+    HEADLINE = "HEADLINE"
+    ANNOUNCEMENT = "ANNOUNCEMENT"
+    ALERT = "ALERT"
+

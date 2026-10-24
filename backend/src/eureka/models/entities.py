@@ -15,6 +15,14 @@ from eureka.models.orm import (
     AgentRun,
     AgentToolCall,
     CopilotFeedback,
+    DistrictPosition,
+    SchemeHoarding,
+    Clipping,
+    SocialPost,
+    TvClip,
+    TickerItem,
+    WebAuthnCredential,
+    TranscriptSegment,
 )
 
 __all__ = [
@@ -32,4 +40,12 @@ __all__ = [
     "AgentRun",
     "AgentToolCall",
     "CopilotFeedback",
+    "DistrictPosition",
+    "SchemeHoarding",
+    "Clipping",
+    "SocialPost",
+    "TvClip",
+    "TickerItem",
+    "WebAuthnCredential",
+    "TranscriptSegment",
 ]

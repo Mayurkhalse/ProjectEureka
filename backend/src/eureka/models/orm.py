@@ -26,7 +26,9 @@ from eureka.models.enums import (
     FactCheckTicketStatus,
     IngestionRunStatus,
     OutboxEventStatus,
+    PositionCategory,
     SourceLane,
+    TickerKind,
     UserRole,
     VerificationStatus,
 )
@@ -533,4 +535,164 @@ class CopilotFeedback(Base, UUIDPrimaryKeyMixin):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False
     )
+
+
+class DistrictPosition(Base):
+    """Elected and administrative key leadership posts per district."""
+
+    __tablename__ = "district_positions"
+
+    id: Mapped[str] = mapped_column(String(100), primary_key=True, default=lambda: str(uuid.uuid4()))
+    district_code: Mapped[str] = mapped_column(String(10), nullable=False, index=True)
+    category: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
+    designation_en: Mapped[str] = mapped_column(String(255), nullable=False)
+    designation_mr: Mapped[str] = mapped_column(String(255), nullable=False)
+    person_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    responsibilities_en: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    responsibilities_mr: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    phone: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+    email: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    provenance: Mapped[str] = mapped_column(String(50), default="synthetic", nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False
+    )
+
+
+class SchemeHoarding(Base):
+    """Field publicity and government scheme hoardings."""
+
+    __tablename__ = "scheme_hoardings"
+
+    id: Mapped[str] = mapped_column(String(100), primary_key=True, default=lambda: str(uuid.uuid4()))
+    district_code: Mapped[str] = mapped_column(String(10), nullable=False, index=True)
+    scheme_name_en: Mapped[str] = mapped_column(String(255), nullable=False)
+    scheme_name_mr: Mapped[str] = mapped_column(String(255), nullable=False)
+    department_code: Mapped[str] = mapped_column(String(100), nullable=False, index=True)
+    lat: Mapped[float] = mapped_column(Float, nullable=False)
+    lon: Mapped[float] = mapped_column(Float, nullable=False)
+    address: Mapped[str] = mapped_column(Text, nullable=False)
+    size: Mapped[str] = mapped_column(String(50), nullable=False)
+    installed_on: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+    expires_on: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+    status: Mapped[str] = mapped_column(String(50), default="ACTIVE", nullable=False)
+    announcement_en: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    announcement_mr: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    image_url: Mapped[Optional[str]] = mapped_column(String(1024), nullable=True)
+    provenance: Mapped[str] = mapped_column(String(50), default="synthetic", nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False
+    )
+
+
+class Clipping(Base):
+    """Print news clippings and press monitoring records."""
+
+    __tablename__ = "clippings"
+
+    id: Mapped[str] = mapped_column(String(100), primary_key=True, default=lambda: str(uuid.uuid4()))
+    district_code: Mapped[str] = mapped_column(String(10), nullable=False, index=True)
+    headline: Mapped[str] = mapped_column(String(500), nullable=False)
+    outlet: Mapped[str] = mapped_column(String(255), nullable=False)
+    language: Mapped[str] = mapped_column(String(20), default="mr", nullable=False)
+    published_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    source_url: Mapped[str] = mapped_column(String(1024), nullable=False)
+    clipping_image_url: Mapped[Optional[str]] = mapped_column(String(1024), nullable=True)
+    summary: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    provenance: Mapped[str] = mapped_column(String(50), default="synthetic", nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False
+    )
+
+
+class SocialPost(Base):
+    """Social media listening posts."""
+
+    __tablename__ = "social_posts"
+
+    id: Mapped[str] = mapped_column(String(100), primary_key=True, default=lambda: str(uuid.uuid4()))
+    district_code: Mapped[str] = mapped_column(String(10), nullable=False, index=True)
+    platform: Mapped[str] = mapped_column(String(50), nullable=False)
+    handle: Mapped[str] = mapped_column(String(100), nullable=False)
+    post_url: Mapped[str] = mapped_column(String(1024), nullable=False)
+    text: Mapped[str] = mapped_column(Text, nullable=False)
+    posted_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    engagement: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    provenance: Mapped[str] = mapped_column(String(50), default="synthetic", nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False
+    )
+
+
+class TvClip(Base):
+    """Broadcast TV monitoring news segments."""
+
+    __tablename__ = "tv_clips"
+
+    id: Mapped[str] = mapped_column(String(100), primary_key=True, default=lambda: str(uuid.uuid4()))
+    district_code: Mapped[str] = mapped_column(String(10), nullable=False, index=True)
+    channel: Mapped[str] = mapped_column(String(100), nullable=False)
+    programme: Mapped[str] = mapped_column(String(255), nullable=False)
+    clip_url: Mapped[str] = mapped_column(String(1024), nullable=False)
+    aired_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    start_offset_sec: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    transcript_text: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    provenance: Mapped[str] = mapped_column(String(50), default="synthetic", nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False
+    )
+
+
+class TickerItem(Base):
+    """Statewide horizontal live news ticker items."""
+
+    __tablename__ = "ticker_items"
+
+    id: Mapped[str] = mapped_column(String(100), primary_key=True, default=lambda: str(uuid.uuid4()))
+    kind: Mapped[str] = mapped_column(String(50), nullable=False)
+    text_en: Mapped[str] = mapped_column(Text, nullable=False)
+    text_mr: Mapped[str] = mapped_column(Text, nullable=False)
+    link_url: Mapped[Optional[str]] = mapped_column(String(1024), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False
+    )
+    expires_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    provenance: Mapped[str] = mapped_column(String(50), default="synthetic", nullable=False)
+
+
+class WebAuthnCredential(Base):
+    """WebAuthn FIDO2 / Passkey credentials for device biometric face authentication."""
+
+    __tablename__ = "webauthn_credentials"
+
+    id: Mapped[str] = mapped_column(String(100), primary_key=True, default=lambda: str(uuid.uuid4()))
+    user_id: Mapped[str] = mapped_column(String(100), nullable=False, index=True)
+    credential_id: Mapped[str] = mapped_column(String(512), unique=True, nullable=False, index=True)
+    public_key: Mapped[str] = mapped_column(Text, nullable=False)
+    sign_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    transports: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    label: Mapped[Optional[str]] = mapped_column(String(255), default="Face ID / Windows Hello", nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False
+    )
+    last_used_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class TranscriptSegment(Base):
+    """Streaming audio transcription segments."""
+
+    __tablename__ = "transcript_segments"
+
+    id: Mapped[str] = mapped_column(String(100), primary_key=True, default=lambda: str(uuid.uuid4()))
+    stream_id: Mapped[str] = mapped_column(String(100), nullable=False, index=True)
+    start_time: Mapped[float] = mapped_column(Float, nullable=False)
+    end_time: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    text: Mapped[str] = mapped_column(Text, nullable=False)
+    language: Mapped[str] = mapped_column(String(10), default="mr", nullable=False)
+    provider: Mapped[str] = mapped_column(String(50), nullable=False)
+    model: Mapped[str] = mapped_column(String(100), nullable=False)
+    machine_generated: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False
+    )
+
 

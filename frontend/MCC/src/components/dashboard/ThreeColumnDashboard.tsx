@@ -12,6 +12,8 @@ import { SocialMediaAnalysis } from '@/components/leadership/SocialMediaAnalysis
 import { EmergencyAlert } from '@/components/zones/EmergencyAlert/EmergencyAlert';
 import { LiveNewsQueue } from '@/components/dashboard/LiveNewsQueue';
 import { LiveStreaming } from '@/components/leadership/LiveStreaming/LiveStreaming';
+import { DIPRDivisionsPanel } from '@/components/dashboard/DIPRDivisionsPanel';
+import { GovernmentSchemeHoardingsPanel } from '@/components/dashboard/GovernmentSchemeHoardingsPanel';
 
 export const ThreeColumnDashboard: React.FC = () => {
   const [isWide, setIsWide] = useState(true);
@@ -40,6 +42,8 @@ export const ThreeColumnDashboard: React.FC = () => {
           <div className="md:col-span-12 lg:col-span-7 flex flex-col gap-5 min-w-0">
             <GISMap />
             <BreakingNewsTicker />
+            <GovernmentSchemeHoardingsPanel />
+            <DIPRDivisionsPanel />
             <DistrictLeaderboard showChart={false} />
           </div>
 
@@ -62,12 +66,14 @@ export const ThreeColumnDashboard: React.FC = () => {
             <ScoreDecomposition />
             <KeyMetricsTrends />
             <TopLowerMatrix />
+            <DIPRDivisionsPanel />
           </div>
 
           {/* CENTER COLUMN (5/12 on XL, 4/12 on LG) - Map, Ticker & State Leaderboard */}
           <div className="lg:col-span-4 xl:col-span-5 flex flex-col gap-5 min-w-0">
             <GISMap />
             <BreakingNewsTicker />
+            <GovernmentSchemeHoardingsPanel />
             <DistrictLeaderboard showChart={false} />
           </div>
 
