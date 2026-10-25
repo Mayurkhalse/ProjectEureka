@@ -38,12 +38,22 @@ if "torch_scatter" not in sys.modules:
     sys.modules["torch_scatter"] = types.ModuleType("torch_scatter")
 
 import numpy as np
-import onnx
-import onnxruntime as ort
+
+try:
+    import onnx
+    import onnxruntime as ort
+    from onnxruntime.quantization import QuantType, quantize_dynamic
+    HAS_ONNX = True
+except ImportError:
+    onnx = None
+    ort = None
+    QuantType = None
+    quantize_dynamic = None
+    HAS_ONNX = False
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from onnxruntime.quantization import QuantType, quantize_dynamic
 
 from eureka.processor.stgnn_dataset import build_static_district_edge_index
 
