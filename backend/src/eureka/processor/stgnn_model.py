@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 """Spatio-Temporal Graph Neural Network (A3TGCN) for Predictive Rumor Diffusion.
 
 Implements the Attention Temporal Graph Convolutional Network (A3TGCN) architecture
@@ -9,7 +11,7 @@ import logging
 import os
 import sys
 import types
-from typing import Dict, Optional, Tuple
+from typing import Any, Dict, Optional, Tuple
 
 # PyG 2.x and PyTorch 2.x compatibility shims for torch-sparse and torch-scatter
 if "torch_sparse" not in sys.modules:
@@ -26,18 +28,61 @@ try:
     import torch
     import torch.nn as nn
     import torch.nn.functional as F
-    from torch_geometric.nn import GCNConv
-    from torch_geometric_temporal.nn.recurrent import TGCN
     HAS_TORCH = True
     _BaseModule = nn.Module
 except ImportError:
     HAS_TORCH = False
-    torch = None
+    class _DummyTorch:
+        Tensor = Any
+    torch = _DummyTorch()
     nn = None
     F = None
+    _BaseModule = object
+
+try:
+    from torch_geometric.nn import GCNConv
+    from torch_geometric_temporal.nn.recurrent import TGCN
+    HAS_PYG = True
+except ImportError:
+    HAS_PYG = False
     GCNConv = None
     TGCN = None
-    _BaseModule = object
+
+if TGCN is None and HAS_TORCH:
+    class _FallbackTGCN(nn.Module):
+        """Fallback implementation of TGCN when torch_geometric_temporal is not installed."""
+        def __init__(
+            self,
+            in_channels: int,
+            out_channels: int,
+            improved: bool = False,
+            cached: bool = False,
+            add_self_loops: bool = True,
+        ):
+            super().__init__()
+            self.in_channels = in_channels
+            self.out_channels = out_channels
+            self.linear = nn.Linear(in_channels, out_channels)
+            self.gru_cell = nn.GRUCell(out_channels, out_channels)
+
+        def forward(self, x, edge_index, edge_weight=None, h=None):
+            if edge_index is not None and hasattr(edge_index, "shape") and edge_index.shape[1] > 0:
+                num_nodes = x.shape[0]
+                row, col = edge_index[0], edge_index[1]
+                msg = x[row]
+                if edge_weight is not None:
+                    msg = msg * edge_weight.unsqueeze(-1)
+                aggr = torch.zeros(num_nodes, x.shape[1], device=x.device, dtype=x.dtype)
+                aggr.index_add_(0, col, msg)
+                proj = self.linear(aggr)
+            else:
+                proj = self.linear(x)
+
+            if h is None:
+                h = torch.zeros(x.shape[0], self.out_channels, device=x.device, dtype=x.dtype)
+            return self.gru_cell(proj, h)
+
+    TGCN = _FallbackTGCN
 
 logger = logging.getLogger(__name__)
 
