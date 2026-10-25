@@ -128,7 +128,7 @@ async def test_c1_router_successful_c1_markup():
 
     c1_valid_markup = (
         '<Heading level=2 text="Top 5 Maharashtra Districts" />\n'
-        '<KpiCard title="Thane" value="96.75" unit="/100" />'
+        '<KpiCard title="Thane" value="95.45" unit="/100" />'
     )
 
     with patch.dict(os.environ, {"COPILOT_UI_ENGINE": "c1"}), \
