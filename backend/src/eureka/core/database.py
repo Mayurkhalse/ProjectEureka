@@ -1,10 +1,11 @@
-"""Database engine and session management for PostgreSQL 16 using SQLAlchemy 2.0 with verified local SQLite fallback."""
+"""Database engine and session management for PostgreSQL 16 using SQLAlchemy 2.0 with safe development-only fallback."""
 
 from contextlib import asynccontextmanager, contextmanager
 import logging
 from pathlib import Path
 from typing import AsyncGenerator, Generator
 from sqlalchemy import text, create_engine
+from sqlalchemy.exc import InterfaceError, OperationalError
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
     AsyncSession,
@@ -70,6 +71,18 @@ SyncSessionLocal = sessionmaker(
 )
 
 
+def is_sqlite_fallback_allowed() -> bool:
+    """Fallback to local SQLite is ONLY permitted in local development/test/demo when explicitly allowed.
+    
+    Strictly prohibited in production, prod, or staging.
+    """
+    curr_settings = get_settings()
+    env_lower = (curr_settings.ENVIRONMENT or "").strip().lower()
+    if env_lower in ("production", "prod", "staging"):
+        return False
+    return bool(curr_settings.ALLOW_SQLITE_FALLBACK)
+
+
 def _get_sqlite_fallback_path() -> Path | None:
     candidates = [
         Path("eureka_db.db"),
@@ -96,13 +109,25 @@ async def get_async_db() -> AsyncGenerator[AsyncSession, None]:
                 await session.close()
             except Exception:
                 pass
-        fb_path = _get_sqlite_fallback_path()
-        if fb_path and not is_async_sqlite:
-            logger.warning("Async PostgreSQL connection unavailable (%s); routing to verified local store %s", e, fb_path)
-            fb_engine = create_async_engine(f"sqlite+aiosqlite:///{fb_path}")
-            fb_maker = async_sessionmaker(bind=fb_engine, class_=AsyncSession, autocommit=False, autoflush=False)
-            session = fb_maker()
+
+        if is_sqlite_fallback_allowed() and not is_async_sqlite:
+            err_str = str(e).lower()
+            is_conn_error = isinstance(e, (OperationalError, InterfaceError)) or any(
+                w in err_str for w in ("connection refused", "could not connect", "timeout", "unreachable")
+            )
+            if is_conn_error:
+                fb_path = _get_sqlite_fallback_path()
+                if fb_path:
+                    logger.warning("Async PostgreSQL connection unavailable (%s); routing to verified local store %s", e, fb_path)
+                    fb_engine = create_async_engine(f"sqlite+aiosqlite:///{fb_path}")
+                    fb_maker = async_sessionmaker(bind=fb_engine, class_=AsyncSession, autocommit=False, autoflush=False)
+                    session = fb_maker()
+                else:
+                    raise
+            else:
+                raise
         else:
+            # Production, staging, or fallback disabled: fail fast
             raise
 
     try:
@@ -128,12 +153,23 @@ async def async_db_context() -> AsyncGenerator[AsyncSession, None]:
                 await session.close()
             except Exception:
                 pass
-        fb_path = _get_sqlite_fallback_path()
-        if fb_path and not is_async_sqlite:
-            logger.warning("Async PostgreSQL context unavailable (%s); routing to verified local store %s", e, fb_path)
-            fb_engine = create_async_engine(f"sqlite+aiosqlite:///{fb_path}")
-            fb_maker = async_sessionmaker(bind=fb_engine, class_=AsyncSession, autocommit=False, autoflush=False)
-            session = fb_maker()
+
+        if is_sqlite_fallback_allowed() and not is_async_sqlite:
+            err_str = str(e).lower()
+            is_conn_error = isinstance(e, (OperationalError, InterfaceError)) or any(
+                w in err_str for w in ("connection refused", "could not connect", "timeout", "unreachable")
+            )
+            if is_conn_error:
+                fb_path = _get_sqlite_fallback_path()
+                if fb_path:
+                    logger.warning("Async PostgreSQL context unavailable (%s); routing to verified local store %s", e, fb_path)
+                    fb_engine = create_async_engine(f"sqlite+aiosqlite:///{fb_path}")
+                    fb_maker = async_sessionmaker(bind=fb_engine, class_=AsyncSession, autocommit=False, autoflush=False)
+                    session = fb_maker()
+                else:
+                    raise
+            else:
+                raise
         else:
             raise
 
@@ -149,7 +185,7 @@ async def async_db_context() -> AsyncGenerator[AsyncSession, None]:
 
 @contextmanager
 def sync_db_context() -> Generator[Session, None, None]:
-    """Synchronous context manager for Celery workers and synchronous tasks with automatic verified local fallback."""
+    """Synchronous context manager for Celery workers and synchronous tasks."""
     session = None
     try:
         session = SyncSessionLocal()
@@ -160,12 +196,23 @@ def sync_db_context() -> Generator[Session, None, None]:
                 session.close()
             except Exception:
                 pass
-        fb_path = _get_sqlite_fallback_path()
-        if fb_path and not is_sync_sqlite:
-            logger.warning("Sync PostgreSQL context unavailable (%s); routing to verified local store %s", e, fb_path)
-            fb_engine = create_engine(f"sqlite:///{fb_path}", connect_args={"check_same_thread": False})
-            FbSession = sessionmaker(bind=fb_engine, autocommit=False, autoflush=False)
-            session = FbSession()
+
+        if is_sqlite_fallback_allowed() and not is_sync_sqlite:
+            err_str = str(e).lower()
+            is_conn_error = isinstance(e, (OperationalError, InterfaceError)) or any(
+                w in err_str for w in ("connection refused", "could not connect", "timeout", "unreachable")
+            )
+            if is_conn_error:
+                fb_path = _get_sqlite_fallback_path()
+                if fb_path:
+                    logger.warning("Sync PostgreSQL context unavailable (%s); routing to verified local store %s", e, fb_path)
+                    fb_engine = create_engine(f"sqlite:///{fb_path}", connect_args={"check_same_thread": False})
+                    FbSession = sessionmaker(bind=fb_engine, autocommit=False, autoflush=False)
+                    session = FbSession()
+                else:
+                    raise
+            else:
+                raise
         else:
             raise
 

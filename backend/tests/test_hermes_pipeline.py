@@ -30,13 +30,79 @@ from eureka.hermes.dm_pipeline_manager import (
     DISTRICT_LOOKUP,
 )
 from eureka.hermes.orchestrator import get_hermes_orchestrator
-from eureka.models.entities import CanonicalEvent, FactCheckTicket
-from eureka.models.enums import FactCheckTicketStatus, UserRole
+from eureka.models.entities import CanonicalEvent, FactCheckTicket, HumanReviewAction, OutboxEvent
+from eureka.models.enums import (
+    CanonicalEventStatus,
+    DetectedLanguage,
+    FactCheckTicketStatus,
+    UserRole,
+    VerificationStatus,
+)
 
 
 @pytest.fixture
 def client():
     return TestClient(app)
+
+
+@pytest.fixture(autouse=True)
+def hermes_test_db_records():
+    """Deterministic fixture providing required CanonicalEvent and FactCheckTicket in PostgreSQL."""
+    test_event_id = None
+    test_ticket_id = None
+    created = False
+    with sync_db_context() as session:
+        ticket = session.query(FactCheckTicket).join(CanonicalEvent).first()
+        if not ticket:
+            event = CanonicalEvent(
+                id=uuid.uuid4(),
+                title="Beed Kharif Crop Insurance Disbursement Verification",
+                summary="Official verification of Kharif crop insurance disbursements in Beed.",
+                primary_language=DetectedLanguage.MARATHI,
+                district_code="MH-23",
+                district_name="Beed",
+                status=CanonicalEventStatus.PENDING_REVIEW,
+                verification_status=VerificationStatus.UNVERIFIED,
+                first_detected_at=datetime.now(timezone.utc) - timedelta(minutes=30),
+                last_updated_at=datetime.now(timezone.utc),
+            )
+            session.add(event)
+            session.flush()
+
+            ticket = FactCheckTicket(
+                id=uuid.uuid4(),
+                canonical_event_id=event.id,
+                claim_text="TKT-BEED-002: Beed Kharif crop insurance claims cancelled",
+                is_rumor=True,
+                event_timestamp=datetime.now(timezone.utc) - timedelta(minutes=20),
+                status=FactCheckTicketStatus.OPEN,
+                assigned_to="Collector MH-23",
+                resolution_notes=None,
+            )
+            session.add(ticket)
+            session.commit()
+            test_event_id = event.id
+            test_ticket_id = ticket.id
+            created = True
+        else:
+            ticket.event_timestamp = datetime.now(timezone.utc) - timedelta(minutes=20)
+            ticket.status = FactCheckTicketStatus.OPEN
+            ticket.refuted_at = None
+            ticket.refuted_within_sla_90m = False
+            session.commit()
+
+    yield
+
+    if created and test_ticket_id and test_event_id:
+        with sync_db_context() as session:
+            try:
+                session.query(HumanReviewAction).filter(HumanReviewAction.entity_id == test_ticket_id).delete()
+                session.query(OutboxEvent).filter(OutboxEvent.aggregate_id == str(test_event_id)).delete()
+                session.query(FactCheckTicket).filter(FactCheckTicket.id == test_ticket_id).delete()
+                session.query(CanonicalEvent).filter(CanonicalEvent.id == test_event_id).delete()
+                session.commit()
+            except Exception:
+                session.rollback()
 
 
 # --- 1. SLA Calculation Unit Tests ---

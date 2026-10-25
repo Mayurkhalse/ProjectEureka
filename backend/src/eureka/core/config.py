@@ -2,7 +2,7 @@
 
 from functools import lru_cache
 from typing import Optional
-from pydantic import Field
+from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -23,6 +23,22 @@ class Settings(BaseSettings):
 
     # Database URL override (e.g. SQLite for local testing or custom Postgres DSN)
     DATABASE_URL: Optional[str] = Field(default=None, description="Database URL override")
+
+    # Explicit development-only fallback flag (STRICTLY FORBIDDEN IN PRODUCTION/STAGING)
+    ALLOW_SQLITE_FALLBACK: bool = Field(
+        default=False,
+        description="Allow fallback to local SQLite when PostgreSQL is unreachable. Strictly forbidden in production and staging.",
+    )
+
+    @model_validator(mode="after")
+    def validate_fallback_safety(self) -> "Settings":
+        env_lower = (self.ENVIRONMENT or "").strip().lower()
+        if env_lower in ("production", "prod", "staging") and self.ALLOW_SQLITE_FALLBACK:
+            raise ValueError(
+                f"ALLOW_SQLITE_FALLBACK is strictly prohibited in '{self.ENVIRONMENT}' environment. "
+                "Production and staging configurations must fail fast if PostgreSQL is unavailable."
+            )
+        return self
 
     # PostgreSQL 16
     POSTGRES_HOST: str = Field(default="localhost")
