@@ -1241,6 +1241,144 @@ To guarantee immediate accessibility in all deployed environments without manual
 - **Mathematical Grounding Check:** Every numerical literal in the output is cross-referenced against the executed read-only tool results with an exact 0.05 tolerance threshold. Fabricated statistics trigger an automatic 1-shot repair or fallback to the deterministic ViewSpec.
 - **GIGW 3.0 & UX4G Accessibility:** All generated charts (`BarChart`, `LineChart`, `GraphView`) must include nested screen-reader summaries (`<Text>`) and companion tabular data (`<DataTable>`).
 
+
+### 10.8 Fused Floating Action Button (FAB) Architecture & Synchronized Header Triggers
+
+To eliminate visual distraction and provide immediate, single-click access to Nirdeshak while maintaining executive UI polish, the trigger architecture was redesigned into a fused dual-entry mechanism:
+
+```
++----------------------------------------------------------------------------------------------------+
+|                         DUAL-ENTRY COPILOT SYNCHRONIZATION ARCHITECTURE                            |
++----------------------------------------------------------------------------------------------------+
+|                                                                                                    |
+|  [Header Trigger (Header.tsx)]                     [Floating Action Button (ai-assistant-widget)]  |
+|  • Position: Top navigation bar                    • Position: fixed bottom-6 right-6 z-50         |
+|  • Layout: Inline button next to Bell              • Geometry: 56px (w-14 h-14) circular FAB       |
+|  • Theme: Amber glow (hover:bg-amber-500/15)       • Theme: Dark slate/gold (!rounded-full)        |
+|  • Text: "Nirdeshak | निर्देशांक"                 • Visuals: Rotating Sparkles + Pulsing Beacon   |
+|  • Accessible: aria-label="DGIPR Nirdeshak"        • Accessible: aria-label="Open DGIPR Nirdeshak"  |
+|                  │                                                  │                              |
+|                  └─────────────────────────┬────────────────────────┘                              |
+|                                            ▼                                                       |
+|                         useDashboardStore().setCopilotOpen(!copilotOpen)                           |
+|                                            │                                                       |
+|                      ┌─────────────────────┴─────────────────────┐                                 |
+|                      ▼                                           ▼                                 |
+|             copilotOpen == true                         copilotOpen == false                       |
+|             • Mounts CopilotDrawer.tsx                  • Unmounts CopilotDrawer.tsx               |
+|             • Slides in from right (300ms)              • FAB returns smoothly (spring 380/30)     |
+|             • FAB morphs away (scale: 0) to avoid       • Zero HUD button overlap                  |
+|               covering drawer input / send controls                                                |
++----------------------------------------------------------------------------------------------------+
+```
+
+1. **Top Header Copilot Button (`frontend/MCC/src/components/layout/Header.tsx`):**
+   - Rendered conditionally when `NEXT_PUBLIC_COPILOT_ENABLED !== 'false'`.
+   - Uses `useDashboardStore()` to toggle `setCopilotOpen(!copilotOpen)`.
+   - Incorporates bilingual text (`Nirdeshak` in English, `निर्देशाक` in Devanagari mono badge) with gold/amber accent styling (`bg-amber-500/10 border-amber-500/40 text-amber-300`).
+2. **Fused Floating Action Button (`frontend/MCC/src/components/ai/ai-assistant-widget.tsx`):**
+   - Styled using modern executive tokens: `w-14 h-14 rounded-full flex items-center justify-center cursor-pointer bg-primary text-primary-foreground shadow-lg hover:shadow-xl ring-1 ring-border/20`.
+   - Continuous subtle 12-degree rotation loop on the Heroicons `SparklesIcon` on hover.
+   - Active state indicator beacon dot (`bg-gov-accent`) with CSS `animate-ping` signaling live AI readiness.
+   - Spring-based exit animation (`scale: 0, opacity: 0, borderRadius: '9999px'`) triggered when `copilotOpen` activates, ensuring the FAB never collides with or obscures the Copilot Drawer's query input bar or send button.
+3. **Elimination of Legacy Overlap:**
+   - Removed the obsolete static amber HUD button previously hardcoded in `CopilotDrawer.tsx` (lines 553–561), leaving a single, unambiguous floating action button on screen.
+
+---
+
+### 10.9 Side-Expandable Wide Workspace Mechanics
+
+In standard operational mode, a fixed drawer width of `max-w-lg` (~512px) restricts multi-column data visualization. Nirdeshak incorporates a responsive horizontal side-expansion subsystem:
+
+```
++----------------------------------------------------------------------------------------------------+
+|                         SIDE-EXPANDABLE DRAWER WIDTH SPECIFICATION                                 |
++----------------------------------------------------------------------------------------------------+
+|  State                 | Width Class              | CSS Dimensions  | Ideal Data Presentation      |
++------------------------+--------------------------+-----------------+------------------------------+
+| Collapsed / Standard   | max-w-lg                 | 32rem / ~512px  | Conversational Q&A, KPI cards|
+| Wide Executive Mode    | max-w-4xl xl:max-w-5xl   | 56rem–64rem /   | Multi-district DataTables,   |
+|                        | 2xl:max-w-6xl            | ~896px–1152px   | BarCharts, Diffusion Graphs  |
++------------------------+--------------------------+-----------------+------------------------------+
+```
+
+1. **State Machine & Animation:**
+   - Managed via React state `const [isExpanded, setIsExpanded] = useState<boolean>(false)`.
+   - Container class string dynamically evaluates:
+     ```tsx
+     className={`w-full ${
+       isExpanded ? 'max-w-4xl xl:max-w-5xl 2xl:max-w-6xl' : 'max-w-lg'
+     } bg-slate-50 h-full shadow-2xl flex flex-col border-l border-slate-200 animate-in slide-in-from-right duration-300 transition-all ease-in-out`}
+     ```
+2. **Header Action Controls:**
+   - Includes an Expand/Collapse icon button utilizing `MaterialIcon` with verified mappings:
+     - Expand icon: `open_in_full` (`ArrowsPointingOutIcon`).
+     - Collapse icon: `fullscreen_exit` (`ArrowsPointingInIcon`).
+   - Localized tooltips:
+     - English: `"Expand Drawer (Wide Workspace)"` / `"Collapse Drawer (Standard Width)"`.
+     - Marathi: `"कप्पे विस्तृत करा (विस्तृत कार्यक्षेत्र)"` / `"कप्पे संकुचित करा (सामान्य आकार)"`.
+3. **Header Visual State Tag:**
+   - When in wide mode, a live badge appears in the drawer title strip:
+     `<span class="text-[10px] font-mono px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">विस्तृत कार्यक्षेत्र (Expanded Workspace)</span>`.
+4. **Keyboard & Backdrop Ergonomics:**
+   - `Escape` key event listener closes the drawer instantly from any focus state.
+   - Clicking anywhere on the semi-transparent backdrop (`bg-slate-900/40 backdrop-blur-[2px]`) dismisses the drawer smoothly.
+
+---
+
+### 10.10 Edge Proxy Fail-Safe Resilient Streaming Engine
+
+To guarantee zero unhandled `502 Bad Gateway` errors during network disruptions between Vercel Edge and local/cloud compute backends:
+
+```
++----------------------------------------------------------------------------------------------------+
+|                            FAIL-SAFE RESILIENT STREAMING FLOWCHART                                 |
++----------------------------------------------------------------------------------------------------+
+|  [User Query in Nirdeshak Drawer]                                                                  |
+|                │                                                                                   |
+|                ▼                                                                                   |
+|  [Next.js API Route: POST /api/v1/copilot/query]                                                  |
+|                │                                                                                   |
+|                ├──► Try: Fetch from BACKEND_URL (Cloudflare Tunnel / Localhost:8000)               |
+|                │       │                                                                           |
+|                │       ├─► HTTP 200 OK: Stream raw SSE chunks to client                            |
+|                │       │                                                                           |
+|                │       └─► Network Failure / Timeout / HTTP 502 Bad Gateway                        |
+|                │                                                                                   |
+|                ▼                                                                                   |
+|  [Edge Interceptor Catch Block]                                                                    |
+|  • Intercepts failure before sending error status to client                                        |
+|  • Resolves query against local verified fallback database                                         |
+|  • Emits SSE stream containing:                                                                    |
+|    1. Status Event: "Service communication interrupted. Displaying verified local fallback data."  |
+|    2. Source Status: "demo" / "unavailable" with amber warning badge                               |
+|    3. ViewSpec Chunk: Verified 3-pillar governance ranking & district metrics                      |
+|    4. Done Event: Stream closes cleanly without throwing browser unhandled rejection exceptions    |
++----------------------------------------------------------------------------------------------------+
+```
+
+---
+
+### 10.11 Mem0 Officer Preferences & Memory Persistence Protocol
+
+Nirdeshak interfaces with an authenticated preferences memory store (`/api/v1/copilot/memory`):
+
+1. **Data Model:**
+   ```typescript
+   interface OfficerMemory {
+     id: string;
+     user_id: string;
+     memory: string;
+     created_at: string;
+     category: 'language_preference' | 'district_focus' | 'visualization_mode';
+   }
+   ```
+2. **Operations:**
+   - `GET /api/v1/copilot/memory`: Retrieves all verified preferences for the authenticated officer.
+   - `DELETE /api/v1/copilot/memory`: Triggers an immediate "Forget Me" purge, removing all personalization records from Redis and SQLite/PostgreSQL stores.
+   - User Interface: Accessible via the Clock icon button (`MaterialIcon name="history"`) in the Copilot Drawer header.
+
+
 ### 10.7 Official Publication-Grade PDF Telemetry Exporter
 - Implemented in `frontend/MCC/src/lib/exportTelemetryPdf.ts`.
 - Zero external runtime dependencies: produces vector-perfect, print-ready Government of Maharashtra A4 Telemetry & Operations Reports.
@@ -1315,3 +1453,216 @@ Project EUREKA represents a fully deterministic, enterprise-grade architecture e
 - **Streaming Ingestion:** `GET /api/v1/transcription/stream?channel=tv_marathi_live` (SSE `text/event-stream`).
 - **Persisted Database Entity:** `transcript_segments` records monotonic chunk timestamps, Devanagari text, and `machine_generated=True`.
 - **UI Component:** `LiveAudioTranscriptionPanel.tsx` embedded in `LiveStreaming.tsx` with auto-scroll and play/pause freeze toggle.
+
+
+---
+
+## 12. The 10-Screen Institutional Frontend Architecture & Workspace Decks
+
+Following the integration of the modern institutional frontend deck, the Maha-Command Center expands from a single dashboard into a comprehensive 10-screen governance operating system:
+
+```
++----------------------------------------------------------------------------------------------------+
+|                    MAHA-COMMAND CENTER (MCC) 10-SCREEN APPLICATION MATRIX                          |
++----------------------------------------------------------------------------------------------------+
+| Route Path           | Screen Component       | Primary Layout Structure   | Key Dependencies      |
++----------------------+------------------------+----------------------------+-----------------------+
+| /dashboard           | DashboardPage          | ThreeColumnDashboard.tsx   | GISMap, Ticker, Matrix|
+| /newspaper           | NewspaperScreen        | Full-width Card Grid + Modal| OCR parser, PDF export|
+| /live-news           | LiveNewsScreen         | 2x2 Video Relays + Ticker  | HLS.js, OCR Feed, Relays
+| /advertisements      | AdvertisementsScreen   | MaharashtraGISDeck + Cards | Leaflet/SVG, GPS Pins |
+| /publications        | PublicationsScreen     | Magazine Shelf + Archive   | PDF Viewer, Lokrajya  |
+| /media-intelligence  | MediaIntelligenceScreen| Cross-Media Multi-Matrix   | StGNN, Trend Charts   |
+| /attendance          | AttendanceScreen       | Duty Table + Shift Heatmap | BioTelemetry, DIO logs|
+| /fact-check          | FactCheckScreen        | 3-Column Rapid Intake Desk | SLA Clock, Rebuttals  |
+| /konkan-index        | KonkanIndexScreen      | Divisional Director Matrix | 7-District Deep Dive  |
+| /live-events         | LiveEventsScreen       | Live Stream + STT Log      | Gemini STT, Devanagari|
+| /settings            | SettingsScreen         | Tabbed Configuration Deck  | WebAuthn, RBAC, Keys  |
++----------------------+------------------------+----------------------------+-----------------------+
+```
+
+### 12.1 Detailed Architecture of Each Institutional Screen
+
+#### 1. Newspaper Clippings Deck (`/newspaper` - `NewspaperScreen.tsx`)
+- **Route:** `/newspaper`
+- **Data Model:** `Clipping` (`id`, `district`, `publication`, `edition`, `headline_mr`, `summary_en`, `ocr_text`, `sentiment_score`, `clipping_url`, `page_number`).
+- **Features:**
+  - 516 daily print clippings harvested across 10 major Marathi and English dailies.
+  - Multi-tier filtering by administrative division, district code, sentiment polarity (Positive, Neutral, Critical), and publication house.
+  - Interactive Modal View: Renders high-resolution newspaper clipping images alongside extracted OCR text, automated English executive summaries, and direct source links.
+
+#### 2. Live Broadcast News & TV OCR Relays (`/live-news` - `LiveNewsScreen.tsx`)
+- **Route:** `/live-news`
+- **Video Relays:** 4 live television streaming relays (Doordarshan Sahyadri, ABP Majha, TV9 Marathi, Zee 24 Taas) arranged in an enlarged 16:9 canvas with 2x2 relay switcher buttons.
+- **OCR Ticker Queue:** Real-time on-screen broadcast ticker capture capped at `max-h-[210px]` with auto-scroll and sentiment badge tagging.
+- **Fact-Check Escalation:** One-click conversion of any breaking TV claim into an active Fact-Check investigation ticket.
+
+#### 3. Scheme Hoardings & Outdoor Publicity GIS (`/advertisements` - `AdvertisementsScreen.tsx`)
+- **Route:** `/advertisements`
+- **Data Model:** `SchemeHoarding` (`id`, `district`, `scheme_name`, `vendor_name`, `latitude`, `longitude`, `dimensions`, `sanctioned_amount`, `compliance_status`, `expiry_date`).
+- **GIS Deck Integration:** Embedded `MaharashtraGISDeck` with interactive district centroids and GPS hoarding pins.
+- **Audit Analytics:** Automatic calculation of district hoarding saturation scores, vendor delivery audits, and expiring publicity alerts.
+
+#### 4. State Publications & Lokrajya Archive (`/publications` - `PublicationsScreen.tsx`)
+- **Route:** `/publications`
+- **Repository:** Complete digital repository of *Lokrajya* (लोकराज्य), the official monthly magazine of the Government of Maharashtra published continuously since 1947.
+- **Capabilities:** Edition archive search, cover preview cards, download telemetry, thematic issue filtering (agriculture, industry, cultural heritage, budget specials).
+
+#### 5. Cross-Platform Media Intelligence (`/media-intelligence` - `MediaIntelligenceScreen.tsx`)
+- **Route:** `/media-intelligence`
+- **Analytics:** Cross-platform narrative propagation matrix analyzing how stories transition between Print Newspaper -> TV Broadcast -> Digital Social Discourse.
+- **Charts:** Multi-channel volume trends, velocity divergence rates, and sentiment polarization metrics powered by Recharts with GIGW 3.0 screen-reader summaries.
+
+#### 6. Biometric Attendance Telemetry (`/attendance` - `AttendanceScreen.tsx`)
+- **Route:** `/attendance`
+- **Telemetry:** Real-time biometric attendance logs for all 36 District Information Offices (DIOs).
+- **Metrics:** On-duty officer counts, shift timings, field reporting availability, and biometric system heartbeat monitoring.
+
+#### 7. Rapid Fact-Check Command Desk (`/fact-check` - `FactCheckScreen.tsx`)
+- **Route:** `/fact-check`
+- **Operational Workflow:** 
+  1. Intake of viral claims from social networks, messaging platforms, and print media.
+  2. Investigation assignment to district information officers.
+  3. Official verification verdict assignment (`verified_false`, `misleading`, `verified_true`).
+  4. Publication of authorized state rebuttals across web, social, and print channels.
+- **SLA Countdown:** Visual 90-minute countdown timer with automatic priority escalation to Tier-1 DG Admin if uncontained.
+
+#### 8. Konkan Divisional Index Desk (`/konkan-index` - `KonkanIndexScreen.tsx`)
+- **Route:** `/konkan-index`
+- **Scope:** Dedicated operational terminal for the Divisional Director of Information (Konkan Division), encompassing Mumbai City, Mumbai Suburban, Thane, Palghar, Raigad, Ratnagiri, and Sindhudurg.
+- **Features:** High-density comparative scorecards, coastal weather alerts, urban transport rumor tracking, and divisional leaderboard standings.
+
+#### 9. Live Events & Speech-to-Text Transcripts (`/live-events` - `LiveEventsScreen.tsx`)
+- **Route:** `/live-events`
+- **Capabilities:** Live streaming coverage of Mantralaya press briefings, Cabinet decisions, and disaster management updates.
+- **Speech-to-Text (STT):** Near-real-time streaming transcription for Marathi, Hindi, and English using Gemini multimodal audio chunking, producing timestamped Devanagari transcripts with auto-scroll.
+
+#### 10. Institutional Settings & Security Desk (`/settings` - `SettingsScreen.tsx`)
+- **Route:** `/settings`
+- **Features:** 
+  - FIDO2 / WebAuthn biometric passkey management (registration, listing, revocation).
+  - RBAC role and district assignment auditing.
+  - Upstream backend connectivity and Cloudflare tunnel latency audits.
+  - Telemetry export and system health diagnostics.
+
+---
+
+### 12.2 Three-Column Executive Workspace Decongestion (v5.0)
+
+To resolve visual clutter across varying screen resolutions, the core dashboard incorporates four critical layout refinements:
+1. **Social Media Analysis Stacking (Bug 1 Fix):** Stacks cleanly on standard desktop views and transitions to an ergonomic split layout on 2xl screens with tab toggle controls.
+2. **100% Width GIS Map Canvas (Bug 2 Fix):** The central map canvas occupies 100% width with telemetry details positioned directly below, eliminating horizontal squishing.
+3. **Enlarged 16:9 Video Canvas (Bug 3 Fix):** Broadcast news video embeds maintain strict 16:9 aspect ratio with a 2x2 grid of channel relay switcher buttons below.
+4. **Decongested Score Decomposition (Bug 4 Fix):** Eliminated redundant subtitles, increased row vertical breathing room (`py-3`), and contained tables with horizontal scrolling (`overflow-x-auto -mx-1 px-1`).
+
+---
+
+## 14. Cloudflare Tunnel & Hybrid Production Network Topology
+
+The production architecture bridges edge presentation with secure local compute via an encrypted, zero-trust Cloudflare Tunnel:
+
+```
++----------------------------------------------------------------------------------------------------+
+|                         PRODUCTION CLOUDFLARE TUNNEL ARCHITECTURE                                  |
++----------------------------------------------------------------------------------------------------+
+|                                                                                                    |
+|  [Vercel Serverless Edge Runtime]                                                                  |
+|  • Hosted Domain: https://project-eureka-pi.vercel.app                                             |
+|  • Static CDN: 42 Pre-rendered App Router pages                                                    |
+|  • Dynamic Reverse Proxy: /api/v1/copilot/[...path]                                                |
+|            │                                                                                       |
+|            ▼ (Outbound HTTPS Requests over TLS 1.3)                                                |
+|  [Cloudflare Anycast Global Network]                                                               |
+|  • Edge Ingress URL: https://lists-going-combine-corpus.trycloudflare.com                           |
+|  • DDoS Protection, WAF, & Rate Limiting                                                           |
+|            │                                                                                       |
+|            ▼ (HTTP/2 Multiplexed Tunnel Connection)                                                |
+|  [Local Cloudflared Agent Process] (task-11929)                                                    |
+|  • Executable: npx cloudflared tunnel --edge-ip-version 4 --protocol http2                         |
+|  • Target: http://127.0.0.1:8000                                                                   |
+|            │                                                                                       |
+|            ▼ (Internal Loopback on Host Machine)                                                   |
+|  [FastAPI Backend Application] (task-11909)                                                        |
+|  • Process: uvicorn eureka.api.main:app --port 8000 --host 127.0.0.1                              |
+|  • Endpoints: /api/v1/copilot/query, /api/v1/copilot/memory, /api/v1/districts, /api/v1/ticker     |
++----------------------------------------------------------------------------------------------------+
+```
+
+### Reverse Proxy Resolution Order
+When the Next.js API route handler receives a copilot request:
+1. Reads `process.env.BACKEND_URL` (set to the Cloudflare tunnel in Vercel settings).
+2. Reads `process.env.NEXT_PUBLIC_API_URL` (fallback).
+3. Defaults to `http://127.0.0.1:8000` for local development.
+4. If the upstream connection fails or times out, the handler intercepts the error and returns a verified deterministic ViewSpec with zero client-side exceptions.
+
+---
+
+## 15. Sequence-Wise Serial Booting & Operations Manual
+
+To initialize and boot the complete EUREKA ecosystem in serial order with zero race conditions, follow this authoritative step-by-step procedure:
+
+```
++----------------------------------------------------------------------------------------------------+
+|                            SERIAL BOOT SEQUENCE (STEPS 1 TO 6)                                     |
++----------------------------------------------------------------------------------------------------+
+|  Step 1: Database & Caching Services (PostgreSQL 16, Neo4j 5.x, Redis 7.x)                         |
+|  Step 2: Deterministic Data Seeding (36 Districts, Hoardings, Positions, News)                     |
+|  Step 3: Distributed Task Queue (Celery Multi-Queue Workers & Beat Scheduler)                       |
+|  Step 4: Application Intelligence Engine (FastAPI on Port 8000)                                    |
+|  Step 5: Cloudflare Secure Edge Tunnel (Public HTTPS Ingress)                                      |
+|  Step 6: Maha-Command Center Frontend (Next.js 16 on Port 3000)                                    |
++----------------------------------------------------------------------------------------------------+
+```
+
+### Detailed Command Execution Steps
+
+#### Step 1: Start Persistence & Caching Services
+```powershell
+# Boot PostgreSQL 16 (port 5433), Neo4j 5.x (7474/7687), and Redis 7.x (6379)
+docker compose --profile db up -d
+
+# Verify containers are healthy
+docker compose ps
+```
+
+#### Step 2: Seed Deterministic 36-District Demo Data
+```powershell
+# Seeds all 36 Maharashtra districts, 516 clippings, hoardings, positions, and ticker items
+uv run python scripts/seed_demo_dashboard.py
+```
+
+#### Step 3: Start Celery Workers & Beat Scheduler
+```powershell
+# Terminal 1: Celery Distributed Worker (Q: default, quad_ingestion, irf_binding, processor, outbox)
+uv run celery -A eureka.core.celery_app worker -l info -Q default,quad_ingestion,irf_binding,processor,outbox
+
+# Terminal 2: Celery Beat Periodic Scheduler (Outbox worker & scoring snapshots)
+uv run celery -A eureka.core.celery_app beat -l info
+```
+
+#### Step 4: Boot FastAPI Application Engine (Port 8000)
+```powershell
+# Terminal 3: FastAPI Application
+uv run uvicorn eureka.api.main:app --host 127.0.0.1 --port 8000 --app-dir backend/src
+
+# Verify health endpoint
+curl http://127.0.0.1:8000/api/v1/health
+```
+
+#### Step 5: Start Cloudflare Secure Edge Tunnel
+```powershell
+# Terminal 4: Cloudflare Quick Tunnel
+npx cloudflared tunnel --edge-ip-version 4 --protocol http2 --url http://127.0.0.1:8000
+# Output will display the public tunnel URL: https://<random-id>.trycloudflare.com
+# Set this URL in Vercel as BACKEND_URL for production or preview deployments
+```
+
+#### Step 6: Boot Maha-Command Center Frontend (Port 3000)
+```powershell
+# Terminal 5: Next.js Frontend
+cd frontend/MCC
+npm run dev -- --webpack -p 3000
+
+# Verify local dashboard is responsive
+curl http://localhost:3000
+```
