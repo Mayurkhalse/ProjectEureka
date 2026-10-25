@@ -29,11 +29,6 @@ except ImportError:
     nn = None
     ReduceLROnPlateau = None
 
-try:
-    from torch_geometric_temporal.signal import StaticGraphTemporalSignal
-except ImportError:
-    StaticGraphTemporalSignal = None
-
 from eureka.core.celery_app import celery_app
 from eureka.processor.stgnn_dataset import (
     INDEX_TO_CODE,
@@ -42,6 +37,7 @@ from eureka.processor.stgnn_dataset import (
     MAHARASHTRA_DISTRICTS,
     NUM_MAHARASHTRA_DISTRICTS,
     EurekaTemporalDatasetBuilder,
+    StaticGraphTemporalSignal,
     resolve_district_index,
 )
 from eureka.processor.stgnn_model import EurekaA3TGCN
@@ -246,7 +242,12 @@ def infer_risk_diffusion(
         - Top critical epicenter alerts
     """
     # Extract x as numpy array or tensor
-    if isinstance(current_state, StaticGraphTemporalSignal):
+    is_temporal_signal = (
+        (StaticGraphTemporalSignal is not None and isinstance(current_state, StaticGraphTemporalSignal))
+        or hasattr(current_state, "snapshot_count")
+        or (hasattr(current_state, "features") and hasattr(current_state, "edge_index"))
+    )
+    if is_temporal_signal:
         snapshot = list(current_state)[-1]
         x_raw = snapshot.x
         x_np = x_raw.cpu().numpy() if hasattr(x_raw, "cpu") else np.array(x_raw, dtype=np.float32)

@@ -13,6 +13,8 @@ Validates:
 import json
 import os
 import shutil
+import uuid
+from datetime import datetime, timedelta, timezone
 from unittest.mock import MagicMock, patch
 import httpx
 import pytest
@@ -20,6 +22,7 @@ from fastapi.testclient import TestClient
 
 from eureka.api.auth import create_access_token
 from eureka.api.main import app
+from eureka.core.database import sync_db_context
 from eureka.hermes.agent_tools import (
     AGENT_ALLOWLISTED_TOOLS,
     AGENT_TOOL_DEFINITIONS,
@@ -33,12 +36,84 @@ from eureka.hermes.hermes_client import (
     HermesUnavailableError,
 )
 from eureka.hermes.orchestrator import HermesOrchestrator
-from eureka.models.enums import UserRole
+from eureka.models.entities import CanonicalEvent, FactCheckTicket, HumanReviewAction, OutboxEvent
+from eureka.models.enums import (
+    CanonicalEventStatus,
+    DetectedLanguage,
+    FactCheckTicketStatus,
+    UserRole,
+    VerificationStatus,
+)
 
 
 @pytest.fixture
 def client():
     return TestClient(app)
+
+
+@pytest.fixture
+def hermes_integration_db_records():
+    """Deterministic fixture ensuring test tickets exist for Hermes integration tests."""
+    created_events = []
+    created_tickets = []
+    try:
+        with sync_db_context() as session:
+            # Check or create Palghar ticket (TKT-PALGHAR-001)
+            palghar_ticket = session.query(FactCheckTicket).filter(
+                (FactCheckTicket.assigned_to.ilike("%MH-04%"))
+                | (FactCheckTicket.claim_text.ilike("%TKT-PALGHAR-001%"))
+            ).first()
+            if not palghar_ticket:
+                event_palghar = CanonicalEvent(
+                    id=uuid.uuid4(),
+                    title="Palghar Oxygen Supply Crisis Report",
+                    summary="Factual verification of hospital oxygen supply in Palghar district.",
+                    primary_language=DetectedLanguage.MARATHI,
+                    district_code="MH-04",
+                    district_name="Palghar",
+                    status=CanonicalEventStatus.PENDING_REVIEW,
+                    verification_status=VerificationStatus.UNVERIFIED,
+                    first_detected_at=datetime.now(timezone.utc) - timedelta(minutes=25),
+                    last_updated_at=datetime.now(timezone.utc),
+                )
+                session.add(event_palghar)
+                session.flush()
+
+                palghar_ticket = FactCheckTicket(
+                    id=uuid.uuid4(),
+                    canonical_event_id=event_palghar.id,
+                    claim_text="TKT-PALGHAR-001: Hospital oxygen supply shortage report",
+                    is_rumor=True,
+                    event_timestamp=datetime.now(timezone.utc) - timedelta(minutes=20),
+                    status=FactCheckTicketStatus.OPEN,
+                    assigned_to="Collector MH-04",
+                    resolution_notes=None,
+                )
+                session.add(palghar_ticket)
+                created_events.append(event_palghar.id)
+                created_tickets.append(palghar_ticket.id)
+            else:
+                palghar_ticket.status = FactCheckTicketStatus.OPEN
+                palghar_ticket.resolution_notes = None
+
+            session.commit()
+    except Exception as exc:
+        pytest.skip(f"Database connection unavailable: {exc}")
+
+    yield
+
+    if created_tickets or created_events:
+        with sync_db_context() as session:
+            try:
+                for tid in created_tickets:
+                    session.query(HumanReviewAction).filter(HumanReviewAction.entity_id == tid).delete()
+                    session.query(FactCheckTicket).filter(FactCheckTicket.id == tid).delete()
+                for eid in created_events:
+                    session.query(OutboxEvent).filter(OutboxEvent.aggregate_id == str(eid)).delete()
+                    session.query(CanonicalEvent).filter(CanonicalEvent.id == eid).delete()
+                session.commit()
+            except Exception:
+                session.rollback()
 
 
 # --- 1. HermesClient Mocked Unit Tests ---
@@ -184,7 +259,7 @@ def test_orchestrator_blocks_autonomous_signoff():
     assert "Autonomous sign-off is strictly prohibited" in str(exc_info.value)
 
 
-def test_orchestrator_staging_draft_allowed():
+def test_orchestrator_staging_draft_allowed(hermes_integration_db_records):
     """Verify drafting and staging into 'pending_review' is permitted."""
     orchestrator = HermesOrchestrator()
 
@@ -274,7 +349,7 @@ def test_fastapi_hermes_execute_autonomous_signoff_forbidden(client):
     assert "Autonomous sign-off is strictly prohibited" in res.json()["detail"]
 
 
-def test_fastapi_hermes_execute_staging_allowed(client):
+def test_fastapi_hermes_execute_staging_allowed(client, hermes_integration_db_records):
     token = create_access_token(username="dg_admin", role=UserRole.DG_STATE_ADMIN)
     headers = {"Authorization": f"Bearer {token}"}
 
