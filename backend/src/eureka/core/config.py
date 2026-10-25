@@ -21,6 +21,9 @@ class Settings(BaseSettings):
     DEBUG: bool = Field(default=False, description="Debug mode")
     PROJECT_NAME: str = Field(default="Project EUREKA", description="DGIPR Command Center Engine")
 
+    # Database URL override (e.g. SQLite for local testing or custom Postgres DSN)
+    DATABASE_URL: Optional[str] = Field(default=None, description="Database URL override")
+
     # PostgreSQL 16
     POSTGRES_HOST: str = Field(default="localhost")
     POSTGRES_PORT: int = Field(default=5432)
@@ -69,10 +72,19 @@ class Settings(BaseSettings):
     TRITON_SERVER_URL: str = Field(default="localhost:8001", description="Triton inference server gRPC endpoint")
     TRITON_ENABLED: bool = Field(default=True, description="Enable Triton gRPC inference offload")
 
-
     @property
     def async_database_url(self) -> str:
-        """Construct PostgreSQL async connection URL for asyncpg."""
+        """Construct PostgreSQL async connection URL for asyncpg or SQLite fallback."""
+        if self.DATABASE_URL:
+            if self.DATABASE_URL.startswith("sqlite"):
+                if "+aiosqlite" in self.DATABASE_URL:
+                    return self.DATABASE_URL
+                return self.DATABASE_URL.replace("sqlite://", "sqlite+aiosqlite://", 1)
+            if self.DATABASE_URL.startswith("postgresql://") and "+asyncpg" not in self.DATABASE_URL:
+                return self.DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://", 1)
+            elif "+psycopg2" in self.DATABASE_URL:
+                return self.DATABASE_URL.replace("+psycopg2", "+asyncpg", 1)
+            return self.DATABASE_URL
         return (
             f"postgresql+asyncpg://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@"
             f"{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
@@ -80,7 +92,13 @@ class Settings(BaseSettings):
 
     @property
     def sync_database_url(self) -> str:
-        """Construct PostgreSQL sync connection URL for psycopg2/alembic."""
+        """Construct PostgreSQL sync connection URL for psycopg2/alembic or SQLite fallback."""
+        if self.DATABASE_URL:
+            if self.DATABASE_URL.startswith("sqlite"):
+                return self.DATABASE_URL
+            if self.DATABASE_URL.startswith("postgresql://") and "+psycopg2" not in self.DATABASE_URL:
+                return self.DATABASE_URL.replace("postgresql://", "postgresql+psycopg2://", 1)
+            return self.DATABASE_URL
         return (
             f"postgresql+psycopg2://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@"
             f"{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"

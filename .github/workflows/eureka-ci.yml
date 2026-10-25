@@ -2,9 +2,10 @@ name: Project EUREKA CI
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [ main, develop, test/backend-testing, "test/**", "feature/**" ]
   pull_request:
-    branches: [ main, develop ]
+    branches: [ main, develop, test/backend-testing ]
+  workflow_dispatch:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -12,10 +13,9 @@ concurrency:
 
 jobs:
   test:
-    name: Backend Test Suite
+    name: Backend Comprehensive Test Suite
     runs-on: ubuntu-latest
 
-    # 1. ADD THE SERVICE CONTAINER
     services:
       postgres:
         image: postgres:16-alpine
@@ -31,9 +31,30 @@ jobs:
           --health-timeout 5s
           --health-retries 5
 
-    # 2. SET THE DATABASE URL FOR THE TEST SUITE
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
     env:
+      ENVIRONMENT: test
       DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/eureka_db
+      POSTGRES_HOST: 127.0.0.1
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: eureka_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      REDIS_HOST: 127.0.0.1
+      REDIS_PORT: 6379
+      REDIS_URL: redis://127.0.0.1:6379/0
+      CELERY_BROKER_URL: redis://127.0.0.1:6379/0
+      CELERY_RESULT_BACKEND: redis://127.0.0.1:6379/1
+      CELERY_TASK_ALWAYS_EAGER: "true"
       PYTHONPATH: backend/src:src
 
     steps:
@@ -73,8 +94,16 @@ jobs:
             sleep 1
           done
           
-          # FIXED: Complete, un-truncated database initialization command
-          uv run python -c "from sqlalchemy import create_engine; from eureka.db.models import Base; engine = create_engine('postgresql://postgres:postgres@127.0.0.1:5432/eureka_db'); Base.metadata.create_all(bind=engine)"
+          # Initialize all 36 tables across ORM and DB models
+          uv run python -c "
+          from sqlalchemy import create_engine
+          from eureka.models.orm import Base as OrmBase
+          from eureka.db.models import Base as DbBase
+          engine = create_engine('postgresql://postgres:postgres@127.0.0.1:5432/eureka_db')
+          OrmBase.metadata.create_all(bind=engine)
+          DbBase.metadata.create_all(bind=engine)
+          print('All relational tables created successfully!')
+          "
 
-      - name: Run EUREKA Test Suite
-        run: uv run pytest backend/tests/test_api_endpoints.py -v
+      - name: Run Comprehensive Backend Test Suite
+        run: uv run pytest backend/tests/ -v --durations=10

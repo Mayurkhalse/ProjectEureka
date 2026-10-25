@@ -163,14 +163,14 @@ graph TD
 * **Context:** Maharashtra state media operates predominantly in Marathi (65%), Hindi (20%), and English (15%). Generic English LLMs struggle with Marathi morphological markers (e.g., 'ळ', 'झाले', 'शासनाने').
 * **Decision:** Integrate HuggingFace's `google/muril-base-cased` (Multilingual Representations for Indian Languages). The model outputs classification labels (`Positive`, `Neutral`, `Negative`, `Mixed`) and a continuous polarity score in $[-1.0, 1.0]$. A resilient rule-anchored fallback classifier provides seamless continuity when GPU resources or model weights are initializing.
 
-### ADR-005: 100-Point Composite Index Performance Measurement
-* **Status:** Accepted & Implemented
-* **Context:** Executive command staff need a standardized, deterministic score ($0 - 100$) reflecting real-time communication performance.
-* **Decision:** Implement four 25-point additive pillars:
-  1. **Volume Pillar ($0 - 25$):** $25 \times \min\left(\frac{\text{TotalReleases}}{300}, 1.0\right)$ (saturates at 300 releases per window).
-  2. **Turnaround Speed (TAT) Pillar ($0 - 25$):** Evaluates elapsed time $\Delta t = \text{published\_ts} - \text{event\_ts}$. $\Delta t \le 45\text{ min} \implies 25\text{ pts}$; $\Delta t \ge 120\text{ min} \implies 0\text{ pts}$; linear degradation between 45 and 120 min.
-  3. **Sentiment Pillar ($0 - 25$):** Evaluates Net Sentiment Index ($NSI = \frac{\text{Pos} - \text{Neg}}{\text{Total}}$) mapped linearly: $\left(\frac{NSI + 1.0}{2.0}\right) \times 25.0$.
-  4. **Crisis SLA Pillar ($0 - 25$):** $\left(\frac{\text{RumorsRefutedWithin90Mins}}{\text{TotalRumorsIngested}}\right) \times 25.0$. **Critical Rule:** If $\text{TotalRumorsIngested} = 0$, the engine must strictly return $25.0$ points to prevent division by zero.
+### ADR-005: 100-Point Composite Index Performance Measurement (v2.0 - 3-Pillar Model)
+* **Status:** Accepted & Implemented (Supersedes 4-pillar model per DGIPR Executive Directive)
+* **Context:** Executive command staff require a standardized, deterministic score ($0 - 100$) reflecting real-time communication performance across all 36 Maharashtra districts. Turnaround Time (TAT) was retired from active scoring to eliminate latency gaming and geographic publishing delays, reallocating weights to Volume (35%), Sentiment (35%), and Crisis SLA (30%).
+* **Decision:** Implement three additive pillars totaling strictly 100 points:
+  1. **Volume Pillar ($0 - 35$ pts):** $35.0 \times \min\left(\frac{\text{TotalReleases}}{300}, 1.0\right)$ (saturates strictly at 300 releases per evaluation window).
+  2. **Sentiment Pillar ($0 - 35$ pts):** Evaluates Net Sentiment Index ($NSI = \frac{\text{Pos} - \text{Neg}}{\text{TotalClassified}} \in [-1.0, 1.0]$) mapped linearly: $\left(\frac{NSI + 1.0}{2.0}\right) \times 35.0$. If $\text{TotalClassified} == 0$, neutral baseline $NSI = 0.0 \implies 17.50$ pts.
+  3. **Crisis SLA Pillar ($0 - 30$ pts):** $\left(\frac{\text{RumorsRefutedWithin90Mins}}{\text{TotalRumorsIngested}}\right) \times 30.0$. **Critical Rule:** If $\text{TotalRumorsIngested} = 0$, the engine strictly awards the full $30.0$ points (division-by-zero protection). Resolution strictly $< 90.0$ minutes is required.
+  4. **TAT Speed Deprecation:** Turnaround Time is retired from all composite calculations, ranking logic, and copilot scoring intents. Existing database columns (`media_events.turnaround_time_mins`) are preserved purely for auxiliary non-scored operational reporting ($\% \le 60\text{ min}$).
 
 ### ADR-006: Human-in-the-Loop Review State Machine & Strict RBAC
 * **Status:** Accepted & Implemented
@@ -770,35 +770,33 @@ To guarantee end-to-end predictability and compliance across state operations, e
   ```json
   {
     "district": "Thane",
-    "composite_index_score": 78.42,
+    "composite_index_score": 80.08,
     "evaluation_window_hours": 24,
     "pillars": {
       "volume": {
-        "score": 23.50,
-        "max_score": 25.0,
+        "score": 32.90,
+        "max_score": 35.0,
         "total_releases": 282,
         "saturation_cap": 300
       },
-      "turnaround_time": {
-        "score": 19.80,
-        "max_score": 25.0,
-        "average_tat_minutes": 60.5,
-        "target_tat_minutes": 45.0
-      },
       "sentiment": {
-        "score": 17.62,
-        "max_score": 25.0,
+        "score": 24.68,
+        "max_score": 35.0,
         "net_sentiment_index": 0.41,
         "positive_ratio": 0.65,
         "negative_ratio": 0.24
       },
       "crisis_sla": {
-        "score": 17.50,
-        "max_score": 25.0,
+        "score": 22.50,
+        "max_score": 30.0,
         "total_rumors": 4,
         "refuted_within_90m": 3,
         "sla_success_rate": 0.75
       }
+    },
+    "auxiliary_metrics": {
+      "output_velocity_pct": 72.4,
+      "average_tat_minutes": 60.5
     },
     "generated_at": "2026-10-18T21:15:30Z"
   }

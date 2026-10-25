@@ -247,7 +247,7 @@ To achieve enterprise-grade scale without runaway cloud infrastructure bills, EU
   * `GlobalSearchBar`: Arrow-indicator search navigation and dot-separated category metadata.
   * `Sidebar`: Accessible dynamic `PanelLeftOpenIcon` / `PanelLeftCloseIcon` toggle.
 * **Live Backend Proxy Integration (`src/lib/backendClient.ts`):** Directly interfaces Next.js route handlers with Project EUREKA's FastAPI backend (`http://127.0.0.1:8000`):
-  * `/api/districts`: Maps live evaluated 100-Point Composite Index across all 37 districts evaluated from PostgreSQL `media_events`.
+  * `/api/districts`: Maps live evaluated 100-Point Composite Index across all 36 districts evaluated from PostgreSQL `media_events`.
   * `/api/dashboard/overview`: Statewide aggregated releases, average TAT, Net Sentiment Index, and active rumors.
   * `/api/crisis/incidents`: 90-minute Crisis SLA desk with Gemini-drafted rebuttals.
   * `/api/crisis/incidents/[id]/action`: Strictly enforced RBAC sign-off proxying to `/api/v1/hermes/dm-pipelines/{id}/action`.
@@ -407,12 +407,12 @@ To govern narratives effectively across Maharashtra's 112+ million citizens, Pro
 | **Amravati** | MH-29 | Washim | 1.2M | Varhadi / Marathi | Soybean procurement, irrigation dams, agrarian health | MH-22, MH-25, MH-28, MH-31 |
 | **Amravati** | MH-30 | Amravati | 2.9M | Varhadi / Marathi / Korku | Melghat tribal nutrition, orange farming, textile parks | MH-27, MH-28, MH-31, MH-32 |
 | **Amravati** | MH-31 | Yavatmal | 2.8M | Varhadi / Marathi / Gondi | Agrarian crisis hotspots, pesticide safety, cotton pricing | MH-25, MH-29, MH-30, MH-32, MH-34 |
-| **Nagpur** | MH-32 | Wardha | 1.3M | Marathi (Nagpuri) | Cotton spinning, Sevagram heritage, dry farming | MH-30, MH-31, MH-33, MH-34 |
-| **Nagpur** | MH-33 | Nagpur | 4.7M | Marathi (Nagpuri) / Hindi | Winter Assembly sessions, cargo hub, logistics, health | MH-32, MH-34, MH-35 |
-| **Nagpur** | MH-34 | Chandrapur | 2.2M | Marathi (Nagpuri) / Gondi | Thermal power pollution, coal mines, man-animal conflict | MH-31, MH-32, MH-33, MH-35, MH-36 |
-| **Nagpur** | MH-35 | Bhandara | 1.2M | Marathi (Nagpuri / Zadi Boli) | Rice paddy procurement, brass industry, Wainganga floods | MH-33, MH-34, MH-36 |
-| **Nagpur** | MH-36 | Gondia | 1.3M | Marathi / Hindi / Gondi | LWE border monitoring, rice mills, forest produce | MH-34, MH-35 |
-| **Nagpur** | MH-37 | Gadchiroli | 1.1M | Gondi / Madiya / Marathi | Forest rights, mining projects, LWE security logistics | MH-34, MH-36 |
+| **Nagpur** | MH-31 | Nagpur | 4.7M | Marathi (Nagpuri) / Hindi | Winter Assembly sessions, cargo hub, logistics, health | MH-32, MH-33, MH-36 |
+| **Nagpur** | MH-32 | Wardha | 1.3M | Marathi (Nagpuri) | Cotton spinning, Sevagram heritage, dry farming | MH-31, MH-36 |
+| **Nagpur** | MH-33 | Bhandara | 1.2M | Marathi (Nagpuri / Zadi Boli) | Rice paddy procurement, brass industry, Wainganga floods | MH-31, MH-34, MH-36 |
+| **Nagpur** | MH-34 | Gondia | 1.3M | Marathi / Hindi / Gondi | LWE border monitoring, rice mills, forest produce | MH-33, MH-35 |
+| **Nagpur** | MH-35 | Gadchiroli | 1.1M | Gondi / Madiya / Marathi | Forest rights, mining projects, LWE security logistics | MH-34, MH-36 |
+| **Nagpur** | MH-36 | Chandrapur | 2.2M | Marathi (Nagpuri) / Gondi | Thermal power pollution, coal mines, man-animal conflict | MH-31, MH-32, MH-33, MH-35 |
 
 *(Note: Official state administration maps 36 operational collectorates with Mumbai City and Mumbai Suburban handled as twin headquarters for capital media operations).*
 
@@ -1018,7 +1018,7 @@ CALL db.schema.visualization();
 | **Knowledge Graph (Neo4j 5.18)** | `localhost:7474` (HTTP) / `7687` (Bolt) | Docker (`savi-neo4j-compute`) | **Online & Healthy** (17,020+ nodes) |
 | **Transactional Outbox Worker** | Background Worker | `eureka.conclusion.outbox_worker` | **Synchronized** (Zero lag, ACID to Graph) |
 | **Core API Engine (FastAPI)** | `http://127.0.0.1:8000` | Uvicorn (`eureka.api.main:app`) | **Healthy** (PostgreSQL & Neo4j connected) |
-| **Command Deck (Next.js 16 MCC)** | `http://localhost:3000` | Next.js Production Build (`branch sarvdny`) | **Online** (`source: live_backend`, 37 districts) |
+| **Command Deck (Next.js 16 MCC)** | `http://localhost:3000` | Next.js Production Build (`branch sarvdny`) | **Online** (`source: live_backend`, 36 districts) |
 | **Vector Memory Store (Qdrant)** | `qdrant:6333` | Docker (`qdrant/qdrant:v1.9.0`) | **Operational** (Mem0 officer preferences) |
 | **Nirdeshak Copilot Engine (v4)** | `FastAPI /api/v1/copilot` | Thesys C1 + Gemma Fallback + Fast-Path Router | **Online** (Dual-Path, Grounded OpenUI Lang) |
 
@@ -1080,34 +1080,23 @@ Nirdeshak enforces a strict multi-stage deterministic pipeline where generative 
 
 Every number rendered in the Nirdeshak Copilot is mathematically derived from raw transactional signals across Maharashtra's 36 administrative districts.
 
-##### 1. Information Volume Pillar (Max: 25 Points)
-The volume pillar measures whether a district administration proactively communicates authenticated news and public circulars, preventing an information vacuum. Rather than rewarding unbounded volume spam, EUREKA applies a **logistic saturation function (S-curve)**:
+##### 1. Information Volume Pillar (0 - 35 Points)
+The volume pillar measures whether a district administration proactively communicates authenticated news and public circulars, preventing an information vacuum. Evaluated strictly over a 24-hour window:
 
-$$\text{VolumeScore} = 25 \times \min\left(1.0, \; \frac{1}{1 + e^{-k \cdot (V - V_{\text{mid}})}}\right)$$
-
-Where:
-* $V = \text{Total official press releases and notices published by the district administration in the observation window}$.
-* $V_{\text{mid}} = 15.0$ (The inflection midpoint threshold representing operational viability).
-* $k = 0.15$ (The logistical steepness factor).
-* **Boundary Conditions:**
-  * For $V = 0$: $\text{VolumeScore} \approx 25 \times \frac{1}{1 + e^{2.25}} = 2.37$ (Administrative silence penalty).
-  * For $V = 15$: $\text{VolumeScore} = 25 \times 0.5 = 12.50$ (Midpoint baseline).
-  * For $V \ge 35$: $\text{VolumeScore} \to 25.0$ (Full saturation; additional releases yield diminishing returns).
-
-##### 2. Turnaround Time (TAT) / Speed Pillar (Max: 30 Points)
-The TAT pillar evaluates how rapidly an administration responds to emergent events or public inquiries. Let $T_{\text{event}}$ be the recorded timestamp of the event or citizen grievance in the public domain, and $T_{\text{published}}$ be the official publication timestamp of the clarification or press release:
-
-$$\Delta t = \text{TAT}_{\text{minutes}} = \frac{T_{\text{published}} - T_{\text{event}}}{60}$$
-
-An **exponential decay penalty** evaluates operational agility:
-
-$$\text{TATScore} = 30 \times \exp\left(-\frac{\max(0, \; \Delta t - \Delta t_{\text{optimal}})}{\tau}\right)$$
+$$\text{VolumeScore} = 35.0 \times \min\left(\frac{\text{TotalReleases}}{300}, \; 1.0\right)$$
 
 Where:
-* $\Delta t_{\text{optimal}} = 45\text{ minutes}$ (The target crisis response window).
-* $\tau = 180\text{ minutes}$ (The decay rate parameter).
-* **Anti-Cheating Chronological Validation Rule:**
-  $$\text{If } T_{\text{published}} < T_{\text{event}} \implies \text{TATScore} = 0 \quad (\text{Falsified Record Flagged in Audit})$$
+* Saturates strictly at 300 releases per evaluation window.
+* Boundary conditions:
+  * For $V = 0$: $\text{VolumeScore} = 0.0$ pts.
+  * For $V = 150$: $\text{VolumeScore} = 17.50$ pts.
+  * For $V \ge 300$: $\text{VolumeScore} = 35.00$ pts (capped).
+
+##### 2. Turnaround Time (TAT) Speed Deprecation Notice
+Per DGIPR Executive Directive, Turnaround Time (TAT) is **retired from the composite index score calculation**. It is preserved in the database schema strictly for auxiliary operational monitoring:
+* **Output Velocity Metric:** $\% \text{ of press releases published with TAT} \le 60\text{ minutes}$.
+* **Chronological Integrity Rule:**
+  $$\text{If } T_{\text{published}} < T_{\text{event}} \implies \text{Falsified Record Flagged & Rejected by CSVAdapter}$$
 * **Performance Brackets:**
   * $\Delta t \le 45\text{ min} \implies \text{TATScore} = 30.0$ (Gold standard).
   * $\Delta t = 135\text{ min (2.25 hrs)} \implies \text{TATScore} = 30 \times e^{-0.5} \approx 18.20$.
