@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 """Asynchronous Training Loop, Evaluation, and Risk Diffusion Inference for StGNN.
 
 Executes production-grade PyTorch training for EurekaA3TGCN using Adam with
@@ -17,13 +19,19 @@ try:
     import torch
     import torch.nn as nn
     from torch.optim.lr_scheduler import ReduceLROnPlateau
-    from torch_geometric_temporal.signal import StaticGraphTemporalSignal
     HAS_TORCH = True
 except ImportError:
     HAS_TORCH = False
-    torch = None
+    class _DummyTorch:
+        device = Any
+        Tensor = Any
+    torch = _DummyTorch()
     nn = None
     ReduceLROnPlateau = None
+
+try:
+    from torch_geometric_temporal.signal import StaticGraphTemporalSignal
+except ImportError:
     StaticGraphTemporalSignal = None
 
 from eureka.core.celery_app import celery_app

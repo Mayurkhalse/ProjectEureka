@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 """Spatio-Temporal Graph Dataset Structuring for Project EUREKA.
 
 Structures Neo4j graph projections and Indic NLP signals into a PyTorch Geometric
@@ -25,14 +27,57 @@ if "torch_scatter" not in sys.modules:
 
 try:
     import torch
+    HAS_TORCH = True
+except ImportError:
+    torch = None
+    HAS_TORCH = False
+
+try:
     from torch_geometric.data import Data
+except ImportError:
+    class Data:
+        def __init__(self, x=None, edge_index=None, edge_attr=None, y=None, **kwargs):
+            self.x = x
+            self.edge_index = edge_index
+            self.edge_attr = edge_attr
+            self.y = y
+            for k, v in kwargs.items():
+                setattr(self, k, v)
+
+try:
     from torch_geometric_temporal.signal import StaticGraphTemporalSignal
     HAS_TORCH_GEOMETRIC = True
 except ImportError:
-    torch = None
-    Data = None
-    StaticGraphTemporalSignal = None
     HAS_TORCH_GEOMETRIC = False
+
+    class _FallbackSignal:
+        def __init__(self, edge_index, edge_weight, features, targets):
+            self.edge_index = edge_index
+            self.edge_weight = edge_weight
+            self.features = features
+            self.targets = targets
+            self.snapshot_count = len(features)
+
+        def __len__(self):
+            return self.snapshot_count
+
+        def __iter__(self):
+            for i in range(self.snapshot_count):
+                feat = self.features[i]
+                targ = self.targets[i]
+                if HAS_TORCH and torch is not None:
+                    x = torch.from_numpy(feat) if isinstance(feat, np.ndarray) else feat
+                    y = torch.from_numpy(targ) if isinstance(targ, np.ndarray) else targ
+                    ei = torch.from_numpy(self.edge_index) if isinstance(self.edge_index, np.ndarray) else self.edge_index
+                    ew = torch.from_numpy(self.edge_weight) if isinstance(self.edge_weight, np.ndarray) else self.edge_weight
+                else:
+                    x, y, ei, ew = feat, targ, self.edge_index, self.edge_weight
+                yield Data(x=x, edge_index=ei, edge_attr=ew, y=y)
+
+        def __getitem__(self, idx):
+            return list(self)[idx]
+
+    StaticGraphTemporalSignal = _FallbackSignal
 
 from eureka.core.neo4j_driver import Neo4jGraphService
 from eureka.processor.stgnn_prep import StGNNDataPreparation
