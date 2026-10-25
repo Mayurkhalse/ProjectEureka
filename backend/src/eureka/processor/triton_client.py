@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 """High-Speed gRPC Inference Client for Triton Inference Server in Project EUREKA.
 
 Replaces in-process PyTorch model forward passes inside Celery workers with lightweight,
@@ -15,9 +17,23 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 import numpy as np
-import onnxruntime as ort
-import tritonclient.grpc as grpcclient
-from tritonclient.utils import InferenceServerException
+
+try:
+    import onnxruntime as ort
+    HAS_ORT = True
+except ImportError:
+    ort = None
+    HAS_ORT = False
+
+try:
+    import tritonclient.grpc as grpcclient
+    from tritonclient.utils import InferenceServerException
+    HAS_TRITON = True
+except ImportError:
+    grpcclient = None
+    class InferenceServerException(Exception):
+        pass
+    HAS_TRITON = False
 
 from eureka.core.config import get_settings
 from eureka.processor.export_models import get_normalized_district_adjacency

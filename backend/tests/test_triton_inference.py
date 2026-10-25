@@ -11,6 +11,14 @@ from pathlib import Path
 import numpy as np
 import pytest
 
+try:
+    import onnxruntime
+    HAS_ORT = True
+except ImportError:
+    HAS_ORT = False
+
+pytestmark = pytest.mark.skipif(not HAS_ORT, reason="onnxruntime not installed in this environment")
+
 from eureka.processor.stgnn_dataset import EurekaTemporalDatasetBuilder
 from eureka.processor.stgnn_trainer import infer_risk_diffusion
 from eureka.processor.triton_client import TritonInferenceClient, get_triton_client
