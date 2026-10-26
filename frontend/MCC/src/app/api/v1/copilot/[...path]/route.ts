@@ -185,6 +185,11 @@ async function proxyToFastApi(
       });
     }
 
+    // If backend returned an error status (e.g. 404 or 5xx), seamlessly engage the offline streaming synthesizer
+    if (!finalBackendRes.ok && subpath === 'query') {
+      throw new Error(`FastAPI copilot backend returned HTTP ${finalBackendRes.status}: ${finalBackendRes.statusText}`);
+    }
+
     const responseHeaders = new Headers();
     finalBackendRes.headers.forEach((val, key) => {
       // Do not forward hop-by-hop headers

@@ -17,7 +17,7 @@ import { getServerDistricts, getServerIncidents, getServerOverviewMetrics, updat
  * with 'http://127.0.0.1:8000' as local fallback.
  */
 export function getBackendBaseUrl(): string {
-  const url = process.env.BACKEND_URL || 'http://127.0.0.1:8000';
+  const url = process.env.BACKEND_URL || process.env.FASTAPI_BACKEND_URL || 'http://127.0.0.1:8000';
   return url.replace(/\/$/, '');
 }
 
@@ -30,7 +30,7 @@ export function getBackendEndpoint(endpointPath: string): URL {
   return new URL(cleanPath, base + "/");
 }
 
-export const FASTAPI_BACKEND_URL = process.env.BACKEND_URL || 'http://127.0.0.1:8000';
+export const FASTAPI_BACKEND_URL = process.env.BACKEND_URL || process.env.FASTAPI_BACKEND_URL || 'http://127.0.0.1:8000';
 
 export interface DistrictMeta {
   code: string;

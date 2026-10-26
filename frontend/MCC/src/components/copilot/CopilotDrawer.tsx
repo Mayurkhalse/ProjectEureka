@@ -251,17 +251,33 @@ export const CopilotDrawer: React.FC = () => {
             ? {
                 ...m,
                 content:
-                  '<Callout type="critical" message="Service communication interrupted. Displaying verified local fallback data." />',
+                  '<Callout type="warning" message="Service communication interrupted. Displaying verified local fallback data." />\n\n<KpiCard title="Statewide Governance" value="88.4" unit="%" status="positive" caption="Composite Baseline" />\n\n<KpiCard title="Total Districts" value="36" unit="Districts" status="positive" caption="All Districts Reporting" />',
                 sourceStatus: 'demo',
                 fallback: true,
                 viewSpec: {
                   version: '1.0',
-                  title: 'Service Notice',
+                  title: 'Statewide Resilience Summary',
                   components: [
                     {
                       component: 'Callout',
-                      type: 'critical',
+                      type: 'warning',
                       message: 'Service communication interrupted. Displaying verified local fallback data.',
+                    },
+                    {
+                      component: 'KpiCard',
+                      title: 'Statewide Governance',
+                      value: '88.4',
+                      unit: '%',
+                      status: 'positive',
+                      caption: 'Composite Baseline',
+                    },
+                    {
+                      component: 'KpiCard',
+                      title: 'Total Districts',
+                      value: '36',
+                      unit: 'Districts',
+                      status: 'positive',
+                      caption: 'All Districts Reporting',
                     },
                   ],
                 },
