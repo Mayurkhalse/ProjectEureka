@@ -475,3 +475,81 @@ async def test_copilot_stage_timers_and_server_timing():
     assert "first_byte_ms" in done_data["timings"]
     assert "last_byte_ms" in done_data["timings"]
     assert "server_timing" in done_data
+
+
+# ============================================================================
+# 9. MULTI-GRAPH GENERATION (PIE, BAR, LINE) PARITY TESTS
+# ============================================================================
+
+def test_pie_chart_spec_and_openui_rendering():
+    """Verify PieChartSpec properly serializes into compliant OpenUI Lang markup."""
+    from eureka.copilot.viewspec import ViewSpec, PieChartSpec, DataTableSpec, TextSpec
+
+    table_alt = DataTableSpec(
+        columns=["Category", "Value"],
+        rows=[{"Category": "Konkan", "Value": 7}, {"Category": "Pune", "Value": 5}],
+        caption="Division Breakdown",
+    )
+    pie = PieChartSpec(
+        title="Revenue Divisions Distribution",
+        categories=["Konkan", "Pune"],
+        values=[7, 5],
+        variant="donut",
+        data=[{"name": "Konkan", "value": 7}, {"name": "Pune", "value": 5}],
+        text_summary="2 divisions represented.",
+        table_alternative=table_alt,
+    )
+    vspec = ViewSpec(
+        title="Division Distribution View",
+        as_of="2026-10-20T00:00:00Z",
+        source_status="live",
+        components=[pie],
+    )
+
+    markup = vspec.to_openui_lang()
+    assert "<PieChart" in markup
+    assert 'title="Revenue Divisions Distribution"' in markup
+    assert 'variant="donut"' in markup
+    assert "Konkan" in markup
+    assert "<DataTable" in markup
+
+
+def test_pie_chart_validation_with_number_grounding():
+    """Verify that PieChart passes validate_openui_output when numbers and summaries are grounded."""
+    from eureka.copilot.openui_generator import validate_openui_output
+
+    tool_results = [{
+        "data": {
+            "districts": [
+                {"name_en": "Konkan", "count": 7},
+                {"name_en": "Pune", "count": 5},
+            ]
+        }
+    }]
+
+    valid_pie_markup = """<PieChart title="Division Share" variant="donut" values="[7, 5]">
+  <Text content="Division distribution for 2 divisions." />
+  <DataTable columns="Category,Count" rows="[{&quot;Category&quot;: &quot;Konkan&quot;, &quot;Count&quot;: 7}]" />
+</PieChart>"""
+
+    is_valid, errors = validate_openui_output(valid_pie_markup, tool_results)
+    assert is_valid is True, f"Validation failed unexpectedly: {errors}"
+
+
+def test_fast_path_and_viewspec_pie_intent():
+    """Fast-path query with 'pie chart' sets view=pie and produces a PieChart component in ViewSpec."""
+    from eureka.copilot.intent_router import match_fast_path
+    from eureka.copilot.tools import CopilotPrincipal
+    from eureka.copilot.viewspec import ViewSpecBuilder
+
+    principal = CopilotPrincipal(username="dg_admin", role="DG State Admin")
+    match = match_fast_path("Show me a pie chart of top districts", principal)
+
+    assert match is not None
+    tool_name, tool_args, tool_result = match
+    assert tool_name == "league_table"
+    assert tool_result.get("view") == "pie"
+
+    vspec = ViewSpecBuilder.build_from_tool_result(tool_name, tool_result)
+    comp_names = [c.component for c in vspec.components]
+    assert "PieChart" in comp_names

@@ -325,7 +325,7 @@ async def copilot_query(
 
                 if text_parts:
                     raw_text = "\n".join(text_parts).strip()
-                    component_match = re.search(r'<(?:Stack|Heading|KpiCard|Callout|DataTable|BarChart|LineChart|GraphView|Card|Text)\b', raw_text)
+                    component_match = re.search(r'<(?:Stack|Heading|KpiCard|Callout|DataTable|BarChart|LineChart|PieChart|GraphView|Card|Text)\b', raw_text)
                     if component_match and component_match.start() > 0:
                         final_markup = raw_text[component_match.start():].strip()
                     else:
@@ -395,7 +395,7 @@ async def copilot_query(
                     if not repair_text_parts:
                         repair_text_parts = [p["text"] for p in repair_parts if "text" in p]
                     raw_rep = "\n".join(repair_text_parts).strip()
-                    comp_rep = re.search(r'<(?:Stack|Heading|KpiCard|Callout|DataTable|BarChart|LineChart|GraphView|Card|Text)\b', raw_rep)
+                    comp_rep = re.search(r'<(?:Stack|Heading|KpiCard|Callout|DataTable|BarChart|LineChart|PieChart|GraphView|Card|Text)\b', raw_rep)
                     if comp_rep and comp_rep.start() > 0:
                         repair_text = raw_rep[comp_rep.start():].strip()
                     else:

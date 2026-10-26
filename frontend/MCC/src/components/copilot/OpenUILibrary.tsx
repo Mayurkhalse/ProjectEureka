@@ -131,14 +131,43 @@ export const BarChart: React.FC<{
   title: string;
   xKey?: string;
   yKey?: string;
+  categories?: string | string[];
+  values?: string | number[];
+  series?: Array<{ name: string; data: number[] }>;
   data?: string | Array<Record<string, any>>;
   children?: React.ReactNode;
   onExplain?: () => void;
-}> = ({ title, xKey = 'x', yKey = 'y', data, children, onExplain }) => {
+}> = ({ title, xKey = 'x', yKey = 'y', categories, values, series, data, children, onExplain }) => {
   const [viewAsTable, setViewAsTable] = useState(false);
 
   let chartData: Array<Record<string, any>> = [];
-  if (Array.isArray(data)) {
+
+  // Parse categories & values or series if provided
+  if (categories && values) {
+    const catList = Array.isArray(categories) ? categories : typeof categories === 'string' ? categories.split(',').map((c) => c.trim()) : [];
+    let valList: number[] = [];
+    if (Array.isArray(values)) {
+      valList = values.map(Number);
+    } else if (typeof values === 'string') {
+      try {
+        valList = JSON.parse(values).map(Number);
+      } catch {
+        valList = values.split(',').map((v) => Number(v.trim()) || 0);
+      }
+    }
+    chartData = catList.map((cat, i) => ({
+      [xKey]: cat,
+      [yKey]: valList[i] ?? 0,
+    }));
+  } else if (categories && series && series.length > 0) {
+    const catList = Array.isArray(categories) ? categories : [];
+    const s0 = series[0];
+    chartData = catList.map((cat, i) => ({
+      [xKey]: cat,
+      [yKey]: s0.data?.[i] ?? 0,
+      seriesName: s0.name,
+    }));
+  } else if (Array.isArray(data)) {
     chartData = data;
   } else if (typeof data === 'string') {
     try {
@@ -210,18 +239,48 @@ export const BarChart: React.FC<{
   );
 };
 
-// 5. LineChart Component with "View as Table" toggle
+// 5. LineChart Component with "View as Table" toggle & SVG curve
 export const LineChart: React.FC<{
   title: string;
   xKey?: string;
   yKey?: string;
+  categories?: string | string[];
+  values?: string | number[];
+  series?: Array<{ name: string; data: number[] }>;
   data?: string | Array<Record<string, any>>;
   children?: React.ReactNode;
-}> = ({ title, xKey = 'day', yKey = 'value', data, children }) => {
+  onExplain?: () => void;
+}> = ({ title, xKey = 'day', yKey = 'value', categories, values, series, data, children, onExplain }) => {
   const [viewAsTable, setViewAsTable] = useState(false);
+  const [hoveredIdx, setHoveredIdx] = useState<number | null>(null);
 
   let chartData: Array<Record<string, any>> = [];
-  if (Array.isArray(data)) {
+
+  if (categories && values) {
+    const catList = Array.isArray(categories) ? categories : typeof categories === 'string' ? categories.split(',').map((c) => c.trim()) : [];
+    let valList: number[] = [];
+    if (Array.isArray(values)) {
+      valList = values.map(Number);
+    } else if (typeof values === 'string') {
+      try {
+        valList = JSON.parse(values).map(Number);
+      } catch {
+        valList = values.split(',').map((v) => Number(v.trim()) || 0);
+      }
+    }
+    chartData = catList.map((cat, i) => ({
+      [xKey]: cat,
+      [yKey]: valList[i] ?? 0,
+    }));
+  } else if (categories && series && series.length > 0) {
+    const catList = Array.isArray(categories) ? categories : [];
+    const s0 = series[0];
+    chartData = catList.map((cat, i) => ({
+      [xKey]: cat,
+      [yKey]: s0.data?.[i] ?? 0,
+      seriesName: s0.name,
+    }));
+  } else if (Array.isArray(data)) {
     chartData = data;
   } else if (typeof data === 'string') {
     try {
@@ -231,6 +290,33 @@ export const LineChart: React.FC<{
     }
   }
 
+  const valuesArr = chartData.map((d) => Number(d[yKey]) || 0);
+  const minVal = Math.min(0, ...valuesArr);
+  const maxVal = Math.max(10, ...valuesArr);
+  const range = maxVal - minVal || 1;
+
+  const svgWidth = 360;
+  const svgHeight = 120;
+  const paddingX = 24;
+  const paddingY = 16;
+  const usableWidth = svgWidth - paddingX * 2;
+  const usableHeight = svgHeight - paddingY * 2;
+
+  const points = chartData.map((d, idx) => {
+    const x = paddingX + (chartData.length > 1 ? (idx / (chartData.length - 1)) * usableWidth : usableWidth / 2);
+    const val = Number(d[yKey]) || 0;
+    const y = paddingY + usableHeight - ((val - minVal) / range) * usableHeight;
+    return { x, y, val, label: String(d[xKey] || '') };
+  });
+
+  const pathD = points.length > 0
+    ? points.reduce((acc, p, idx) => `${acc} ${idx === 0 ? 'M' : 'L'} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`, '')
+    : '';
+
+  const areaD = points.length > 0
+    ? `${pathD} L ${points[points.length - 1].x.toFixed(1)} ${(svgHeight - paddingY).toFixed(1)} L ${points[0].x.toFixed(1)} ${(svgHeight - paddingY).toFixed(1)} Z`
+    : '';
+
   return (
     <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm my-2">
       <div className="flex items-center justify-between border-b border-slate-100 pb-2 mb-3">
@@ -238,39 +324,374 @@ export const LineChart: React.FC<{
           <MaterialIcon name="trending_up" size="sm" className="text-blue-600" />
           <h4 className="text-xs font-bold text-slate-800">{title}</h4>
         </div>
-        <button
-          onClick={() => setViewAsTable(!viewAsTable)}
-          className="text-xs font-semibold px-2.5 py-1 rounded-md border border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100 transition-colors flex items-center gap-1"
-        >
-          <MaterialIcon name={viewAsTable ? 'trending_up' : 'checklist'} size="xs" />
-          {viewAsTable ? 'View Trend Line' : 'View as Table'}
-        </button>
+        <div className="flex items-center gap-2">
+          {onExplain && (
+            <button
+              onClick={onExplain}
+              className="text-xs text-slate-500 hover:text-blue-600 flex items-center gap-1 border rounded px-2 py-0.5"
+            >
+              <MaterialIcon name="description" size="xs" /> Explain
+            </button>
+          )}
+          <button
+            onClick={() => setViewAsTable(!viewAsTable)}
+            className="text-xs font-semibold px-2.5 py-1 rounded-md border border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100 transition-colors flex items-center gap-1"
+          >
+            <MaterialIcon name={viewAsTable ? 'trending_up' : 'checklist'} size="xs" />
+            {viewAsTable ? 'View Trend Line' : 'View as Table'}
+          </button>
+        </div>
       </div>
 
       {viewAsTable ? (
         <DataTable columns={[xKey, yKey]} rows={chartData} caption={`${title} (Historical Data)`} />
       ) : (
         <div className="py-2">
-          <div className="h-28 flex items-end gap-1.5 pt-4 px-2 border-b border-slate-200">
-            {chartData.map((d, idx) => {
-              const val = Number(d[yKey]) || 0;
-              const h = Math.min(100, Math.max(10, Math.round(val)));
-              return (
-                <div key={idx} className="flex-1 flex flex-col items-center gap-1 group relative">
-                  <div
-                    className="w-full bg-blue-500 rounded-t hover:bg-blue-600 transition-all cursor-pointer"
-                    style={{ height: `${h}%` }}
-                    title={`${d[xKey]}: ${val}`}
+          <div className="w-full overflow-hidden flex flex-col items-center">
+            <svg
+              viewBox={`0 0 ${svgWidth} ${svgHeight}`}
+              className="w-full h-32 overflow-visible select-none"
+            >
+              <defs>
+                <linearGradient id="lineGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#3b82f6" stopOpacity="0.25" />
+                  <stop offset="100%" stopColor="#3b82f6" stopOpacity="0.0" />
+                </linearGradient>
+              </defs>
+
+              <line x1={paddingX} y1={paddingY} x2={svgWidth - paddingX} y2={paddingY} stroke="#f1f5f9" strokeWidth="1" strokeDasharray="3 3" />
+              <line x1={paddingX} y1={paddingY + usableHeight / 2} x2={svgWidth - paddingX} y2={paddingY + usableHeight / 2} stroke="#f1f5f9" strokeWidth="1" strokeDasharray="3 3" />
+              <line x1={paddingX} y1={svgHeight - paddingY} x2={svgWidth - paddingX} y2={svgHeight - paddingY} stroke="#e2e8f0" strokeWidth="1" />
+
+              {areaD && <path d={areaD} fill="url(#lineGrad)" />}
+
+              {pathD && (
+                <path
+                  d={pathD}
+                  fill="none"
+                  stroke="#2563eb"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              )}
+
+              {points.map((p, idx) => {
+                const isHovered = hoveredIdx === idx;
+                return (
+                  <g key={idx} onMouseEnter={() => setHoveredIdx(idx)} onMouseLeave={() => setHoveredIdx(null)}>
+                    <circle
+                      cx={p.x}
+                      cy={p.y}
+                      r={isHovered ? 5 : 3.5}
+                      fill={isHovered ? '#1d4ed8' : '#3b82f6'}
+                      stroke="#ffffff"
+                      strokeWidth={isHovered ? 2 : 1.5}
+                      className="transition-all cursor-pointer"
+                    />
+                    {isHovered && (
+                      <g>
+                        <rect
+                          x={Math.max(4, Math.min(svgWidth - 64, p.x - 30))}
+                          y={Math.max(4, p.y - 24)}
+                          width="60"
+                          height="18"
+                          rx="4"
+                          fill="#0f172a"
+                          opacity="0.9"
+                        />
+                        <text
+                          x={Math.max(4, Math.min(svgWidth - 64, p.x - 30)) + 30}
+                          y={Math.max(4, p.y - 24) + 12}
+                          textAnchor="middle"
+                          fill="#ffffff"
+                          fontSize="9"
+                          fontWeight="bold"
+                        >
+                          {p.val}
+                        </text>
+                      </g>
+                    )}
+                  </g>
+                );
+              })}
+            </svg>
+
+            <div className="w-full flex justify-between px-3 text-[10px] text-slate-400 font-mono pt-1 border-t border-slate-100">
+              {chartData.map((d, idx) => (
+                <span
+                  key={idx}
+                  className={`cursor-pointer transition-colors ${hoveredIdx === idx ? 'text-blue-600 font-bold' : ''}`}
+                  onMouseEnter={() => setHoveredIdx(idx)}
+                  onMouseLeave={() => setHoveredIdx(null)}
+                >
+                  {String(d[xKey] || '')}
+                </span>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {children && <div className="mt-2 text-xs text-slate-600 border-t border-slate-50 pt-2">{children}</div>}
+    </div>
+  );
+};
+
+// 5b. PieChart & DonutChart Component with "View as Table" toggle
+export const PieChart: React.FC<{
+  title: string;
+  categories?: string | string[];
+  values?: string | number[];
+  variant?: 'pie' | 'donut';
+  data?: string | Array<Record<string, any>>;
+  xKey?: string;
+  yKey?: string;
+  children?: React.ReactNode;
+  onExplain?: () => void;
+}> = ({
+  title,
+  categories,
+  values,
+  variant = 'donut',
+  data,
+  xKey = 'name',
+  yKey = 'value',
+  children,
+  onExplain,
+}) => {
+  const [viewAsTable, setViewAsTable] = useState(false);
+  const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
+
+  const SLICE_COLORS = [
+    '#f59e0b',
+    '#3b82f6',
+    '#10b981',
+    '#8b5cf6',
+    '#ec4899',
+    '#06b6d4',
+    '#f97316',
+    '#64748b',
+  ];
+
+  let parsedItems: Array<{ label: string; value: number; color: string }> = [];
+
+  if (categories && values) {
+    const catList = Array.isArray(categories)
+      ? categories
+      : typeof categories === 'string'
+      ? categories.split(',').map((c) => c.trim())
+      : [];
+
+    let valList: number[] = [];
+    if (Array.isArray(values)) {
+      valList = values.map(Number);
+    } else if (typeof values === 'string') {
+      try {
+        valList = JSON.parse(values).map(Number);
+      } catch {
+        valList = values.split(',').map((v) => Number(v.trim()) || 0);
+      }
+    }
+
+    parsedItems = catList.map((cat, i) => ({
+      label: cat,
+      value: valList[i] ?? 0,
+      color: SLICE_COLORS[i % SLICE_COLORS.length],
+    }));
+  } else if (Array.isArray(data)) {
+    parsedItems = data.map((d, i) => {
+      const label = String(d[xKey] ?? d.name ?? d.label ?? d.category ?? `Item ${i + 1}`);
+      const val = Number(d[yKey] ?? d.value ?? d.val ?? d.count ?? 0);
+      return {
+        label,
+        value: val,
+        color: d.fill || d.color || SLICE_COLORS[i % SLICE_COLORS.length],
+      };
+    });
+  } else if (typeof data === 'string') {
+    try {
+      const arr = JSON.parse(data);
+      if (Array.isArray(arr)) {
+        parsedItems = arr.map((d, i) => {
+          const label = String(d[xKey] ?? d.name ?? d.label ?? d.category ?? `Item ${i + 1}`);
+          const val = Number(d[yKey] ?? d.value ?? d.val ?? d.count ?? 0);
+          return {
+            label,
+            value: val,
+            color: d.fill || d.color || SLICE_COLORS[i % SLICE_COLORS.length],
+          };
+        });
+      }
+    } catch {
+      parsedItems = [];
+    }
+  }
+
+  const total = parsedItems.reduce((acc, item) => acc + (item.value || 0), 0);
+
+  const size = 200;
+  const center = size / 2;
+  const radius = 80;
+  const innerRadius = variant === 'donut' ? 48 : 0;
+
+  let cumulativeAngle = -Math.PI / 2;
+  const slices = parsedItems.map((item, idx) => {
+    const fraction = total > 0 ? item.value / total : 0;
+    const sweepAngle = fraction * 2 * Math.PI;
+    const startAngle = cumulativeAngle;
+    const endAngle = cumulativeAngle + sweepAngle;
+    cumulativeAngle = endAngle;
+
+    const x1 = center + radius * Math.cos(startAngle);
+    const y1 = center + radius * Math.sin(startAngle);
+    const x2 = center + radius * Math.cos(endAngle);
+    const y2 = center + radius * Math.sin(endAngle);
+
+    const largeArc = sweepAngle > Math.PI ? 1 : 0;
+
+    let pathD = '';
+    if (variant === 'donut' && innerRadius > 0) {
+      const ix1 = center + innerRadius * Math.cos(endAngle);
+      const iy1 = center + innerRadius * Math.sin(endAngle);
+      const ix2 = center + innerRadius * Math.cos(startAngle);
+      const iy2 = center + innerRadius * Math.sin(startAngle);
+      pathD = [
+        `M ${x1} ${y1}`,
+        `A ${radius} ${radius} 0 ${largeArc} 1 ${x2} ${y2}`,
+        `L ${ix1} ${iy1}`,
+        `A ${innerRadius} ${innerRadius} 0 ${largeArc} 0 ${ix2} ${iy2}`,
+        'Z',
+      ].join(' ');
+    } else {
+      pathD = [
+        `M ${center} ${center}`,
+        `L ${x1} ${y1}`,
+        `A ${radius} ${radius} 0 ${largeArc} 1 ${x2} ${y2}`,
+        'Z',
+      ].join(' ');
+    }
+
+    const percentage = total > 0 ? Math.round(fraction * 100) : 0;
+    return { ...item, pathD, percentage, idx };
+  });
+
+  const activeItem = hoveredIndex !== null ? slices[hoveredIndex] : null;
+
+  return (
+    <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm my-2">
+      <div className="flex items-center justify-between border-b border-slate-100 pb-2 mb-3">
+        <div className="flex items-center gap-2">
+          <svg className="w-4 h-4 text-amber-600 fill-current" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 2.07c3.61.45 6.48 3.33 6.93 6.93H13V4.07zM4 12c0-4.07 3.06-7.44 7-7.93v15.87c-3.94-.5-7-3.87-7-7.94zm9 7.93V13h6.93c-.45 3.61-3.32 6.48-6.93 6.93z" />
+          </svg>
+          <h4 className="text-xs font-bold text-slate-800">{title}</h4>
+        </div>
+        <div className="flex items-center gap-2">
+          {onExplain && (
+            <button
+              onClick={onExplain}
+              className="text-xs text-slate-500 hover:text-amber-600 flex items-center gap-1 border rounded px-2 py-0.5"
+            >
+              <MaterialIcon name="description" size="xs" /> Explain
+            </button>
+          )}
+          <button
+            onClick={() => setViewAsTable(!viewAsTable)}
+            className="text-xs font-semibold px-2.5 py-1 rounded-md border border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100 transition-colors flex items-center gap-1"
+          >
+            <MaterialIcon name={viewAsTable ? 'bar_chart' : 'checklist'} size="xs" />
+            {viewAsTable ? 'View Chart' : 'View as Table'}
+          </button>
+        </div>
+      </div>
+
+      {viewAsTable ? (
+        <DataTable
+          columns={['Category', 'Value', 'Share (%)']}
+          rows={slices.map((s) => ({
+            Category: s.label,
+            Value: s.value,
+            'Share (%)': `${s.percentage}%`,
+          }))}
+          caption={`${title} (Distribution Table)`}
+        />
+      ) : (
+        <div className="py-2 flex flex-col items-center">
+          <div className="relative w-48 h-48 flex items-center justify-center">
+            <svg viewBox={`0 0 ${size} ${size}`} className="w-full h-full transform -rotate-90">
+              {slices.map((s, idx) => {
+                const isHovered = hoveredIndex === idx;
+                return (
+                  <path
+                    key={idx}
+                    d={s.pathD}
+                    fill={s.color}
+                    stroke="#ffffff"
+                    strokeWidth={isHovered ? '2.5' : '1.5'}
+                    opacity={hoveredIndex === null || isHovered ? 1 : 0.6}
+                    className="transition-all duration-200 cursor-pointer"
+                    onMouseEnter={() => setHoveredIndex(idx)}
+                    onMouseLeave={() => setHoveredIndex(null)}
                   />
-                  <span className="text-[9px] text-slate-400 font-mono scale-90">{d[xKey]}</span>
-                </div>
+                );
+              })}
+            </svg>
+
+            {variant === 'donut' && (
+              <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none text-center">
+                {activeItem ? (
+                  <>
+                    <span className="text-base font-black text-slate-900 leading-tight">
+                      {activeItem.percentage}%
+                    </span>
+                    <span className="text-[10px] font-semibold text-slate-500 max-w-[80px] truncate">
+                      {activeItem.label}
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <span className="text-base font-black text-slate-900 leading-tight">
+                      {total}
+                    </span>
+                    <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+                      Total
+                    </span>
+                  </>
+                )}
+              </div>
+            )}
+          </div>
+
+          <div className="mt-4 flex flex-wrap justify-center gap-2 max-w-sm">
+            {slices.map((s, idx) => {
+              const isHovered = hoveredIndex === idx;
+              return (
+                <button
+                  key={idx}
+                  type="button"
+                  onMouseEnter={() => setHoveredIndex(idx)}
+                  onMouseLeave={() => setHoveredIndex(null)}
+                  className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium border transition-all ${
+                    isHovered
+                      ? 'border-slate-400 bg-slate-100 shadow-sm'
+                      : 'border-slate-200 bg-slate-50 text-slate-700'
+                  }`}
+                >
+                  <span
+                    className="w-2 h-2 rounded-full shrink-0"
+                    style={{ backgroundColor: s.color }}
+                  />
+                  <span className="truncate max-w-[120px]">{s.label}</span>
+                  <span className="font-bold text-slate-900">({s.percentage}%)</span>
+                </button>
               );
             })}
           </div>
         </div>
       )}
 
-      {children && <div className="mt-2 text-xs text-slate-600">{children}</div>}
+      {children && <div className="mt-2 text-xs text-slate-600 border-t border-slate-50 pt-2">{children}</div>}
     </div>
   );
 };

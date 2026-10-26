@@ -69,6 +69,17 @@ class LineChartSpec(BaseComponentSpec):
     table_alternative: DataTableSpec
 
 
+class PieChartSpec(BaseComponentSpec):
+    component: Literal["PieChart"] = "PieChart"
+    title: str
+    categories: Optional[List[str]] = None
+    values: Optional[List[Union[int, float]]] = None
+    variant: Literal["pie", "donut"] = "donut"
+    data: Optional[List[Dict[str, Any]]] = None
+    text_summary: str = Field(description="Accessible summary for screen readers & GIGW 3.0")
+    table_alternative: DataTableSpec
+
+
 class GraphViewSpec(BaseComponentSpec):
     component: Literal["GraphView"] = "GraphView"
     title: str
@@ -86,6 +97,7 @@ class StackSpec(BaseComponentSpec):
         DataTableSpec,
         BarChartSpec,
         LineChartSpec,
+        PieChartSpec,
         GraphViewSpec,
         CalloutSpec,
         HeadingSpec,
@@ -99,6 +111,7 @@ AnyComponentSpec = Union[
     DataTableSpec,
     BarChartSpec,
     LineChartSpec,
+    PieChartSpec,
     GraphViewSpec,
     CalloutSpec,
     HeadingSpec,
@@ -173,6 +186,20 @@ def render_component_to_openui(comp: AnyComponentSpec) -> str:
             f'  <Text content="{chart.text_summary}" />\n'
             f'  {tbl_comp}\n'
             f'</{c_type}>'
+        )
+
+    if c_type == "PieChart":
+        pie = comp  # type: PieChartSpec
+        import json
+        data_json = json.dumps(pie.data or []).replace('"', '&quot;')
+        cats_json = json.dumps(pie.categories or []).replace('"', '&quot;')
+        vals_json = json.dumps(pie.values or []).replace('"', '&quot;')
+        tbl_comp = render_component_to_openui(pie.table_alternative)
+        return (
+            f'<PieChart title="{pie.title}" variant="{pie.variant}" categories="{cats_json}" values="{vals_json}" data="{data_json}">\n'
+            f'  <Text content="{pie.text_summary}" />\n'
+            f'  {tbl_comp}\n'
+            f'</PieChart>'
         )
 
     if c_type == "GraphView":
@@ -256,14 +283,27 @@ class ViewSpecBuilder:
                 caption="100-Point Composite Governance Index Leaderboard",
             )
 
-            chart_spec = BarChartSpec(
-                title="District Performance Comparison",
-                x_key="district",
-                y_key="score",
-                data=chart_data[:15],
-                text_summary=f"Leaderboard comparing {len(districts)} districts. Top rank is {districts[0].get('name_en') if districts else 'N/A'}.",
-                table_alternative=table_spec,
-            )
+            view_mode = tool_result.get("view") or (data.get("view") if isinstance(data, dict) else "bar")
+            if view_mode in ("pie", "donut"):
+                top_slice = districts[:6]
+                chart_spec = PieChartSpec(
+                    title="Leading Districts Share of Score",
+                    categories=[d.get("name_en") for d in top_slice],
+                    values=[d.get("composite_index") for d in top_slice],
+                    variant="donut" if view_mode == "donut" else "pie",
+                    data=[{"name": d.get("name_en"), "value": d.get("composite_index")} for d in top_slice],
+                    text_summary=f"Distribution of composite index among leading {len(top_slice)} districts.",
+                    table_alternative=table_spec,
+                )
+            else:
+                chart_spec = BarChartSpec(
+                    title="District Performance Comparison",
+                    x_key="district",
+                    y_key="score",
+                    data=chart_data[:15],
+                    text_summary=f"Leaderboard comparing {len(districts)} districts. Top rank is {districts[0].get('name_en') if districts else 'N/A'}.",
+                    table_alternative=table_spec,
+                )
 
             components: List[AnyComponentSpec] = [
                 HeadingSpec(level=2, text="Maharashtra District Governance Leaderboard"),
@@ -353,6 +393,57 @@ class ViewSpecBuilder:
                     HeadingSpec(level=2, text="90-Minute Crisis SLA Incident Queue"),
                     callout,
                     table_spec,
+                ],
+            )
+
+        if tool_name == "division_rollup":
+            divisions_data = data.get("divisions", []) if isinstance(data, dict) else (data if isinstance(data, list) else [])
+            cats = [d.get("division", f"Division {i+1}") for i, d in enumerate(divisions_data)]
+            vals = [d.get("composite_index", d.get("district_count", 0.0)) for d in divisions_data]
+            tbl_rows = [{"Division": c, "Value": v} for c, v in zip(cats, vals)]
+            tbl_spec = DataTableSpec(columns=["Division", "Value"], rows=tbl_rows, caption="Division Breakdown")
+            chart_spec = PieChartSpec(
+                title="Revenue Division Distribution",
+                categories=cats,
+                values=vals,
+                variant="donut",
+                data=[{"name": c, "value": v} for c, v in zip(cats, vals)],
+                text_summary=f"Division distribution across {len(cats)} administrative divisions.",
+                table_alternative=tbl_spec,
+            )
+            return ViewSpec(
+                title="Division Rollup Overview",
+                as_of=as_of,
+                source_status=status,
+                fallback=fallback,
+                components=[
+                    HeadingSpec(level=2, text="Administrative Divisions Breakdown"),
+                    chart_spec,
+                    tbl_spec,
+                ],
+            )
+
+        if tool_name == "trend":
+            trend_points = data.get("points", []) if isinstance(data, dict) else (data if isinstance(data, list) else [])
+            tbl_rows = [{"Date": p.get("date", f"Day {i+1}"), "Score": p.get("score", 0.0)} for i, p in enumerate(trend_points)]
+            tbl_spec = DataTableSpec(columns=["Date", "Score"], rows=tbl_rows, caption="Historical Trend")
+            chart_spec = LineChartSpec(
+                title="Historical Governance Trajectory",
+                x_key="day",
+                y_key="score",
+                data=[{"day": p.get("date", f"Day {i+1}"), "score": p.get("score", 0.0)} for i, p in enumerate(trend_points)],
+                text_summary=f"Temporal trend over {len(trend_points)} points.",
+                table_alternative=tbl_spec,
+            )
+            return ViewSpec(
+                title="Governance Trajectory Trend",
+                as_of=as_of,
+                source_status=status,
+                fallback=fallback,
+                components=[
+                    HeadingSpec(level=2, text="Governance Performance Trend"),
+                    chart_spec,
+                    tbl_spec,
                 ],
             )
 

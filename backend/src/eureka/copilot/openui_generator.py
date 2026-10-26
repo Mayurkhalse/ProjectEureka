@@ -24,6 +24,7 @@ ALLOWED_COMPONENTS = {
     "DataTable",
     "BarChart",
     "LineChart",
+    "PieChart",
     "GraphView",
     "Callout",
     "Heading",
@@ -124,6 +125,7 @@ STRICT SAFETY & DATA CONSTRAINTS:
    - <DataTable columns="..." rows="..." caption="..." />
    - <BarChart title="..." xKey="..." yKey="..." data="..."> <Text content="..." /> <DataTable ... /> </BarChart>
    - <LineChart title="..." xKey="..." yKey="..." data="..."> <Text content="..." /> <DataTable ... /> </LineChart>
+   - <PieChart title="..." variant="pie|donut" categories="..." values="..." data="..."> <Text content="..." /> <DataTable ... /> </PieChart>
    - <GraphView title="..." nodes="..." edges="..."> <Text content="..." /> <DataTable ... /> </GraphView>
    - <Callout type="info|warning|success|critical" message="..." />
    - <Heading level=1|2|3|4 text="..." />
@@ -206,7 +208,7 @@ def validate_openui_output(
             errors.append(f"UNKNOWN_COMPONENT: Tag '<{tag}>' is not permitted in OpenUI library.")
 
     # 3. Accessibility Enforcement: BarChart, LineChart, and GraphView must include text summary AND table alternative
-    chart_tags = ["BarChart", "LineChart", "GraphView"]
+    chart_tags = ["BarChart", "LineChart", "PieChart", "GraphView"]
     for c_tag in chart_tags:
         pattern = rf'<{c_tag}\b([^>]*?)(?:/>|>([\s\S]*?)</{c_tag}>)'
         for match in re.finditer(pattern, markup):

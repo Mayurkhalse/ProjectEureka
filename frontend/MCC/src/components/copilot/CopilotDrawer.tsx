@@ -9,6 +9,7 @@ import {
   DataTable,
   BarChart,
   LineChart,
+  PieChart,
   GraphView,
   Callout,
   Heading,
@@ -48,11 +49,21 @@ const parseMarkupAttributes = (attrStr: string): Record<string, any> => {
   let match;
   while ((match = regex.exec(attrStr)) !== null) {
     const key = match[1];
-    const rawVal = match[2] ?? match[3] ?? match[4] ?? match[5];
+    let rawVal = match[2] ?? match[3] ?? match[4] ?? match[5];
     let val: any = rawVal;
+    if (typeof rawVal === 'string' && rawVal.includes('&quot;')) {
+      rawVal = rawVal.replace(/&quot;/g, '"');
+      val = rawVal;
+    }
     if (rawVal === 'true') val = true;
     else if (rawVal === 'false') val = false;
-    else if (!isNaN(Number(rawVal)) && rawVal.trim() !== '') val = Number(rawVal);
+    else if (!isNaN(Number(rawVal)) && typeof rawVal === 'string' && rawVal.trim() !== '') {
+      val = Number(rawVal);
+    } else if (typeof rawVal === 'string' && ((rawVal.startsWith('[') && rawVal.endsWith(']')) || (rawVal.startsWith('{') && rawVal.endsWith('}')))) {
+      try {
+        val = JSON.parse(rawVal);
+      } catch {}
+    }
     attrs[key] = val;
   }
   return attrs;
@@ -364,6 +375,55 @@ export const CopilotDrawer: React.FC = () => {
               onExplain={() => setExplainedTool({ tool: 'KpiCard', data: attrs })}
             />
           );
+        } else if (tag === 'PieChart') {
+          elements.push(
+            <PieChart
+              key={`tag-${idx++}`}
+              title={attrs.title || 'Distribution Overview'}
+              categories={attrs.categories}
+              values={attrs.values}
+              variant={attrs.variant || 'donut'}
+              data={attrs.data}
+              onExplain={() => setExplainedTool({ tool: 'PieChart', data: attrs })}
+            />
+          );
+        } else if (tag === 'BarChart') {
+          elements.push(
+            <BarChart
+              key={`tag-${idx++}`}
+              title={attrs.title || 'Comparison Chart'}
+              xKey={attrs.xKey || attrs.x_key || 'x'}
+              yKey={attrs.yKey || attrs.y_key || 'y'}
+              categories={attrs.categories}
+              values={attrs.values}
+              series={attrs.series}
+              data={attrs.data}
+              onExplain={() => setExplainedTool({ tool: 'BarChart', data: attrs })}
+            />
+          );
+        } else if (tag === 'LineChart') {
+          elements.push(
+            <LineChart
+              key={`tag-${idx++}`}
+              title={attrs.title || 'Trend Trajectory'}
+              xKey={attrs.xKey || attrs.x_key || 'day'}
+              yKey={attrs.yKey || attrs.y_key || 'value'}
+              categories={attrs.categories}
+              values={attrs.values}
+              series={attrs.series}
+              data={attrs.data}
+              onExplain={() => setExplainedTool({ tool: 'LineChart', data: attrs })}
+            />
+          );
+        } else if (tag === 'DataTable') {
+          elements.push(
+            <DataTable
+              key={`tag-${idx++}`}
+              columns={attrs.columns || []}
+              rows={attrs.rows || []}
+              caption={attrs.caption || attrs.title}
+            />
+          );
         } else {
           elements.push(
             <div key={`tag-${idx++}`} className="text-xs text-slate-600 bg-slate-100 p-2 rounded">
@@ -483,23 +543,50 @@ export const CopilotDrawer: React.FC = () => {
                 );
               if (c.component === 'DataTable')
                 return <DataTable key={idx} columns={c.columns} rows={c.rows} caption={c.caption} />;
+              if (c.component === 'PieChart')
+                return (
+                  <PieChart
+                    key={idx}
+                    title={c.title}
+                    categories={c.categories}
+                    values={c.values}
+                    variant={c.variant || 'donut'}
+                    data={c.data}
+                    onExplain={() => setExplainedTool({ tool: 'PieChart', data: c.data || c.values })}
+                  >
+                    {c.text_summary && <Text content={c.text_summary} />}
+                  </PieChart>
+                );
               if (c.component === 'BarChart')
                 return (
                   <BarChart
                     key={idx}
                     title={c.title}
-                    xKey={c.x_key}
-                    yKey={c.y_key}
+                    xKey={c.x_key || c.xKey}
+                    yKey={c.y_key || c.yKey}
+                    categories={c.categories}
+                    values={c.values}
+                    series={c.series}
                     data={c.data}
                     onExplain={() => setExplainedTool({ tool: 'BarChart', data: c.data })}
                   >
-                    <Text content={c.text_summary} />
+                    {c.text_summary && <Text content={c.text_summary} />}
                   </BarChart>
                 );
               if (c.component === 'LineChart')
                 return (
-                  <LineChart key={idx} title={c.title} xKey={c.x_key} yKey={c.y_key} data={c.data}>
-                    <Text content={c.text_summary} />
+                  <LineChart
+                    key={idx}
+                    title={c.title}
+                    xKey={c.x_key || c.xKey}
+                    yKey={c.y_key || c.yKey}
+                    categories={c.categories}
+                    values={c.values}
+                    series={c.series}
+                    data={c.data}
+                    onExplain={() => setExplainedTool({ tool: 'LineChart', data: c.data })}
+                  >
+                    {c.text_summary && <Text content={c.text_summary} />}
                   </LineChart>
                 );
               if (c.component === 'GraphView')

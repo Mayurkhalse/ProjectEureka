@@ -100,6 +100,22 @@ def get_c1_custom_components() -> List[Dict[str, Any]]:
             },
         },
         {
+            "name": "PieChart",
+            "description": "Categorical share or distribution chart (pie or donut variant) with accessibility text summary.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "title": {"type": "string"},
+                    "categories": {"type": "array", "items": {"type": "string"}},
+                    "values": {"type": "array", "items": {"type": "number"}},
+                    "variant": {"type": "string", "enum": ["pie", "donut"]},
+                    "data": {"type": "array", "items": {"type": "object"}},
+                    "summary": {"type": "string", "description": "Textual summary for accessibility"},
+                },
+                "required": ["title"],
+            },
+        },
+        {
             "name": "GraphView",
             "description": "Spatio-temporal adjacency or rumor diffusion graph.",
             "parameters": {
@@ -217,10 +233,11 @@ class C1Client:
             "Your task is to transform verified, governed tool data into clean visual UI specifications. "
             "STRICT RULES:\n"
             "1. Output ONLY component markup using registered components: "
-            "<Stack>, <Heading>, <KpiCard>, <DataTable>, <BarChart>, <LineChart>, <GraphView>, <Callout>.\n"
-            "2. Ground 100% of numeric values and names directly in the provided DATA block. Do NOT invent numbers.\n"
-            "3. Every BarChart and LineChart MUST include a nested summary attribute for GIGW 3.0 accessibility.\n"
-            "4. Return only the component markup without markdown fences."
+            "<Stack>, <Heading>, <KpiCard>, <DataTable>, <BarChart>, <LineChart>, <PieChart>, <GraphView>, <Callout>.\n"
+            "2. Match user chart intent: pie/donut/distribution/share -> <PieChart>; trend/history -> <LineChart>; compare/ranking -> <BarChart>; tabular -> <DataTable>.\n"
+            "3. Ground 100% of numeric values and names directly in the provided DATA block. Do NOT invent numbers.\n"
+            "4. Every BarChart, LineChart, and PieChart MUST include a nested summary attribute for GIGW 3.0 accessibility.\n"
+            "5. Return only the component markup without markdown fences."
         )
 
         user_content = (
