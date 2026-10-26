@@ -205,6 +205,7 @@ class LeagueTableArgs(BaseModel):
     model_config = ConfigDict(extra="forbid")
     division: Optional[str] = Field(default=None, description="Optional division filter (e.g. Konkan, Pune)")
     sort_by: Optional[str] = Field(default="composite_index", description="Metric to sort by: composite_index, volume, sentiment, crisis_sla")
+    view: Optional[str] = Field(default="bar", description="Preferred visual representation: 'bar', 'pie', 'donut', 'table'")
 
 
 def tool_league_table(principal: CopilotPrincipal, args: LeagueTableArgs) -> Dict[str, Any]:
@@ -228,7 +229,10 @@ def tool_league_table(principal: CopilotPrincipal, args: LeagueTableArgs) -> Dic
         division = principal.division or "Konkan"
 
     res = tool_query_all_36_districts(division=division, include_metrics=True, sort_by=args.sort_by or "composite_index")
-    return build_tool_response(res)
+    resp = build_tool_response(res)
+    if args.view:
+        resp["view"] = args.view
+    return resp
 
 
 class DistrictProfileArgs(BaseModel):

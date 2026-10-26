@@ -116,11 +116,13 @@ def match_fast_path(
         "leaderboard", "league", "rank", "top", "bottom", "score", "index", "performance",
         "गुणवत्ता", "क्रमवारी", "सर्वोत्तम", "रँकिंग", "तालिका"
     ]
-    if any(t in q_lower for t in table_triggers) or "district" in q_lower or "जिल्ह" in query:
-        args_l = LeagueTableArgs()
-        res_l = tool_league_table(principal, args_l)
+    if any(t in q_lower for t in table_triggers) or "district" in q_lower or "जिल्ह" in query or "division" in q_lower or "विभाग" in query:
+        preferred_view = "bar"
         if any(w in q_lower for w in ["pie", "donut", "breakdown", "share", "distribution", "वाटा", "विभागणी", "टक्केवारी"]):
-            res_l["view"] = "donut" if "donut" in q_lower else "pie"
+            preferred_view = "donut" if "donut" in q_lower else "pie"
+        args_l = LeagueTableArgs(view=preferred_view)
+        res_l = tool_league_table(principal, args_l)
+        res_l["view"] = preferred_view
         return "league_table", args_l.model_dump(), res_l
 
     return None
