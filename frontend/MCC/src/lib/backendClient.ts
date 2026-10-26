@@ -17,17 +17,27 @@ import { getServerDistricts, getServerIncidents, getServerOverviewMetrics, updat
  * with 'http://127.0.0.1:8000' as local fallback.
  */
 export function getBackendBaseUrl(): string {
-  const url = process.env.BACKEND_URL || process.env.FASTAPI_BACKEND_URL || 'http://127.0.0.1:8000';
+  if (typeof window !== 'undefined') {
+    return window.location.origin;
+  }
+  let url = (process.env.BACKEND_URL || process.env.FASTAPI_BACKEND_URL || 'http://127.0.0.1:8000').trim();
+  if (url && !url.startsWith('http://') && !url.startsWith('https://')) {
+    url = `https://${url}`;
+  }
   return url.replace(/\/$/, '');
 }
 
 /**
- * Builds a full target URL to the backend service using the bound URL.
+ * Builds a full target URL to the backend service using the bound URL safely.
  */
 export function getBackendEndpoint(endpointPath: string): URL {
-  const base = getBackendBaseUrl();
+  const base = getBackendBaseUrl() || 'http://127.0.0.1:8000';
   const cleanPath = endpointPath.startsWith('/') ? endpointPath.slice(1) : endpointPath;
-  return new URL(cleanPath, base + "/");
+  try {
+    return new URL(cleanPath, base.endsWith('/') ? base : base + '/');
+  } catch {
+    return new URL(`http://127.0.0.1:8000/${cleanPath}`);
+  }
 }
 
 export const FASTAPI_BACKEND_URL = process.env.BACKEND_URL || process.env.FASTAPI_BACKEND_URL || 'http://127.0.0.1:8000';

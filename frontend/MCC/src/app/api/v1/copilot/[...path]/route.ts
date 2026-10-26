@@ -465,42 +465,47 @@ function synthesizeCopilotQuery(userQuery: string) {
  */
 async function proxyToFastApi(
   request: NextRequest,
-  { params }: { params: Promise<{ path: string[] }> }
+  context: any
 ) {
-  const { path } = await params;
-  const subpath = path.join('/');
-  const targetUrl = getBackendEndpoint(`api/v1/copilot/${subpath}`).toString();
-
-  const backendToken = await resolveBackendToken(request);
-
-  const headers: Record<string, string> = {
-    'Accept': request.headers.get('accept') || 'application/json',
-  };
-
-  if (backendToken) {
-    headers['Authorization'] = `Bearer ${backendToken}`;
-  }
-
-  const contentType = request.headers.get('content-type');
-  if (contentType) {
-    headers['Content-Type'] = contentType;
-  }
-
-  const method = request.method;
-  let body: any = undefined;
+  let subpath = 'query';
   let userQuery = '';
 
-  if (method === 'POST') {
-    try {
-      const jsonBody = await request.json();
-      userQuery = (jsonBody?.query || '').trim();
-      body = JSON.stringify(jsonBody);
-    } catch {
-      body = undefined;
-    }
-  }
-
   try {
+    const rawParams = context?.params;
+    const resolvedParams = rawParams && typeof rawParams === 'object' && 'then' in rawParams
+      ? await rawParams
+      : (rawParams || {});
+    const pathArray = Array.isArray(resolvedParams.path) ? resolvedParams.path : [];
+    subpath = pathArray.join('/') || 'query';
+
+    const method = request.method;
+    let body: any = undefined;
+
+    if (method === 'POST') {
+      try {
+        const jsonBody = await request.json();
+        userQuery = (jsonBody?.query || '').trim();
+        body = JSON.stringify(jsonBody);
+      } catch {
+        body = undefined;
+      }
+    }
+
+    const targetUrl = getBackendEndpoint(`api/v1/copilot/${subpath}`).toString();
+    const backendToken = await resolveBackendToken(request);
+
+    const headers: Record<string, string> = {
+      'Accept': request.headers.get('accept') || 'application/json',
+    };
+
+    if (backendToken) {
+      headers['Authorization'] = `Bearer ${backendToken}`;
+    }
+
+    const contentType = request.headers.get('content-type');
+    if (contentType) {
+      headers['Content-Type'] = contentType;
+    }
     let finalBackendRes = await fetch(targetUrl, {
       method,
       headers,
@@ -617,21 +622,21 @@ async function proxyToFastApi(
 
 export async function GET(
   request: NextRequest,
-  context: { params: Promise<{ path: string[] }> }
+  context: any
 ) {
   return proxyToFastApi(request, context);
 }
 
 export async function POST(
   request: NextRequest,
-  context: { params: Promise<{ path: string[] }> }
+  context: any
 ) {
   return proxyToFastApi(request, context);
 }
 
 export async function DELETE(
   request: NextRequest,
-  context: { params: Promise<{ path: string[] }> }
+  context: any
 ) {
   return proxyToFastApi(request, context);
 }
