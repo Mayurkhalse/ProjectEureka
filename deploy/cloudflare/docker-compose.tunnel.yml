@@ -1,0 +1,28 @@
+version: "3.8"
+
+# ==============================================================================
+# Cloudflare Zero Trust Named Tunnel Container Service
+# ==============================================================================
+# To run alongside Project EUREKA / SAVI on a Linux VPS or Docker host:
+#
+# 1. Set CLOUDFLARE_TUNNEL_TOKEN in your .env file
+# 2. Launch with: docker compose -f deploy/cloudflare/docker-compose.tunnel.yml up -d
+# 3. Check logs: docker compose -f deploy/cloudflare/docker-compose.tunnel.yml logs -f
+
+services:
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: eureka-cloudflared-tunnel
+    restart: always
+    command: tunnel --no-autoupdate run
+    environment:
+      - TUNNEL_TOKEN=${CLOUDFLARE_TUNNEL_TOKEN}
+      - TUNNEL_TRANSPORT_PROTOCOL=http2
+      - TUNNEL_METRICS=0.0.0.0:2000
+    network_mode: host
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://127.0.0.1:2000/ready || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s

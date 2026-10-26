@@ -16,3 +16,9 @@ All 12 meeting changes are **100% complete** on branch `feature/meeting-changes`
 3. **Gemini Live Audio Transcription**:
    - Uses `GEMINI_TRANSCRIBE_MODEL` (`gemini-2.0-flash`) and main `GEMINI_API_KEY`.
    - `DemoProvider` automatically takes over when no key is supplied, ensuring seamless offline functionality.
+
+
+4. **Cloudflare Backend Persistent Domain & Ingress Finalization**:
+   - The Cloudflare Zero Trust named tunnel (eureka-backend, ID 9d8b1584-4581-49f6-ae5a-5ad8255868f3) is provisioned and connects via token authentication in scripts/run_cloudflare_tunnel.py and deploy/cloudflare/.
+   - Pending action for future discussion: Associate a registered public Top-Level Domain (e.g., eureka-mcc.com, eureka.gov.in, or a free static domain) in Cloudflare Zero Trust > Tunnels > eureka-backend > Routes (currently mapped to pi.eureka-mcc).
+   - Once a public domain is finalized, set BACKEND_URL=https://api.<domain> in Vercel project settings so Vercel edge routes route to the live backend permanently without manual URL rotation.

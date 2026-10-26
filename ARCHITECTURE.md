@@ -1566,12 +1566,12 @@ The production architecture bridges edge presentation with secure local compute 
 |            │                                                                                       |
 |            ▼ (Outbound HTTPS Requests over TLS 1.3)                                                |
 |  [Cloudflare Anycast Global Network]                                                               |
-|  • Edge Ingress URL: https://lists-going-combine-corpus.trycloudflare.com                           |
+|  • Edge Ingress URL: https://api.yourdomain.com (Persistent Subdomain via Zero Trust Tunnel)                           |
 |  • DDoS Protection, WAF, & Rate Limiting                                                           |
 |            │                                                                                       |
 |            ▼ (HTTP/2 Multiplexed Tunnel Connection)                                                |
 |  [Local Cloudflared Agent Process] (task-11929)                                                    |
-|  • Executable: npx cloudflared tunnel --edge-ip-version 4 --protocol http2                         |
+|  • Executable: python scripts/run_cloudflare_tunnel.py (or npx cloudflared tunnel run --token <TOKEN>)                         |
 |  • Target: http://127.0.0.1:8000                                                                   |
 |            │                                                                                       |
 |            ▼ (Internal Loopback on Host Machine)                                                   |

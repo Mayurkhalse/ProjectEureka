@@ -1589,7 +1589,7 @@ In mission-critical command centers, network interruptions between edge presenta
 
 ---
 
-### 12.9 Cloudflare Quick Tunnel & Hybrid Production Topology
+### 12.9 Cloudflare Persistent Named Tunnel & Hybrid Production Topology
 
 Project EUREKA combines globally distributed edge rendering with secure on-premise / private cloud neural execution:
 
@@ -1609,7 +1609,7 @@ Project EUREKA combines globally distributed edge rendering with secure on-premi
 |                       │                                                                            |
 |                       ▼ (Encrypted TLS Tunnel)                                                     |
 |         Cloudflare Edge Ingress Point                                                              |
-|         URL: https://lists-going-combine-corpus.trycloudflare.com                                  |
+|         URL: https://api.yourdomain.com (Persistent Subdomain via Zero Trust Tunnel)                                  |
 |                       │                                                                            |
 |                       ▼ (HTTP/2 Multiplexed Pipe)                                                  |
 |         Local Cloudflared Connector Agent                                                          |
@@ -1762,8 +1762,10 @@ uv run celery -A eureka.core.celery_app beat -l info
 # Step 4: Boot FastAPI Application Engine (Port 8000)
 uv run uvicorn eureka.api.main:app --host 127.0.0.1 --port 8000 --app-dir backend/src
 
-# Step 5: Start Cloudflare Tunnel (for public ingress / Vercel proxying)
-npx cloudflared tunnel --edge-ip-version 4 --protocol http2 --url http://127.0.0.1:8000
+# Step 5: Start Cloudflare Persistent Named Tunnel
+python scripts/run_cloudflare_tunnel.py
+# Or directly via token:
+# npx cloudflared tunnel --no-autoupdate run --token <CLOUDFLARE_TUNNEL_TOKEN>
 
 # Step 6: Start Next.js Maha-Command Center Frontend (Port 3000)
 cd frontend/MCC
