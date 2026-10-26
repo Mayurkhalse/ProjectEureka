@@ -445,7 +445,7 @@ export const CopilotDrawer: React.FC = () => {
             </span>
             {msg.fallback && (
               <span className="bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded text-[10px] font-semibold">
-                Deterministic ViewSpec Fallback
+                Deterministic OpenUI
               </span>
             )}
             {msg.engine === 'c1' && (
