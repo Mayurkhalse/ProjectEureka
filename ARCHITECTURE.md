@@ -609,42 +609,37 @@ sequenceDiagram
 
 ## 6. Mathematical Formulations (100-Point Composite Index)
 
-The scoring engine calculates performance over a sliding time window $W$ (default: 24 hours):
+The scoring engine calculates performance over a sliding time window $W$ (default: 24 hours) based on the authoritative 3-pillar model (ADR-005):
 
-$$\text{Composite Index Score} = S_{\text{vol}} + S_{\text{tat}} + S_{\text{sent}} + S_{\text{sla}} \quad \in [0.0, 100.0]$$
+$$\text{Composite Index Score} = S_{\text{vol}} + S_{\text{sent}} + S_{\text{sla}} \quad \in [0.0, 100.0]$$
 
-### Pillar 1: Volume ($S_{\text{vol}} \in [0, 25]$)
+*(Turnaround Time $S_{\text{tat}}$ has been retired from the composite index calculation per DGIPR Executive Directive and defaults to $0.0$.)*
+
+### Pillar 1: Volume ($S_{\text{vol}} \in [0, 35]$)
 Measures communication output and presence, saturating at 300 releases per window:
 
-$$S_{\text{vol}} = 25.0 \times \min\left(\frac{N_{\text{releases}}}{300}, 1.0\right)$$
+$$S_{\text{vol}} = 35.0 \times \min\left(\frac{N_{\text{releases}}}{300}, 1.0\right)$$
 
-### Pillar 2: Turnaround Speed ($S_{\text{tat}} \in [0, 25]$)
-Measures the latency between an event occurrence ($t_{\text{event}}$) and the official public communication ($t_{\text{pub}}$):
+### Turnaround Speed (TAT - Deprecated from Composite Score)
+Preserved solely for operational monitoring ($S_{\text{tat}} = 0.0$ in composite index):
+* Output Velocity Metric: $\%$ of press releases published with $\text{TAT} \le 60\text{ minutes}$.
 
-$$\overline{\Delta t} = \frac{1}{N} \sum_{i=1}^{N} (t_{\text{pub}, i} - t_{\text{event}, i}) \quad \text{(in minutes)}$$
-
-$$S_{\text{tat}} = \begin{cases} 
-25.0 & \text{if } \overline{\Delta t} \le 45 \\
-25.0 \times \left(1.0 - \frac{\overline{\Delta t} - 45}{120 - 45}\right) & \text{if } 45 < \overline{\Delta t} < 120 \\
-0.0 & \text{if } \overline{\Delta t} \ge 120 
-\end{cases}$$
-
-### Pillar 3: Sentiment ($S_{\text{sent}} \in [0, 25]$)
+### Pillar 2: Sentiment ($S_{\text{sent}} \in [0, 35]$)
 Evaluates public and media sentiment polarity using the Net Sentiment Index ($NSI$):
 
 $$NSI = \frac{C_{\text{positive}} - C_{\text{negative}}}{C_{\text{total\_classified}}} \quad \in [-1.0, 1.0]$$
 
-$$S_{\text{sent}} = \left(\frac{NSI + 1.0}{2.0}\right) \times 25.0$$
+$$S_{\text{sent}} = \left(\frac{NSI + 1.0}{2.0}\right) \times 35.0$$
 
-*(If $C_{\text{total\_classified}} = 0$, $NSI = 0.0$ and $S_{\text{sent}} = 12.5$)*
+*(If $C_{\text{total\_classified}} = 0$, $NSI = 0.0$ and $S_{\text{sent}} = 17.50$)*
 
-### Pillar 4: Crisis SLA ($S_{\text{sla}} \in [0, 25]$)
+### Pillar 3: Crisis SLA ($S_{\text{sla}} \in [0, 30]$)
 Measures the state's capacity to identify, refute, and fact-check rumors within a 90-minute SLA window:
 
 $$S_{\text{sla}} = \begin{cases}
-25.0 & \text{if } N_{\text{rumors}} = 0 \quad \text{\textbf{(Critical Division-by-Zero Protection)}} \\
-\left(\frac{N_{\text{refuted\_within\_90m}}}{N_{\text{rumors}}}\right) \times 25.0 & \text{if } N_{\text{rumors}} > 0
-\end{cases}$$
+30.0 & \text{if } N_{\text{rumors}} = 0 \quad \text{\textbf{(Critical Division-by-Zero Protection)}} \\
+30.0 \times \min\left(\frac{N_{\text{refuted\_within\_90m}}}{N_{\text{rumors}}}, 1.0\right) & \text{if } N_{\text{rumors}} > 0
+\end{cases}
 
 ---
 

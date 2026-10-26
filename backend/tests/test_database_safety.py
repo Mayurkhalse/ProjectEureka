@@ -20,6 +20,7 @@ from sqlalchemy.exc import InterfaceError, OperationalError, ProgrammingError
 
 from eureka.core.config import Settings, get_settings
 from eureka.core.database import (
+    check_sync_db_health,
     is_sqlite_fallback_allowed,
     sync_db_context,
 )
@@ -211,3 +212,106 @@ def test_non_connection_errors_not_swallowed(monkeypatch):
             with sync_db_context():
                 pass
         assert "non_existent_table" in str(exc_info.value)
+
+
+# --- 9. Production & Staging reject SQLite DATABASE_URL ---
+
+def test_production_rejects_sqlite_database_url():
+    """In production, prod, or staging, primary SQLite DATABASE_URL is strictly prohibited."""
+    for env in ("production", "prod", "staging"):
+        for sqlite_url in ("sqlite:///eureka.db", "sqlite://", "sqlite+aiosqlite:///prod.db"):
+            with pytest.raises(ValidationError) as exc_info:
+                Settings(ENVIRONMENT=env, DATABASE_URL=sqlite_url)
+            assert "strictly prohibited" in str(exc_info.value)
+            assert "PostgreSQL" in str(exc_info.value)
+
+
+def test_unsupported_database_url_scheme_rejected():
+    """Unsupported database schemes in DATABASE_URL must raise ValidationError."""
+    for scheme_url in ("mysql://root:pass@localhost/db", "oracle://scott:tiger@localhost/db", "http://example.com"):
+        with pytest.raises(ValidationError) as exc_info:
+            Settings(ENVIRONMENT="development", DATABASE_URL=scheme_url)
+        assert "Unsupported database scheme" in str(exc_info.value)
+
+
+def test_sqlite_database_url_in_allowed_environments():
+    """SQLite DATABASE_URL is only permitted in explicit development/test/demo/local environments."""
+    for env in ("development", "dev", "test", "demo", "local"):
+        s = Settings(ENVIRONMENT=env, DATABASE_URL="sqlite:///allowed.db")
+        assert s.DATABASE_URL == "sqlite:///allowed.db"
+
+    # Any unknown or non-whitelisted environment must reject SQLite
+    with pytest.raises(ValidationError) as exc_info:
+        Settings(ENVIRONMENT="unrecognized_env", DATABASE_URL="sqlite:///unrecognized.db")
+    assert "not permitted" in str(exc_info.value)
+
+
+def test_production_accepts_valid_postgresql_database_url():
+    """Production accepts valid PostgreSQL URLs with standard or driver-specific schemes."""
+    for pg_url in (
+        "postgresql://prod_user:prod_pass@10.0.0.1:5432/eureka_db",
+        "postgresql+asyncpg://prod_user:prod_pass@10.0.0.1:5432/eureka_db",
+        "postgresql+psycopg2://prod_user:prod_pass@10.0.0.1:5432/eureka_db",
+    ):
+        s = Settings(ENVIRONMENT="production", DATABASE_URL=pg_url)
+        assert s.ENVIRONMENT == "production"
+
+
+# --- 10. Database URL Driver Translation ---
+
+def test_database_url_driver_translation():
+    """Verifies bidirectional translation between async and sync driver schemes."""
+    # 1. Bare postgresql://
+    s1 = Settings(DATABASE_URL="postgresql://user:pass@127.0.0.1:5432/testdb")
+    assert s1.sync_database_url == "postgresql+psycopg2://user:pass@127.0.0.1:5432/testdb"
+    assert s1.async_database_url == "postgresql+asyncpg://user:pass@127.0.0.1:5432/testdb"
+
+    # 2. postgresql+asyncpg:// translates to +psycopg2 for sync
+    s2 = Settings(DATABASE_URL="postgresql+asyncpg://user:pass@127.0.0.1:5432/testdb")
+    assert s2.sync_database_url == "postgresql+psycopg2://user:pass@127.0.0.1:5432/testdb"
+    assert s2.async_database_url == "postgresql+asyncpg://user:pass@127.0.0.1:5432/testdb"
+
+    # 3. postgresql+psycopg2:// translates to +asyncpg for async
+    s3 = Settings(DATABASE_URL="postgresql+psycopg2://user:pass@127.0.0.1:5432/testdb")
+    assert s3.sync_database_url == "postgresql+psycopg2://user:pass@127.0.0.1:5432/testdb"
+    assert s3.async_database_url == "postgresql+asyncpg://user:pass@127.0.0.1:5432/testdb"
+
+    # 4. Bare sqlite:///
+    s4 = Settings(ENVIRONMENT="test", DATABASE_URL="sqlite:///eureka.db")
+    assert s4.sync_database_url == "sqlite:///eureka.db"
+    assert s4.async_database_url == "sqlite+aiosqlite:///eureka.db"
+
+    # 5. sqlite+aiosqlite:/// cleans +aiosqlite for sync
+    s5 = Settings(ENVIRONMENT="test", DATABASE_URL="sqlite+aiosqlite:///eureka.db")
+    assert s5.sync_database_url == "sqlite:///eureka.db"
+    assert s5.async_database_url == "sqlite+aiosqlite:///eureka.db"
+
+
+# --- 11. Synchronous health-check correctness ---
+
+def test_check_sync_db_health_fails_during_postgres_outage_despite_dev_fallback(monkeypatch):
+    """In development with fallback enabled, check_sync_db_health must report False if PostgreSQL is unreachable."""
+    monkeypatch.setenv("ENVIRONMENT", "development")
+    monkeypatch.setenv("ALLOW_SQLITE_FALLBACK", "true")
+    get_settings.cache_clear()
+
+    assert is_sqlite_fallback_allowed() is True
+
+    # Simulate unreachable primary PostgreSQL database on SyncSessionLocal
+    with patch("eureka.core.database.SyncSessionLocal") as mock_session_maker:
+        mock_session_maker.side_effect = OperationalError("connection to postgres:5432 failed", {}, None)
+
+        # Health check must verify the PRIMARY engine and NOT mask the failure with SQLite
+        is_healthy = check_sync_db_health()
+        assert is_healthy is False
+
+
+def test_check_sync_db_health_success_when_postgres_healthy():
+    """When PostgreSQL is healthy, check_sync_db_health returns True."""
+    with patch("eureka.core.database.SyncSessionLocal") as mock_session_maker:
+        mock_session = MagicMock()
+        mock_session.execute.return_value.scalar.return_value = 1
+        mock_session_maker.return_value = mock_session
+
+        assert check_sync_db_health() is True
+        mock_session.close.assert_called_once()

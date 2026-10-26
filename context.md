@@ -576,8 +576,8 @@ Project EUREKA produces **4 Core Operational Dossiers** tailored to distinct sta
 | ACTION REQUIRED BEFORE SLA BREACH:                                                                 |
 | 1. District Collector Beed must review pre-generated factual rebuttal on MCC Portal.               |
 | 2. Cryptographic sign-off required to authorize release.                                           |
-| 3. If refuted by 14:42 IST: Pillar 4 Score = 25.0 / 25.0.                                          |
-| 4. If unrefuted after 14:42 IST: Pillar 4 Score = 0.0 / 25.0 (Automatic Statewide Demotion).       |
+| 3. If refuted by 14:42 IST: Pillar 3 (Crisis SLA) Score = 30.0 / 30.0.                             |
+| 4. If unrefuted after 14:42 IST: Pillar 3 (Crisis SLA) Score = 0.0 / 30.0 (Automatic Demotion).   |
 +----------------------------------------------------------------------------------------------------+
 ```
 
@@ -837,7 +837,7 @@ flowchart LR
 | Persona / Role | Administrative Scope | Authentication Guard (`Role`) | Maha-Command Center (MCC) Views | Authorized System Actions | SLA & Escalation Accountability |
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | **Director General (DG) State Admin** | Statewide (All 36 Districts, 6 Divisions) | `ROLE_STATE_ADMIN` | Statewide Master HUD, 36-District League Table, Cross-Division Contagion Radar, Audit Ledger | • Override system-generated scores<br/>• Reassign fact-check tickets across districts<br/>• Configure statewide SLA thresholds<br/>• Issue inter-departmental inquiries | Accountable to Chief Secretary & Hon'ble Minister (IPR) for statewide communication cohesion. |
-| **District Collector / Magistrate (DM)** | District Specific (e.g., `MH-04` Thane) | `ROLE_DISTRICT_COLLECTOR` | District War Room HUD, 90-Minute Crisis Countdown Timer, Departmental TAT Tracker | • Cryptographically authorize crisis rebuttals<br/>• Sign off on official press statements<br/>• Request state-level fact-check assistance<br/>• View localized StGNN diffusion forecasts | Sole authority responsible for District Crisis SLA (Pillar 4 score: 25.0 vs 0.0 points). |
+| **District Collector / Magistrate (DM)** | District Specific (e.g., `MH-04` Thane) | `ROLE_DISTRICT_COLLECTOR` | District War Room HUD, 90-Minute Crisis Countdown Timer, Departmental TAT Tracker | • Cryptographically authorize crisis rebuttals<br/>• Sign off on official press statements<br/>• Request state-level fact-check assistance<br/>• View localized StGNN diffusion forecasts | Sole authority responsible for District Crisis SLA (Pillar 3 Crisis SLA score: 30.0 vs 0.0 points). |
 | **District Information Officer (DIO Desk)** | District Field Operations | `ROLE_DIO_DESK` | Field Ingestion Desk, Clipping Upload Portal, Fact-Check Ticket Queue, Local Media Directory | • Ingest official releases and circulars<br/>• Upload and annotate regional press clippings<br/>• Draft preliminary rebuttal copy for DM sign-off<br/>• Log local press conference transcripts | Accountable for Pillar 1 Volume saturation and sub-45 minute response time (Pillar 2 TAT). |
 | **CMO / Cabinet Observer** | Statewide Executive (Read-Only) | `ROLE_CABINET_OBSERVER` | Executive High-Level Briefing, 4 Executive Dossiers, Real-Time Crisis War Room | • View real-time statewide sentiment index<br/>• Inspect 6-hour predictive diffusion vectors<br/>• Export audited PDF dossiers for cabinet meetings<br/>• Drill down into historical district rankings | Zero operational input; provides real-time strategic awareness for the Chief Minister and Council of Ministers. |
 
@@ -907,7 +907,7 @@ All system prompts across Project EUREKA have been standardized, hardened, and s
 1. **Hermes Executive Orchestrator Prompt (`backend/src/eureka/hermes/orchestrator.py`):**
    * **Role:** Lead AI Media Governance & Incident Analyst for DGIPR Maharashtra.
    * **Scope:** 36 administrative districts (`MH-01` to `MH-36`) across 6 revenue divisions (Konkan, Pune, Nashik, Chhatrapati Sambhajinagar, Amravati, Nagpur).
-   * **4 Governance Pillars:** Information Volume (25 pts), Turnaround Time (30 pts), Net Sentiment Index (25 pts), and 90-Minute Crisis SLA (20 pts).
+   * **3 Governance Pillars:** Information Volume (35 pts), Net Sentiment Index (35 pts), and 90-Minute Crisis SLA (30 pts) (100 Points Total, TAT retired).
    * **Tool Access:** Strictly restricted to 4 allowlisted tools (`tool_query_all_36_districts`, `tool_translate_and_normalize`, `tool_stage_dm_rebuttal`, `tool_sync_neo4j_nodes`).
    * **Guardrail:** Non-negotiable prohibition on autonomous ticket sign-off or publishing.
 
@@ -1097,12 +1097,11 @@ Per DGIPR Executive Directive, Turnaround Time (TAT) is **retired from the compo
 * **Output Velocity Metric:** $\% \text{ of press releases published with TAT} \le 60\text{ minutes}$.
 * **Chronological Integrity Rule:**
   $$\text{If } T_{\text{published}} < T_{\text{event}} \implies \text{Falsified Record Flagged & Rejected by CSVAdapter}$$
-* **Performance Brackets:**
-  * $\Delta t \le 45\text{ min} \implies \text{TATScore} = 30.0$ (Gold standard).
-  * $\Delta t = 135\text{ min (2.25 hrs)} \implies \text{TATScore} = 30 \times e^{-0.5} \approx 18.20$.
-  * $\Delta t = 405\text{ min (6.75 hrs)} \implies \text{TATScore} = 30 \times e^{-2.0} \approx 4.06$.
+* **Operational Monitoring Brackets (Auxiliary Only):**
+  * $\Delta t \le 45\text{ min} \implies \text{Velocity Target Met}$ (Gold standard).
+  * $\Delta t > 120\text{ min} \implies \text{Operational Escalation Warning}$.
 
-##### 3. Net Sentiment Index (NSI) Pillar (Max: 25 Points)
+##### 3. Net Sentiment Index (NSI) Pillar (Max: 35 Points)
 The sentiment pillar maps public tone across regional news, citizen feedback, and media commentary using the MuRIL multilingual neural model. Each analyzed unit $i \in \{1, \dots, N\}$ receives a polarity classification:
 
 $$P_i \in \{-1\text{ (Negative)}, \; 0\text{ (Neutral)}, \; +1\text{ (Positive)}\}$$
@@ -1111,25 +1110,31 @@ The **Net Sentiment Index (NSI)** is computed as:
 
 $$\text{NSI} = \frac{N_{\text{pos}} - N_{\text{neg}}}{N_{\text{total}}} \quad \in [-1.0, \; +1.0]$$
 
-The NSI scalar is mapped linearly into the 25-point governance pillar:
+The NSI scalar is mapped linearly into the 35-point governance pillar:
 
-$$\text{SentimentScore} = 25 \times \left(\frac{\text{NSI} + 1.0}{2.0}\right)$$
+$$\text{SentimentScore} = 35.0 \times \left(\frac{\text{NSI} + 1.0}{2.0}\right)$$
 
-* For $\text{NSI} = +1.0$ (Unanimously positive coverage): $\text{SentimentScore} = 25.0$.
-* For $\text{NSI} = 0.0$ (Balanced/neutral civic tone): $\text{SentimentScore} = 12.5$.
+* For $\text{NSI} = +1.0$ (Unanimously positive coverage): $\text{SentimentScore} = 35.0$.
+* For $\text{NSI} = 0.0$ (Balanced/neutral civic tone): $\text{SentimentScore} = 17.50$.
 * For $\text{NSI} = -1.0$ (Severe civic dissatisfaction): $\text{SentimentScore} = 0.0$.
+*(If $N_{\text{total}} = 0$, neutral baseline $\text{NSI} = 0.0 \implies \text{SentimentScore} = 17.50$ pts)*
 
-##### 4. Crisis SLA & Rumor Containment Pillar (Max: 20 Points)
-The crisis pillar assesses whether active rumors or unrefuted viral misinformation tickets are lingering unaddressed. EUREKA applies a **zero-tolerance binary step function**:
+##### 4. Crisis SLA & Rumor Containment Pillar (Max: 30 Points)
+The crisis pillar assesses whether active rumors or unrefuted viral misinformation tickets are lingering unaddressed. EUREKA evaluates the proportion of rumors refuted within the 90-minute SLA window:
 
-$$\text{CrisisScore} = \begin{cases} 20.0, & \text{if } U_{\text{active}} = 0 \text{ and } \text{SLAViolations} = 0 \\ 0.0, & \text{if } U_{\text{active}} > 0 \text{ or } \text{SLAViolations} > 0 \end{cases}$$
+$$\text{CrisisScore} = 30.0 \times \min\left(\frac{N_{\text{refuted\_within\_90m}}}{N_{\text{rumors}}}, \; 1.0\right)$$
 
-Where $U_{\text{active}}$ is the count of open, unrefuted fact-check tickets assigned to the district exceeding the 90-minute containment SLA.
+* **Critical Division-by-Zero Protection:** If $N_{\text{rumors}} = 0$, the engine strictly awards the full $30.0$ points ($\text{CrisisScore} = 30.0$).
+* Resolution strictly $< 90.0$ minutes is required for containment compliance.
 
 ##### 5. 100-Point Composite Governance Index ($CI$)
-The overall district governance index is the exact sum of the four orthogonal pillars:
+The overall district governance index is the exact sum of the three orthogonal pillars (with TAT retired to 0.0):
 
-$$\text{CompositeIndex} = \text{VolumeScore} + \text{TATScore} + \text{SentimentScore} + \text{CrisisScore} \quad \in [0, \; 100]$$
+$$\text{CompositeIndex} = \text{VolumeScore} + \text{SentimentScore} + \text{CrisisScore} \quad \in [0.0, \; 100.0]$$
+
+Where:
+$$\text{VolumeScore} \in [0.0, \; 35.0], \quad \text{SentimentScore} \in [0.0, \; 35.0], \quad \text{CrisisScore} \in [0.0, \; 30.0]$$
+$$\text{Maximum Composite Total} = 35.0 + 35.0 + 30.0 = 100.0\text{ Points}$$
 
 ##### 6. Spatio-Temporal Contagion Risk (StGNN / A3TGCN)
 For the predictive radar (`forecast` tool), EUREKA models Maharashtra as a graph $\mathcal{G} = (\mathcal{V}, \mathcal{E})$, where $|\mathcal{V}| = 36$ districts, and $\mathcal{E}$ represents the 152 physical border adjacencies. The normalized graph Laplacian $\tilde{L}$ is computed as:
@@ -1412,7 +1417,7 @@ export function exportTelemetryReportPdf(options: TelemetryReportOptions = {}) {
     period = 'Last 7 Days',
   } = options;
 
-  // Constructs publication-grade print HTML with DGIPR Emblem, 4-Pillar Scorecards,
+  // Constructs publication-grade print HTML with DGIPR Emblem, 3-Pillar Scorecards,
   // and Infrastructure Latency Audits formatted specifically for A4 portrait vector printing.
   const printWindow = window.open('', '_blank', 'width=900,height=800');
   if (printWindow) {

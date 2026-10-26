@@ -237,10 +237,17 @@ async def check_async_db_health() -> bool:
 
 
 def check_sync_db_health() -> bool:
-    """Verify live PostgreSQL connectivity via psycopg2."""
+    """Verify live primary database connectivity via psycopg2 (or configured primary engine)."""
+    session = None
     try:
-        with sync_db_context() as session:
-            result = session.execute(text("SELECT 1"))
-            return result.scalar() == 1
+        session = SyncSessionLocal()
+        result = session.execute(text("SELECT 1"))
+        return result.scalar() == 1
     except Exception:
         return False
+    finally:
+        if session:
+            try:
+                session.close()
+            except Exception:
+                pass

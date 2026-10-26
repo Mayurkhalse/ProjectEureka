@@ -33,7 +33,30 @@ class Settings(BaseSettings):
     @model_validator(mode="after")
     def validate_fallback_safety(self) -> "Settings":
         env_lower = (self.ENVIRONMENT or "").strip().lower()
-        if env_lower in ("production", "prod", "staging") and self.ALLOW_SQLITE_FALLBACK:
+        is_prod_or_staging = env_lower in ("production", "prod", "staging")
+        allowed_sqlite_envs = ("development", "dev", "test", "demo", "local")
+
+        if self.DATABASE_URL:
+            db_url_clean = self.DATABASE_URL.strip()
+            db_url_lower = db_url_clean.lower()
+            if is_prod_or_staging and db_url_lower.startswith("sqlite"):
+                raise ValueError(
+                    f"SQLite DATABASE_URL '{db_url_clean}' is strictly prohibited in '{self.ENVIRONMENT}' environment. "
+                    "Production and staging configurations must use PostgreSQL."
+                )
+            if db_url_lower.startswith("sqlite") and env_lower not in allowed_sqlite_envs:
+                raise ValueError(
+                    f"SQLite DATABASE_URL '{db_url_clean}' is not permitted in '{self.ENVIRONMENT}' environment. "
+                    "SQLite is only permitted in development, dev, test, demo, or local environments."
+                )
+            supported_prefixes = ("postgresql://", "postgresql+", "sqlite://", "sqlite+")
+            if not any(db_url_lower.startswith(p) for p in supported_prefixes):
+                raise ValueError(
+                    f"Unsupported database scheme in DATABASE_URL: '{db_url_clean}'. "
+                    "Must be PostgreSQL or SQLite."
+                )
+
+        if is_prod_or_staging and self.ALLOW_SQLITE_FALLBACK:
             raise ValueError(
                 f"ALLOW_SQLITE_FALLBACK is strictly prohibited in '{self.ENVIRONMENT}' environment. "
                 "Production and staging configurations must fail fast if PostgreSQL is unavailable."
@@ -92,15 +115,16 @@ class Settings(BaseSettings):
     def async_database_url(self) -> str:
         """Construct PostgreSQL async connection URL for asyncpg or SQLite fallback."""
         if self.DATABASE_URL:
-            if self.DATABASE_URL.startswith("sqlite"):
-                if "+aiosqlite" in self.DATABASE_URL:
-                    return self.DATABASE_URL
-                return self.DATABASE_URL.replace("sqlite://", "sqlite+aiosqlite://", 1)
-            if self.DATABASE_URL.startswith("postgresql://") and "+asyncpg" not in self.DATABASE_URL:
-                return self.DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://", 1)
-            elif "+psycopg2" in self.DATABASE_URL:
-                return self.DATABASE_URL.replace("+psycopg2", "+asyncpg", 1)
-            return self.DATABASE_URL
+            db_url = self.DATABASE_URL.strip()
+            if db_url.startswith("sqlite"):
+                if "+aiosqlite" in db_url:
+                    return db_url
+                return db_url.replace("sqlite://", "sqlite+aiosqlite://", 1)
+            if db_url.startswith("postgresql://") and "+asyncpg" not in db_url:
+                return db_url.replace("postgresql://", "postgresql+asyncpg://", 1)
+            elif "+psycopg2" in db_url:
+                return db_url.replace("+psycopg2", "+asyncpg", 1)
+            return db_url
         return (
             f"postgresql+asyncpg://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@"
             f"{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
@@ -110,11 +134,16 @@ class Settings(BaseSettings):
     def sync_database_url(self) -> str:
         """Construct PostgreSQL sync connection URL for psycopg2/alembic or SQLite fallback."""
         if self.DATABASE_URL:
-            if self.DATABASE_URL.startswith("sqlite"):
-                return self.DATABASE_URL
-            if self.DATABASE_URL.startswith("postgresql://") and "+psycopg2" not in self.DATABASE_URL:
-                return self.DATABASE_URL.replace("postgresql://", "postgresql+psycopg2://", 1)
-            return self.DATABASE_URL
+            db_url = self.DATABASE_URL.strip()
+            if db_url.startswith("sqlite"):
+                if "+aiosqlite" in db_url:
+                    return db_url.replace("+aiosqlite", "", 1)
+                return db_url
+            if db_url.startswith("postgresql://") and "+psycopg2" not in db_url:
+                return db_url.replace("postgresql://", "postgresql+psycopg2://", 1)
+            elif "+asyncpg" in db_url:
+                return db_url.replace("+asyncpg", "+psycopg2", 1)
+            return db_url
         return (
             f"postgresql+psycopg2://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@"
             f"{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
