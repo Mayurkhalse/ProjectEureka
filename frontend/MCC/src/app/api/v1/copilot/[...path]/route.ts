@@ -547,7 +547,7 @@ function synthesizeCopilotQuery(userQuery: string) {
 
     components.push({
       component: 'Callout',
-      type: 'critical',
+      type: 'info',
       message: 'All district DIO desks and social intelligence crawlers are synchronized. Rebuttals authorized via DGIPR state protocol.',
     });
 

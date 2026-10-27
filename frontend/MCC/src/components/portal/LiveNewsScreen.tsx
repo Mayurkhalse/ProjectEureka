@@ -684,6 +684,17 @@ export const LiveNewsScreen: React.FC = () => {
                 autoPlay
                 loop
                 playsInline
+                preload="metadata"
+                onError={(e) => {
+                  const target = e.currentTarget;
+                  if (target && !target.dataset.recovering) {
+                    target.dataset.recovering = 'true';
+                    setTimeout(() => {
+                      target.load();
+                      target.play().catch(() => {});
+                    }, 2000);
+                  }
+                }}
                 className="w-full h-full object-cover cursor-pointer"
                 onClick={togglePlay}
               />

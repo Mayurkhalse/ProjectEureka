@@ -153,6 +153,17 @@ export const LiveStreaming: React.FC<LiveStreamingProps> = ({ layout = 'default'
                 loop
                 muted={isMuted}
                 playsInline
+                preload="metadata"
+                onError={(e) => {
+                  const target = e.currentTarget;
+                  if (target && !target.dataset.recovering) {
+                    target.dataset.recovering = 'true';
+                    setTimeout(() => {
+                      target.load();
+                      target.play().catch(() => {});
+                    }, 2000);
+                  }
+                }}
                 className="w-full h-full object-cover absolute inset-0 z-0 cursor-pointer"
                 onClick={togglePlayback}
               />
