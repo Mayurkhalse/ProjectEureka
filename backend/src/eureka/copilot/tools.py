@@ -10,12 +10,79 @@ MANDATORY CONSTRAINTS:
 """
 
 import json
+import time
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 from pydantic import BaseModel, Field, ConfigDict
 
-from eureka.hermes.agent_tools import tool_query_all_36_districts
+from eureka.hermes.agent_tools import (
+    tool_query_all_36_districts as _raw_query_all_36,
+    _query_36_districts_from_csv,
+)
+from functools import lru_cache
+from eureka.copilot.config import get_copilot_settings
 from eureka.scoring.scoring_engine import CompositeScoringEngine
+
+_db_offline: bool = False
+_db_last_checked: float = 0.0
+
+
+def _is_postgres_alive() -> bool:
+    """Fast probe with 1s connect timeout to verify if PostgreSQL is actually responding."""
+    global _db_offline, _db_last_checked
+    now = time.time()
+    if _db_offline and (now - _db_last_checked < 120.0):
+        return False
+    
+    settings = get_copilot_settings()
+    if settings.COPILOT_DEMO_MODE:
+        _db_offline = True
+        _db_last_checked = now
+        return False
+
+    import psycopg2
+    try:
+        from eureka.core.config import get_settings
+        core_settings = get_settings()
+        host = core_settings.POSTGRES_HOST or "127.0.0.1"
+        port = int(core_settings.POSTGRES_PORT or 5433)
+        user = core_settings.POSTGRES_USER or "savi_admin"
+        password = core_settings.POSTGRES_PASSWORD or "savi_secret"
+        dbname = core_settings.POSTGRES_DB or "savi_master"
+        
+        conn = psycopg2.connect(
+            host=host,
+            port=port,
+            user=user,
+            password=password,
+            dbname=dbname,
+            connect_timeout=1,
+        )
+        conn.close()
+        _db_offline = False
+        _db_last_checked = now
+        return True
+    except Exception:
+        _db_offline = True
+        _db_last_checked = now
+        return False
+
+
+def tool_query_all_36_districts(
+    division: Optional[str] = None,
+    include_metrics: bool = True,
+    sort_by: str = "composite_index",
+) -> Dict[str, Any]:
+    """Execute district query with fast offline caching to eliminate repeated TCP connection timeouts."""
+    if not _is_postgres_alive():
+        return _query_36_districts_from_csv(division=division, sort_by=sort_by)
+    try:
+        return _raw_query_all_36(division=division, include_metrics=include_metrics, sort_by=sort_by)
+    except Exception:
+        global _db_offline, _db_last_checked
+        _db_offline = True
+        _db_last_checked = time.time()
+        return _query_36_districts_from_csv(division=division, sort_by=sort_by)
 
 
 
@@ -72,6 +139,7 @@ for alias_tuple in DISTRICT_ALIASES:
     ALIAS_TO_DISTRICT_CODE[alias_txt] = code
 
 
+@lru_cache(maxsize=256)
 def normalize_district_code(code_or_name: str) -> Optional[str]:
     """Convert district code (e.g. MH-04) or English/Marathi name or alias into official MH-XX code."""
     if not code_or_name:
@@ -149,43 +217,54 @@ def extract_district_from_query(query: str) -> Optional[str]:
 
 def verify_district_authorization(principal: CopilotPrincipal, district_code: str) -> Optional[str]:
     """Verify if the authenticated principal is authorized to view data for the requested district.
-    
+
+    Delegates strictly to authoritative policy engine matrix (§5.7 of POLICYENGINE.md).
     Returns None if authorized; returns an error refusal string if unauthorized.
     """
-    role = principal.role.lower()
+    from eureka.copilot.policy.roles import to_role, Role
+    from eureka.copilot.policy.matrix import RULES, ScopeKind, allowed_districts, Intent
+    from eureka.copilot.policy.principal import PolicyPrincipal
 
-    # State Admin, State Director, & Cabinet Observer have statewide access
-    if any(k in role for k in ["admin", "observer", "dg_admin", "director general", "state_director", "state director"]):
-        return None
+    norm_dist = normalize_district_code(district_code) or district_code.upper()
+    role = to_role(principal.role)
+    if role is None:
+        role_lower = principal.role.lower()
+        if any(k in role_lower for k in ["admin", "observer", "dg_admin"]):
+            role = Role.STATE_ADMIN
+        elif any(k in role_lower for k in ["collector"]):
+            role = Role.DISTRICT_COLLECTOR
+        elif any(k in role_lower for k in ["dio"]):
+            role = Role.DIO_DESK
+        elif any(k in role_lower for k in ["division", "director_konkan"]):
+            role = Role.DIVISION_HEAD
 
-    # District Collector & DIO Desk are strictly bound to their assigned district
-    if any(k in role for k in ["collector", "dio_desk", "dio"]):
-        user_dist = (principal.district_code or "").upper()
-        if not user_dist or user_dist != district_code.upper():
-            return f"Access Denied: Officer '{principal.username}' ({principal.role}) is assigned to district '{user_dist}', and cannot inspect '{district_code}'."
-        return None
+    if role is None:
+        return "Access Denied: Unrecognized role clearance."
 
-    # Division Head / Director Konkan is strictly bound to districts within their division
-    if "director_konkan" in role or "division" in role or principal.division:
-        user_div = principal.division or "Konkan"
-        allowed_districts = DIVISION_DISTRICT_MAP.get(user_div, [])
-        if district_code.upper() not in [d.upper() for d in allowed_districts]:
-            return f"Access Denied: Officer '{principal.username}' ({principal.role}) is assigned to division '{user_div}', which does not include '{district_code}'."
-        return None
+    p = PolicyPrincipal(
+        username=principal.username,
+        role=role,
+        district_code=(principal.district_code or "").upper() if principal.district_code else None,
+        division=principal.division or ("Konkan" if "konkan" in principal.role.lower() else None),
+    )
 
-    return "Access Denied: Unrecognized role clearance."
+    kind = RULES.get(role, {}).get(Intent.PROFILE, ScopeKind.NONE)
+    allowed = allowed_districts(p, kind)
+    if norm_dist not in allowed:
+        if role in (Role.DISTRICT_COLLECTOR, Role.DIO_DESK):
+            return f"Access Denied: Officer '{principal.username}' ({principal.role}) is assigned to district '{principal.district_code}', and cannot inspect '{district_code}'."
+        elif role == Role.DIVISION_HEAD:
+            return f"Access Denied: Officer '{principal.username}' ({principal.role}) is assigned to division '{p.division}', which does not include '{district_code}'."
+        return f"Access Denied: Insufficient clearance for district '{district_code}'."
+
+    return None
 
 
 def get_source_status() -> str:
     """Returns 'live' if PostgreSQL is reachable, else 'demo' for CSV/SQLite offline fallback."""
-    try:
-        from eureka.core.database import sync_db_context
-        from sqlalchemy import text
-        with sync_db_context() as session:
-            session.execute(text("SELECT 1"))
-            return "live"
-    except Exception:
-        return "demo"
+    if _is_postgres_alive():
+        return "live"
+    return "demo"
 
 
 def build_tool_response(data: Any, status: Optional[str] = None) -> Dict[str, Any]:
@@ -364,31 +443,61 @@ class ActiveRumorsArgs(BaseModel):
 
 def tool_active_rumors(principal: CopilotPrincipal, args: ActiveRumorsArgs) -> Dict[str, Any]:
     """Retrieve unrefuted fact-check tickets and SLA countdowns."""
+    from eureka.copilot.policy.roles import to_role, Role
+    from eureka.copilot.policy.matrix import allowed_districts, ScopeKind, default_districts, Intent
+    from eureka.copilot.policy.principal import PolicyPrincipal
+
+    allowed_codes = None
     target_code = args.district_code
     if target_code:
         target_code = normalize_district_code(target_code) or target_code.upper()
         err = verify_district_authorization(principal, target_code)
         if err:
             return {"error": "PERMISSION_DENIED", "message": err, "as_of": datetime.now(timezone.utc).isoformat(), "source_status": "live"}
+        allowed_codes = {target_code}
     else:
-        # Enforce caller's scope if they are district-scoped
-        role = principal.role.lower()
-        if any(k in role for k in ["collector", "dio_desk", "dio"]):
-            target_code = (principal.district_code or "").upper()
+        role = to_role(principal.role)
+        role_lower = principal.role.lower()
+        if role is None:
+            if any(k in role_lower for k in ["admin", "observer", "dg_admin"]):
+                role = Role.STATE_ADMIN
+            elif any(k in role_lower for k in ["collector"]):
+                role = Role.DISTRICT_COLLECTOR
+            elif any(k in role_lower for k in ["dio"]):
+                role = Role.DIO_DESK
+            elif any(k in role_lower for k in ["division", "director_konkan"]):
+                role = Role.DIVISION_HEAD
+
+        p = PolicyPrincipal(
+            username=principal.username,
+            role=role or Role.STATE_ADMIN,
+            district_code=(principal.district_code or "").upper() if principal.district_code else None,
+            division=principal.division or ("Konkan" if "konkan" in role_lower else None),
+        )
+        if p.role == Role.DIVISION_HEAD:
+            allowed_codes = set(allowed_districts(p, ScopeKind.OWN_DIVISION))
+        elif p.role in (Role.DISTRICT_COLLECTOR, Role.DIO_DESK):
+            allowed_codes = {p.district_code} if p.district_code else set()
+        else:
+            allowed_codes = None  # Statewide
 
     from eureka.api.routers.hermes_router import _ACTIVE_PIPELINES, HermesDMPipelineManager
     tickets = []
-    for p in _ACTIVE_PIPELINES:
-        p_code = p["districtCode"].upper()
-        if target_code and p_code != target_code:
+    for p_ticket in _ACTIVE_PIPELINES:
+        p_code = (
+            normalize_district_code(p_ticket.get("district"))
+            or normalize_district_code(p_ticket.get("districtCode"))
+            or p_ticket.get("districtCode", "").upper()
+        )
+        if allowed_codes is not None and p_code not in allowed_codes:
             continue
-        ts = datetime.fromisoformat(p["event_timestamp"])
+        ts = datetime.fromisoformat(p_ticket["event_timestamp"])
         sla = HermesDMPipelineManager.calculate_sla_status(ts)
         tickets.append({
-            "ticket_id": p["id"],
-            "claim_text": p["claim_text"],
-            "district_code": p["districtCode"],
-            "status": p["status"],
+            "ticket_id": p_ticket["id"],
+            "claim_text": p_ticket["claim_text"],
+            "district_code": p_code,
+            "status": p_ticket["status"],
             "sla_remaining_formatted": sla["sla_remaining_formatted"],
             "urgency_level": sla["urgency_level"],
             "is_expired": sla["is_expired"],

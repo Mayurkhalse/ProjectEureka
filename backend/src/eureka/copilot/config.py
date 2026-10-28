@@ -65,6 +65,22 @@ class CopilotSettings(BaseSettings):
         description="Salt for user ID HMAC pseudonymization",
     )
 
+    # Policy Engine & Pipeline v2 Settings (§12 of POLICYENGINE.md)
+    COPILOT_PIPELINE: str = Field(default="v2", description="Copilot pipeline: 'v1', 'shadow', 'v2'")
+    COPILOT_V2_ROLES: str = Field(default="", description="Comma-separated roles served by v2 during canary")
+    COPILOT_DEMO_MODE: bool = Field(default=False, description="Enable demo mode for synthetic/heuristic data")
+    COPILOT_PLANNER_MODE: str = Field(default="parser_then_llm", description="'parser_only' or 'parser_then_llm'")
+    COPILOT_NARRATOR_MODE: str = Field(default="off", description="'off' or 'prose'")
+    COPILOT_VALIDATE_DETERMINISTIC: bool = Field(default=True, description="Validate ViewSpec deterministic output")
+    COPILOT_MAX_OPS: int = Field(default=6, description="Hard cap on operations per request")
+    COPILOT_MAX_QUERY_CHARS: int = Field(default=1000, description="Input query length cap")
+    COPILOT_REQ_RATE_LIMIT_USER_PER_MIN: int = Field(default=30, description="Per-principal limiter at router")
+    COPILOT_TOOL_TIMEOUT_SECONDS: float = Field(default=8.0, description="Per-tool execution timeout in executor")
+    COPILOT_REQUEST_DEADLINE_SECONDS: float = Field(default=30.0, description="Whole-request deadline")
+    COPILOT_SSE_HEARTBEAT_SECONDS: float = Field(default=10.0, description="SSE heartbeat interval")
+    COPILOT_PEER_VISIBILITY: str = Field(default="none", description="'none' or 'division_aggregate'")
+    COPILOT_DB_READONLY_URL: Optional[str] = Field(default=None, description="Read-only DSN for tool queries")
+
     def get_effective_gemini_key(self) -> Optional[str]:
         """Return the copilot Gemini key, isolated strictly to copilot and dev studio keys."""
         key = self.OPENUI_COPILOT_GEMINI_API_KEY or os.getenv("GOOGLE_STUDIO_API_KEY")

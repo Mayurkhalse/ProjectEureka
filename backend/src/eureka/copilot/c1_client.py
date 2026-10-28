@@ -233,7 +233,7 @@ class C1Client:
             "Your task is to transform verified, governed tool data into clean visual UI specifications. "
             "STRICT RULES:\n"
             "1. Output ONLY component markup using registered components: "
-            "<Stack>, <Heading>, <KpiCard>, <DataTable>, <BarChart>, <LineChart>, <PieChart>, <GraphView>, <Callout>.\n"
+            "<Heading>, <KpiCard>, <DataTable>, <BarChart>, <LineChart>, <PieChart>, <GraphView>, <Callout>, <Text>.\n"
             "2. Match user chart intent: pie/donut/distribution/share -> <PieChart>; trend/history -> <LineChart>; compare/ranking -> <BarChart>; tabular -> <DataTable>.\n"
             "3. Ground 100% of numeric values and names directly in the provided DATA block. Do NOT invent numbers.\n"
             "4. Every BarChart, LineChart, and PieChart MUST include a nested summary attribute for GIGW 3.0 accessibility.\n"

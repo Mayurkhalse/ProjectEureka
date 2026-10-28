@@ -45,6 +45,9 @@ EMAIL_PATTERN = re.compile(r'[\w\.-]+@[\w\.-]+\.\w+')
 PHONE_PATTERN = re.compile(r'\b(?:\+?\d{1,3}[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}\b')
 NUMERIC_STAT_PATTERN = re.compile(r'\b\d+(?:\.\d+)?(?:\s*%)?\b')
 
+# Module-level set tracking active async background ingestion tasks (§9.5)
+_background_memory_tasks: set[asyncio.Task] = set()
+
 
 def pseudonymize_user_id(username: str, secret_salt: Optional[str] = None) -> str:
     """Derive an irreversible 32-character HMAC pseudonym from username."""
@@ -69,10 +72,17 @@ def is_allowed_preference(text: str) -> bool:
         logger.info("Dropping memory containing incident/rumor text: %s", text[:30])
         return False
 
-    # Must contain at least one recognized presentation preference topic
+    # Reject statistics, 3+ digit numbers, or percentage literals (§9.5)
+    # Small single/double digits (e.g. "top 5") remain permitted
+    if re.search(r"\b\d{3,}\b|\b\d+(?:\.\d+)?\s*%", text):
+        logger.info("Dropping memory containing numeric statistics: %s", text[:30])
+        return False
+
+    # Must contain at least one recognized presentation preference topic as a WHOLE TOKEN (§9.5)
+    # Prevents false-positives like 'Baramati' matching 'bar' or 'deadline' matching 'line'
     text_lower = text.lower()
-    has_allowed_keyword = any(k in text_lower for k in ALLOWED_TOPIC_KEYWORDS)
-    if not has_allowed_keyword:
+    keyword_pattern = r"\b(?:" + "|".join(re.escape(k) for k in ALLOWED_TOPIC_KEYWORDS) + r")\b"
+    if not re.search(keyword_pattern, text_lower):
         logger.info("Dropping memory lacking presentation preference keywords: %s", text[:30])
         return False
 
@@ -86,6 +96,10 @@ class CopilotMemoryManager:
         self.settings = get_copilot_settings()
         self._mem0_instance = None
         self._init_failed = False
+
+    def is_enabled(self) -> bool:
+        """Check if memory management is enabled in settings."""
+        return bool(self.settings.COPILOT_MEMORY_ENABLED)
 
     def _get_mem0(self):
         """Lazy initializer for Mem0 configured with Thesys Embedder & Qdrant."""
@@ -213,8 +227,10 @@ class CopilotMemoryManager:
             except Exception as e:
                 logger.warning("Mem0 background add failed: %s", e)
 
-        # Launch non-blocking background task
-        asyncio.create_task(_do_add())
+        # Launch non-blocking background task with strong reference tracking (§9.5)
+        task = asyncio.create_task(_do_add())
+        _background_memory_tasks.add(task)
+        task.add_done_callback(_background_memory_tasks.discard)
 
     async def get_all_user_memories(self, username: str) -> List[Dict[str, Any]]:
         """Retrieve all stored memories for the authenticated officer."""
@@ -247,11 +263,17 @@ class CopilotMemoryManager:
             return []
 
     async def delete_user_memory(self, username: str, memory_id: str) -> bool:
-        """Delete a single specific preference memory."""
+        """Delete a single specific preference memory with ownership verification (anti-IDOR §9.5)."""
         pseudo_id = pseudonymize_user_id(username)
         mem = self._get_mem0()
         if not mem:
             return True
+
+        # Anti-IDOR: Check that the memory actually belongs to this caller
+        owned = await self.get_all_user_memories(username)
+        if not any(m.get("id") == memory_id for m in owned):
+            logger.warning("Unauthorized memory delete attempt: user %s does not own memory %s", username, memory_id)
+            return False
 
         try:
             loop = asyncio.get_running_loop()

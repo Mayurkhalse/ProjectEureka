@@ -63,11 +63,24 @@ def validate_props_and_security(markup: str) -> Tuple[bool, List[str]]:
     if re.search(r'=["\'][^"\']*(?:https?://|ftp://|javascript:|data:)', markup, re.IGNORECASE):
         errors.append("SECURITY_VIOLATION: Output contains forbidden external URL schema in attributes.")
 
-    # 3. Check attribute length caps (> 600 chars in single prop)
-    attr_matches = re.findall(r'[a-zA-Z0-9_]+=["\']([^"\']*)["\']', markup)
-    for val in attr_matches:
-        if len(val) > 600:
-            errors.append(f"SECURITY_VIOLATION: Attribute value exceeds max length cap ({len(val)} > 600).")
+    # 3. Check attribute length caps via state-machine scanner (§8.5 #2)
+    from eureka.copilot.response.markup_scan import (
+        scan_markup,
+        TEXT_PROPS,
+        DATA_PROPS,
+        MAX_TEXT_PROP_CHARS,
+        MAX_DATA_PROP_CHARS,
+    )
+    tags = scan_markup(markup)
+    for tag in tags:
+        for attr_name, val in tag.attributes.items():
+            attr_lower = attr_name.lower()
+            if attr_lower in DATA_PROPS:
+                if len(val) > MAX_DATA_PROP_CHARS:
+                    errors.append(f"SECURITY_VIOLATION: Data attribute '{attr_name}' exceeds cap ({len(val)} > {MAX_DATA_PROP_CHARS}).")
+            else:
+                if len(val) > MAX_TEXT_PROP_CHARS:
+                    errors.append(f"SECURITY_VIOLATION: Text attribute '{attr_name}' exceeds cap ({len(val)} > {MAX_TEXT_PROP_CHARS}).")
 
     return len(errors) == 0, errors
 
@@ -120,7 +133,6 @@ STRICT SAFETY & DATA CONSTRAINTS:
 1. You have access ONLY to governed read-only tools. NEVER invent, hallucinate, or estimate numbers, ranks, percentages, or dates.
 2. Every number, score, or count you display MUST come directly from the tool outputs.
 3. You must output valid OpenUI Lang markup using ONLY the following registered components:
-   - <Stack direction="vertical|horizontal"> ... </Stack>
    - <KpiCard title="..." value="..." unit="..." delta=... status="positive|negative|neutral|critical" />
    - <DataTable columns="..." rows="..." caption="..." />
    - <BarChart title="..." xKey="..." yKey="..." data="..."> <Text content="..." /> <DataTable ... /> </BarChart>
@@ -146,6 +158,7 @@ def extract_all_numbers(data: Any) -> Set[float]:
         for v in data.values():
             numbers.update(extract_all_numbers(v))
     elif isinstance(data, list):
+        numbers.add(float(len(data)))
         for item in data:
             numbers.update(extract_all_numbers(item))
     elif isinstance(data, str):
@@ -162,25 +175,25 @@ def extract_all_numbers(data: Any) -> Set[float]:
 
 def extract_numbers_from_openui(markup: str) -> List[float]:
     """Extract numeric literals from generated OpenUI attributes and content after numeral normalization."""
+    from eureka.copilot.response.markup_scan import extract_numbers_from_markup
     clean_markup = normalize_numerals_and_text(markup)
-    numbers = []
-    # Match value="..." or value=...
+    # Extract using both scanner and attribute passes to ensure full coverage
+    scanned = extract_numbers_from_markup(clean_markup)
+    # Also extract value and delta for legacy compatibility
     val_matches = re.findall(r'value=["\']?(-?\d+(?:\.\d+)?)["\']?', clean_markup)
     for m in val_matches:
         try:
-            numbers.append(round(float(m), 2))
+            scanned.add(float(m))
         except ValueError:
             pass
-    
-    # Match delta=...
     delta_matches = re.findall(r'delta=["\']?(-?\d+(?:\.\d+)?)["\']?', clean_markup)
     for m in delta_matches:
         try:
-            numbers.append(round(float(m), 2))
+            scanned.add(float(m))
         except ValueError:
             pass
 
-    return numbers
+    return [round(n, 4) for n in scanned]
 
 
 def validate_openui_output(
@@ -221,10 +234,10 @@ def validate_openui_output(
                     f"ACCESSIBILITY_VIOLATION: <{c_tag}> must include both a text summary and an accessible <DataTable /> alternative."
                 )
 
-    # 4. Strict Number Grounding (No arbitrary constant whitelist)
+    # 4. Strict Number Grounding (No arbitrary constant whitelist, 0.005 tolerance per §8.5 #4)
     allowed_numbers = set()
     for res in tool_results:
-        t_data = res.get("data", res)
+        t_data = res.get("data", res) if isinstance(res, dict) else res
         allowed_numbers.update(extract_all_numbers(t_data))
     
     # 0.0 is permissible as a baseline/zero delta
@@ -232,9 +245,11 @@ def validate_openui_output(
 
     markup_numbers = extract_numbers_from_openui(markup)
     for num in markup_numbers:
-        matched = any(abs(num - allowed) < 0.05 for allowed in allowed_numbers)
+        matched = any(abs(num - allowed) <= 0.005 for allowed in allowed_numbers)
         if not matched:
             errors.append(f"FABRICATED_NUMBER: Literal '{num}' was found in OpenUI markup but does not exist in tool data.")
+
+    return len(errors) == 0, errors
 
     return len(errors) == 0, errors
 

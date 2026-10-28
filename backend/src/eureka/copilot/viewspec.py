@@ -6,6 +6,7 @@ Serves as:
 3. Fully compliant with GIGW 3.0 & UX4G accessibility (every chart/graph includes text summary and table alternative).
 """
 
+import re
 from typing import Any, Dict, List, Literal, Optional, Union
 from pydantic import BaseModel, Field, ConfigDict
 
@@ -132,8 +133,33 @@ class ViewSpec(BaseModel):
         """Render the ViewSpec into valid OpenUI Lang syntax for streaming/rendering."""
         lines = []
         for comp in self.components:
-            lines.append(render_component_to_openui(comp))
-        return "\n\n".join(lines)
+            rendered = render_component_to_openui(comp)
+            if rendered:
+                lines.append(rendered)
+        raw_markup = "\n\n".join(lines)
+        return sanitize_markup_for_frontend(raw_markup)
+
+
+def sanitize_markup_for_frontend(markup: str) -> str:
+    """Sanitize OpenUI markup for frontend CopilotDrawer parser:
+    1. Unwraps <Stack> tags so child components render at top level without raw <Stack> code blocks.
+    2. Converts raw markdown headings (e.g. ## Heading) into <Heading level=... text=... /> tags.
+    """
+    if not markup:
+        return ""
+    # 1. Unwrap <Stack ...> and </Stack>
+    clean = re.sub(r'<\s*Stack\b[^>]*>', '', markup)
+    clean = re.sub(r'<\s*/\s*Stack\s*>', '', clean)
+
+    # 2. Convert markdown headers if present
+    def _header_sub(m):
+        hashes = m.group(1)
+        title = m.group(2).strip().replace('"', '&quot;')
+        level = len(hashes)
+        return f'<Heading level="{level}" text="{title}" />'
+
+    clean = re.sub(r'^(#{1,4})\s+(.+)$', _header_sub, clean, flags=re.MULTILINE)
+    return clean.strip()
 
 
 def render_component_to_openui(comp: AnyComponentSpec) -> str:
@@ -142,27 +168,32 @@ def render_component_to_openui(comp: AnyComponentSpec) -> str:
 
     if c_type == "Heading":
         h = comp  # type: HeadingSpec
-        prefix = "#" * h.level
-        return f"{prefix} {h.text}"
+        safe_text = h.text.replace('"', '&quot;')
+        return f'<Heading level="{h.level}" text="{safe_text}" />'
 
     if c_type == "Text":
         t = comp  # type: TextSpec
-        return t.content
+        safe_content = t.content.replace('"', '&quot;')
+        return f'<Text content="{safe_content}" />'
 
     if c_type == "Callout":
         c = comp  # type: CalloutSpec
-        return f'<Callout type="{c.type}" message="{c.message}" />'
+        safe_msg = c.message.replace('"', '&quot;')
+        return f'<Callout type="{c.type}" message="{safe_msg}" />'
 
     if c_type == "KpiCard":
         k = comp  # type: KpiCardSpec
-        props = [f'title="{k.title}"', f'value="{k.value}"']
+        safe_title = k.title.replace('"', '&quot;')
+        props = [f'title="{safe_title}"', f'value="{k.value}"']
         if k.unit:
-            props.append(f'unit="{k.unit}"')
+            safe_unit = k.unit.replace('"', '&quot;')
+            props.append(f'unit="{safe_unit}"')
         if k.delta is not None:
             props.append(f'delta={k.delta}')
         props.append(f'status="{k.status}"')
         if k.caption:
-            props.append(f'caption="{k.caption}"')
+            safe_caption = k.caption.replace('"', '&quot;')
+            props.append(f'caption="{safe_caption}"')
         return f"<KpiCard {' '.join(props)} />"
 
     if c_type == "DataTable":
@@ -217,8 +248,8 @@ def render_component_to_openui(comp: AnyComponentSpec) -> str:
 
     if c_type == "Stack":
         st = comp  # type: StackSpec
-        children_rendered = "\n  ".join(render_component_to_openui(child) for child in st.children)
-        return f'<Stack direction="{st.direction}">\n  {children_rendered}\n</Stack>'
+        rendered_children = [render_component_to_openui(child) for child in st.children]
+        return "\n\n".join(r for r in rendered_children if r)
 
     return ""
 
@@ -227,7 +258,7 @@ class ViewSpecBuilder:
     """Builds authoritative, zero-hallucination ViewSpecs directly from governed tool data."""
 
     @staticmethod
-    def build_from_tool_result(tool_name: str, tool_result: Dict[str, Any], fallback: bool = False) -> ViewSpec:
+    def build_from_tool_result(tool_name: str, tool_result: Dict[str, Any], fallback: bool = False, language: str = "en") -> ViewSpec:
         as_of = tool_result.get("as_of", "2026-10-19T00:00:00Z")
         status = tool_result.get("source_status", "live")
         data = tool_result.get("data", {})
@@ -320,19 +351,80 @@ class ViewSpecBuilder:
                 components=components,
             )
 
+        if tool_name == "pillar_breakdown" and data.get("pillar"):
+            d_name = data.get("name_en") or data.get("district_name") or "District"
+            d_code = data.get("district_code", "MH-XX")
+            p_key = str(data.get("pillar", "pillar")).lower().strip()
+            p_score = float(data.get("score", 0.0))
+            raw = data.get("raw_metrics", {})
+            max_pts = 30 if p_key == "crisis_sla" else 35
+            p_display = "Crisis SLA" if p_key == "crisis_sla" else p_key.replace("_", " ").title()
+
+            components: List[AnyComponentSpec] = [
+                HeadingSpec(level=2, text=f"{d_name} — {p_display} Analysis"),
+            ]
+
+            if p_key == "crisis_sla":
+                act_rumors = raw.get("active_crisis_tickets", 0)
+                if act_rumors > 0:
+                    expl = (
+                        f"Explanation: {d_name}'s Crisis SLA score is {p_score}/{max_pts} (critical) "
+                        f"due to {act_rumors} active rumor ticket(s) currently awaiting verification within the 90-minute SLA window."
+                    )
+                else:
+                    expl = f"Explanation: {d_name}'s Crisis SLA score is {p_score}/{max_pts} with all fact-check tickets resolved within SLA."
+
+                components.append(CalloutSpec(type="critical" if act_rumors > 0 else "success", message=expl))
+                components.append(StackSpec(direction="horizontal", children=[
+                    KpiCardSpec(title="Crisis SLA Score", value=p_score, unit=f"/{max_pts}", status="critical" if p_score < 20 else "positive", caption="Pillar Assessment"),
+                    KpiCardSpec(title="Active Crisis Rumors", value=act_rumors, status="critical" if act_rumors > 0 else "positive", caption="Direct SLA Penalty Factor"),
+                ]))
+                components.append(DataTableSpec(
+                    columns=["Metric", "Value", "Benchmark", "Impact on Score"],
+                    rows=[
+                        {"Metric": "Active Crisis Rumors", "Value": str(act_rumors), "Benchmark": "0", "Impact on Score": f"-{(max_pts - p_score):.1f} pts (SLA queue penalty)" if act_rumors > 0 else "Full Score"},
+                        {"Metric": "Official Releases", "Value": str(raw.get("total_releases", 0)), "Benchmark": "200+", "Impact on Score": "Information Volume factor"},
+                        {"Metric": "Net Sentiment", "Value": f"{raw.get('net_sentiment', 0):.2f}", "Benchmark": "0.60+", "Impact on Score": "Public mood factor"},
+                    ],
+                    caption=f"Crisis SLA Factor Decomposition for {d_name} ({d_code})",
+                ))
+            else:
+                components.append(CalloutSpec(type="info", message=f"{d_name}'s {p_display} score is {p_score}/{max_pts} based on governed media telemetry."))
+                components.append(KpiCardSpec(title=f"{p_display} Score", value=p_score, unit=f"/{max_pts}", status="positive" if p_score >= 25 else "neutral"))
+
+            return ViewSpec(
+                title=f"{d_name} ({d_code}): {p_display}",
+                as_of=as_of,
+                source_status=status,
+                district_code=d_code,
+                fallback=fallback,
+                components=components,
+            )
+
         if tool_name in ("district_profile", "pillar_breakdown"):
             d_name = data.get("name_en") or data.get("district_name") or "District"
             d_code = data.get("district_code", "MH-XX")
             score = data.get("composite_index", 0.0)
             pillars = data.get("pillars", {})
             raw = data.get("raw_metrics", {})
+            rank = data.get("rank")
 
             kpis = [
                 KpiCardSpec(title="Composite Index", value=score, unit="/100", status="positive" if score >= 75 else "neutral"),
+            ]
+            if rank:
+                kpis.append(KpiCardSpec(
+                    title="Statewide Rank",
+                    value=f"#{rank}",
+                    unit="of 36",
+                    status="negative" if rank > 25 else ("positive" if rank <= 10 else "neutral"),
+                    caption="Maharashtra Ranking",
+                ))
+            kpis.extend([
                 KpiCardSpec(title="Volume Pillar", value=pillars.get("volume", 0), unit="/35"),
                 KpiCardSpec(title="Sentiment Pillar", value=pillars.get("sentiment", 0), unit="/35"),
                 KpiCardSpec(title="Crisis SLA Pillar", value=pillars.get("crisis_sla", 0), unit="/30", status="critical" if raw.get("active_crisis_tickets", 0) > 0 else "positive"),
-            ]
+            ])
 
             pillar_rows = [
                 {"Pillar": "Information Volume", "Score": pillars.get("volume", 0), "Max": 35, "Detail": f"{raw.get('total_releases', 0)} official releases"},
@@ -346,18 +438,51 @@ class ViewSpecBuilder:
                 caption=f"3-Pillar Breakdown for {d_name} ({d_code})",
             )
 
+            components = [
+                HeadingSpec(level=2, text=f"{d_name} ({data.get('name_mr', '')}) — Performance Dossier"),
+            ]
+
+            # Explanation of rank / score
+            if rank:
+                c_vol = pillars.get("volume", 0)
+                c_sent = pillars.get("sentiment", 0)
+                c_sla = pillars.get("crisis_sla", 0)
+                act_rumors = raw.get("active_crisis_tickets", 0)
+
+                if rank > 20:
+                    contributors = []
+                    if c_sla < 20:
+                        contributors.append(f"Crisis SLA ({c_sla}/30 with {act_rumors} active rumor(s))")
+                    if c_vol < 25:
+                        contributors.append(f"Information Volume ({c_vol}/35 with {raw.get('total_releases', 0)} releases)")
+                    if c_sent < 25:
+                        contributors.append(f"Net Sentiment ({c_sent}/35 with {raw.get('net_sentiment', 0):.2f} NSI)")
+                    contrib_str = " and ".join(contributors) if contributors else f"a Composite Index of {score}/100"
+
+                    expl_callout = CalloutSpec(
+                        type="info",
+                        message=f"Rank Explanation: {d_name} is currently ranked #{rank} of 36 in Maharashtra with a Composite Index of {score}/100. Its standing is primarily impacted by {contrib_str}."
+                    )
+                else:
+                    expl_callout = CalloutSpec(
+                        type="info",
+                        message=f"Rank Explanation: {d_name} is ranked #{rank} of 36 in Maharashtra with a Composite Index of {score}/100, reflecting strong overall media governance performance."
+                    )
+                components.append(expl_callout)
+
+            components.extend([
+                StackSpec(direction="horizontal", children=kpis[:3]),
+                StackSpec(direction="horizontal", children=kpis[3:]),
+                table_spec,
+            ])
+
             return ViewSpec(
                 title=f"District Profile: {d_name} ({d_code})",
                 as_of=as_of,
                 source_status=status,
                 district_code=d_code,
                 fallback=fallback,
-                components=[
-                    HeadingSpec(level=2, text=f"{d_name} ({data.get('name_mr', '')}) — Performance Dossier"),
-                    StackSpec(direction="horizontal", children=kpis[:3]),
-                    StackSpec(direction="horizontal", children=kpis[3:]),
-                    table_spec,
-                ],
+                components=components,
             )
 
         if tool_name == "active_rumors":
@@ -447,6 +572,111 @@ class ViewSpecBuilder:
                 ],
             )
 
+        if tool_name == "compare_districts":
+            districts = data.get("districts", []) if isinstance(data, dict) else (data if isinstance(data, list) else [])
+            chart_data = [{"district": d.get("name_en", d.get("district_code", "")), "score": d.get("composite_index", 0.0)} for d in districts]
+            tbl_rows = []
+            for d in districts:
+                pillars = d.get("pillars", {})
+                tbl_rows.append({
+                    "District": f"{d.get('name_en', '')} ({d.get('district_code', '')})",
+                    "Score": d.get("composite_index", 0.0),
+                    "Volume": pillars.get("volume", 0.0),
+                    "Sentiment": pillars.get("sentiment", 0.0),
+                    "Crisis SLA": pillars.get("crisis_sla", 0.0),
+                })
+            tbl_spec = DataTableSpec(
+                columns=["District", "Score", "Volume", "Sentiment", "Crisis SLA"],
+                rows=tbl_rows,
+                caption="Multi-District Comparative Index Breakdown",
+            )
+            chart_spec = BarChartSpec(
+                title="Cross-District Governance Index Comparison",
+                x_key="district",
+                y_key="score",
+                data=chart_data,
+                text_summary=f"Comparative performance evaluation across {len(districts)} administrative districts.",
+                table_alternative=tbl_spec,
+            )
+            return ViewSpec(
+                title="District Comparative Analysis",
+                as_of=as_of,
+                source_status=status,
+                fallback=fallback,
+                components=[
+                    HeadingSpec(level=2, text="Inter-District Governance Comparison"),
+                    chart_spec,
+                    tbl_spec,
+                ],
+            )
+
+        if tool_name == "forecast":
+            diff_risk = data.get("diffusion_risk_index", 0.0)
+            velocity = data.get("spread_velocity", "MODERATE")
+            contagion = data.get("predicted_contagion_districts", [])
+            kpis = [
+                KpiCardSpec(title="Diffusion Risk Index", value=diff_risk, unit="/1.0", status="critical" if diff_risk >= 0.7 else "neutral"),
+                KpiCardSpec(title="Predicted Spread Velocity", value=velocity, status="critical" if velocity == "HIGH" else "neutral"),
+            ]
+            rows = [{"Contagion District": c, "Risk Horizon": "6-Hour Horizon"} for c in contagion]
+            tbl_spec = DataTableSpec(columns=["Contagion District", "Risk Horizon"], rows=rows, caption="Contagion Border Trajectory")
+            return ViewSpec(
+                title="Predictive AI Rumor Diffusion Forecast",
+                as_of=as_of,
+                source_status=status,
+                fallback=fallback,
+                components=[
+                    HeadingSpec(level=2, text="Spatio-Temporal Rumor Diffusion Forecast"),
+                    CalloutSpec(type="warning", message="Estimated by predictive graph neural diffusion model (heuristic horizon)."),
+                    StackSpec(direction="horizontal", children=kpis),
+                    tbl_spec,
+                ],
+            )
+
+        if tool_name == "neighbors":
+            nodes = data.get("nodes", []) if isinstance(data, dict) else []
+            edges = data.get("edges", []) if isinstance(data, dict) else []
+            graph_edges = [{"source": e.get("from", e.get("source", "")), "target": e.get("to", e.get("target", "")), "label": e.get("relation", "BORDERS")} for e in edges]
+            edge_rows = [{"Source District": e.get("from", ""), "Adjacent District": e.get("to", ""), "Border Type": e.get("relation", "BORDERS")} for e in edges]
+            tbl_spec = DataTableSpec(columns=["Source District", "Adjacent District", "Border Type"], rows=edge_rows, caption="Physical Geographic Border Mesh")
+            graph_spec = GraphViewSpec(
+                title="District Boundary Contagion Graph",
+                nodes=nodes[:100],
+                edges=graph_edges[:100],
+                text_summary=f"Topology mesh showing {len(nodes)} interconnected boundary nodes and {len(edges)} borders.",
+                table_alternative=tbl_spec,
+            )
+            return ViewSpec(
+                title="Geographic Boundary Adjacency Mesh",
+                as_of=as_of,
+                source_status=status,
+                fallback=fallback,
+                components=[
+                    HeadingSpec(level=2, text="District Border Topology Mesh"),
+                    graph_spec,
+                    tbl_spec,
+                ],
+            )
+
+        if tool_name == "dossier_summary":
+            d_code = data.get("district_code", "MH-XX")
+            score = data.get("composite_index", 0.0)
+            kpis = [
+                KpiCardSpec(title="Executive Composite Index", value=score, unit="/100", status="positive" if score >= 75 else "neutral"),
+            ]
+            return ViewSpec(
+                title=f"District Executive Dossier: {d_code}",
+                as_of=as_of,
+                source_status=status,
+                district_code=d_code,
+                fallback=fallback,
+                components=[
+                    HeadingSpec(level=2, text=f"District Comprehensive Briefing — {d_code}"),
+                    StackSpec(direction="horizontal", children=kpis),
+                    TextSpec(content=f"Integrated multi-pillar briefing for district {d_code}."),
+                ],
+            )
+
         # Default fallback view for any other tool
         return ViewSpec(
             title=f"Data Summary: {tool_name.replace('_', ' ').title()}",
@@ -462,4 +692,38 @@ class ViewSpecBuilder:
                     caption="Structured Metric Records",
                 ),
             ],
+        )
+
+    @classmethod
+    def build_from_ops(cls, results: List[Any], fallback: bool = False) -> ViewSpec:
+        """Compose a unified multi-section ViewSpec from all authorized operation results (§8.1)."""
+        from datetime import datetime, timezone
+
+        if not results:
+            return cls.build_from_tool_result("league_table", {}, fallback=True)
+
+        all_components: List[AnyComponentSpec] = []
+        primary_as_of = datetime.now(timezone.utc).isoformat()
+        primary_status = "live"
+
+        for res in results:
+            tool = getattr(res, "tool", None) or (res.get("tool") if isinstance(res, dict) else "unknown")
+            data = getattr(res, "data", None) or (res.get("data") if isinstance(res, dict) else {})
+            if not data:
+                continue
+
+            sub_view = cls.build_from_tool_result(tool, data, fallback=fallback)
+            primary_as_of = sub_view.as_of
+            primary_status = sub_view.source_status
+            all_components.extend(sub_view.components)
+
+        if not all_components:
+            return cls.build_from_tool_result("league_table", {}, fallback=True)
+
+        return ViewSpec(
+            title="Maharashtra Multi-Domain Executive Governance Report",
+            as_of=primary_as_of,
+            source_status=primary_status,
+            fallback=fallback,
+            components=all_components,
         )

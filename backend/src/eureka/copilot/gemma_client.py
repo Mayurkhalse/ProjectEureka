@@ -63,11 +63,22 @@ class GemmaClient:
         self._user_requests: Dict[str, List[float]] = defaultdict(list)
         self._global_requests: List[float] = []
 
-        # Persistent shared client with connection pooling & keep-alive
+        # Persistent shared client with connection pooling & keep-alive honoring COPILOT_TIMEOUT_SECONDS
+        timeout_sec = self.settings.COPILOT_TIMEOUT_SECONDS
         self._client = httpx.AsyncClient(
-            timeout=httpx.Timeout(connect=15.0, read=60.0, write=15.0, pool=15.0),
+            timeout=httpx.Timeout(connect=min(10.0, timeout_sec), read=timeout_sec, write=min(10.0, timeout_sec), pool=min(10.0, timeout_sec)),
             limits=httpx.Limits(max_keepalive_connections=20, max_connections=50),
         )
+
+    def is_available(self) -> bool:
+        """Check if Gemini API is configured and circuit is healthy without network calls."""
+        if not self.settings.get_effective_gemini_key():
+            return False
+        if self.settings.COPILOT_KILL_SWITCH:
+            return False
+        if self._circuit_open_until > time.time():
+            return False
+        return True
 
     def _check_rate_limits(self, user_id: str) -> None:
         """Enforce per-user and global queries-per-minute rate caps."""
@@ -220,3 +231,14 @@ class GemmaClient:
 
         self._record_failure()
         raise RuntimeError(f"GemmaClient failed after retry attempts: {redact_secrets(str(last_error))}")
+
+
+_gemma_client_instance: Optional[GemmaClient] = None
+
+
+def get_gemma_client() -> GemmaClient:
+    """Return a singleton instance of GemmaClient."""
+    global _gemma_client_instance
+    if _gemma_client_instance is None:
+        _gemma_client_instance = GemmaClient()
+    return _gemma_client_instance

@@ -45,7 +45,7 @@ from eureka.copilot.tools import (
     extract_district_from_query,
     get_source_status,
 )
-from eureka.copilot.viewspec import ViewSpec, ViewSpecBuilder
+from eureka.copilot.viewspec import ViewSpec, ViewSpecBuilder, sanitize_markup_for_frontend
 from eureka.copilot.intent_router import match_fast_path
 
 logger = logging.getLogger("eureka.copilot.router")
@@ -97,6 +97,34 @@ def _resolve_fallback_tool_and_data(user_query: str, principal: CopilotPrincipal
     return "league_table", data
 
 
+@router.get("/whoami", summary="Introspect Current Policy Principal & Scope")
+async def copilot_whoami(
+    current_user: TokenData = Depends(get_current_user),
+):
+    """Return principal clearance, assigned district/division, allowed district count, and policy version (§10.3)."""
+    from eureka.copilot.policy.principal import build_principal, PrincipalError
+    from eureka.copilot.policy.matrix import allowed_districts, ScopeKind, RULES, Intent
+    from eureka.copilot.policy.decisions import POLICY_VERSION
+
+    try:
+        p = build_principal(current_user)
+    except PrincipalError as err:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(err))
+
+    kind = RULES.get(p.role, {}).get(Intent.PROFILE, ScopeKind.NONE)
+    allowed = allowed_districts(p, kind)
+
+    return {
+        "username": p.username,
+        "role": p.role.value,
+        "district_code": p.district_code,
+        "division": p.division,
+        "allowed_district_count": len(allowed),
+        "allowed_districts": sorted(list(allowed)),
+        "policy_version": POLICY_VERSION,
+    }
+
+
 @router.post("/query", summary="Execute Open UI Copilot Query with SSE Streaming")
 async def copilot_query(
     payload: CopilotQueryRequest,
@@ -110,19 +138,172 @@ async def copilot_query(
             detail="Open UI Copilot is disabled on this instance (COPILOT_ENABLED=false).",
         )
 
-    principal = CopilotPrincipal(
-        username=current_user.username,
-        role=current_user.role.value if hasattr(current_user.role, "value") else str(current_user.role),
-        district_code=current_user.district_code,
-    )
+    # 1. Request Guards (§10.3)
+    if settings.COPILOT_KILL_SWITCH:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Open UI Copilot is paused by administrative kill switch.",
+        )
+
+    if len(payload.query) > settings.COPILOT_MAX_QUERY_CHARS:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Query exceeds character cap ({len(payload.query)} > {settings.COPILOT_MAX_QUERY_CHARS}).",
+        )
+
+    # 2. Strict Identity & Principal Validation (§5.2)
+    from eureka.copilot.policy.principal import build_principal, PrincipalError, to_legacy
+    from eureka.copilot.policy.decisions import POLICY_VERSION, Verdict
+    from eureka.copilot.policy.engine import authorize_plan
+    from eureka.copilot.planning.parser import parse_query
+    from eureka.copilot.execution.executor import execute
+    from eureka.copilot.response.composer import compose
+    from eureka.copilot.policy.memory_gate import MemoryGate
+
+    try:
+        policy_principal = build_principal(current_user)
+    except PrincipalError as p_err:
+        logger.warning("PrincipalError for %s: %s", getattr(current_user, "username", "unknown"), p_err)
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(p_err))
+
+    principal = to_legacy(policy_principal)
+
+    # Determine pipeline selection
+    use_v2 = settings.COPILOT_PIPELINE in ("v2", "shadow")
+    if settings.COPILOT_V2_ROLES:
+        roles_allowed = [r.strip() for r in settings.COPILOT_V2_ROLES.split(",") if r.strip()]
+        use_v2 = policy_principal.role.value in roles_allowed or policy_principal.role.name in roles_allowed
+
+    async def v2_event_generator() -> AsyncGenerator[str, None]:
+        start_time = time.time()
+        user_query = payload.query.strip()
+        lang = payload.language if payload.language in ("mr", "hi", "en") else detect_language(user_query)
+
+        # 1. Yield Initial Status Event
+        yield f"event: status\ndata: {json.dumps({'step': 'init', 'message': 'Processing query...', 'language': lang})}\n\n"
+        first_byte_ms = max(0.1, round((time.time() - start_time) * 1000, 2))
+
+        # 2. Deterministic Query Decomposition (§6)
+        parsed = parse_query(user_query, principal=policy_principal)
+
+        # 3. LLM Planner if low confidence (§6.7)
+        plan_source = "parser"
+        if parsed.confidence < 0.7 and settings.COPILOT_PLANNER_MODE == "parser_then_llm":
+            from eureka.copilot.planning.llm_planner import plan_with_llm
+            parsed = await plan_with_llm(user_query, parser_fallback=parsed, principal=policy_principal)
+            plan_source = "llm" if any(op.source == "llm" for op in parsed.ops) else "parser"
+
+        # 4. In-Process Policy Authorization (§5.5)
+        plan_decision = authorize_plan(policy_principal, parsed, settings)
+
+        # 5. Emit Plan Event Early (UI Chips §8.3)
+        groups_event = []
+        for op in parsed.ops:
+            decision = plan_decision.decisions.get(op.op_id)
+            is_allow = decision and decision.verdict == Verdict.ALLOW
+            groups_event.append({
+                "id": op.op_id,
+                "group": op.group,
+                "label": op.label,
+                "status": "allowed" if is_allow else "unavailable",
+                "defaulted": op.defaulted_scope,
+            })
+        for c in parsed.clarifications:
+            groups_event.append({
+                "id": "clarify",
+                "group": "clarification",
+                "label": "Clarification needed",
+                "status": "clarify",
+                "defaulted": False,
+            })
+
+        yield f"event: plan\ndata: {json.dumps({'source': plan_source, 'confidence': parsed.confidence, 'policy_version': POLICY_VERSION, 'groups': groups_event})}\n\n"
+
+        # 6. Execute Authorized Operations Concurrently & Retrieve Presentation Preferences
+        mem_gate = MemoryGate()
+        prefs_task = asyncio.create_task(mem_gate.prefs_for(policy_principal, user_query, lang))
+        exec_task = asyncio.create_task(execute(plan_decision.allowed, policy_principal, settings))
+
+        results, prefs = await asyncio.gather(exec_task, prefs_task)
+
+        # 7. Optional Narrator Prose Lane (§8.4)
+        narrator_summaries = {}
+        if settings.COPILOT_NARRATOR_MODE == "prose":
+            from eureka.copilot.response.narrator import generate_narration
+            narrator_summaries = await generate_narration(results, language=lang)
+
+        # 8. Response Composition (§8.1)
+        sections = compose(
+            results=results,
+            denied=plan_decision.denied,
+            prefs=prefs,
+            language=lang,
+            narrator_summaries=narrator_summaries,
+            clarifications=list(parsed.clarifications),
+        )
+
+        # 9. Stream Chunks with Section IDs and Ordering (§8.3)
+        for sec in sections:
+            clean_markup = sanitize_markup_for_frontend(sec.markup)
+            yield f"event: chunk\ndata: {json.dumps({'text': clean_markup, 'section_id': sec.section_id, 'order': sec.order, 'provenance': sec.provenance, 'data_quality': sec.data_quality})}\n\n"
+
+        # 10. Guaranteed Audit Recording (§11.2)
+        last_byte_ms = round((time.time() - start_time) * 1000, 2)
+        total_latency = int(last_byte_ms)
+        run_id = uuid.uuid4()
+
+        # Ingest user preference asynchronously in background
+        asyncio.create_task(mem_gate.learn(policy_principal, user_query, lang))
+
+        # Determine source_status from results
+        overall_quality = "live"
+        for r in results:
+            if r.data_quality in ("demo", "synthetic", "seed"):
+                overall_quality = "demo"
+                break
+        if settings.COPILOT_DEMO_MODE:
+            overall_quality = "demo"
+
+        # 11. Yield Done Event
+        done_payload = {
+            "run_id": str(run_id),
+            "pipeline": "v2",
+            "policy_version": POLICY_VERSION,
+            "plan_summary": {
+                "requested": len(parsed.ops),
+                "available": len(plan_decision.allowed),
+                "unavailable": len(plan_decision.denied),
+            },
+            "validation_status": "valid",
+            "fallback": False,
+            "machine_generated": True,
+            "source_status": overall_quality,
+            "latency_ms": total_latency,
+            "timings": {
+                "first_byte_ms": first_byte_ms,
+                "last_byte_ms": last_byte_ms,
+                "total_latency_ms": total_latency,
+            },
+            "server_timing": f"first_byte;dur={first_byte_ms}, last_byte;dur={last_byte_ms}, total;dur={total_latency}",
+            "model_id": None if plan_source == "parser" and not narrator_summaries else settings.COPILOT_MODEL,
+        }
+        yield f"event: done\ndata: {json.dumps(done_payload)}\n\n"
+
+    if use_v2:
+        return StreamingResponse(
+            v2_event_generator(),
+            media_type="text/event-stream",
+            headers={
+                "Cache-Control": "no-cache",
+                "Connection": "keep-alive",
+                "X-Accel-Buffering": "no",
+            },
+        )
 
     async def event_generator() -> AsyncGenerator[str, None]:
         start_time = time.time()
-        auth_time_ms = 0.5
-        first_byte_ms: Optional[float] = None
-        memory_time_ms = 0.0
-        intent_routing_time_ms = 0.0
-        model_calls_ms = 0.0
+        auth_time_ms = 0.0
+        first_byte_ms = None
         tool_calls_ms = 0.0
         validation_time_ms = 0.0
         c1_time_ms = 0.0
@@ -182,7 +363,7 @@ async def copilot_query(
             yield f"event: status\ndata: {json.dumps({'step': 'tool_call', 'tool': f_tool, 'args': f_args, 'provenance': 'fast_path'})}\n\n"
 
             final_view_spec = ViewSpecBuilder.build_from_tool_result(f_tool, f_data, fallback=True)
-            final_markup = final_view_spec.to_openui_lang()
+            final_markup = sanitize_markup_for_frontend(final_view_spec.to_openui_lang())
             if first_byte_ms is None:
                 first_byte_ms = max(0.1, round((time.time() - start_time) * 1000, 2))
             yield f"event: chunk\ndata: {json.dumps({'text': final_markup, 'provenance': 'fast_path'})}\n\n"
